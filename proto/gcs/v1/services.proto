@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package gcs.v1;
 
+import "gcs/v1/auth.proto";
 import "gcs/v1/calibration.proto";
 import "gcs/v1/chat.proto";
 import "gcs/v1/commands.proto";
@@ -9,6 +10,7 @@ import "gcs/v1/fleet.proto";
 import "gcs/v1/mesh.proto";
 import "gcs/v1/missions.proto";
 import "gcs/v1/parameters.proto";
+import "gcs/v1/security.proto";
 import "gcs/v1/telemetry.proto";
 import "gcs/v1/track.proto";
 import "gcs/v1/vehicle.proto";
@@ -191,6 +193,34 @@ service VideoService {
 
   // ListRecordings returns stored recordings filtered by node or time range.
   rpc ListRecordings(ListRecordingsRequest) returns (ListRecordingsResponse);
+}
+
+// AuthService validates operator sessions and returns identity profiles.
+// Login and signup are handled by the configured auth provider's own SDK
+// (e.g. Supabase JS) — not by the GCS backend. This service only validates
+// tokens the frontend has already obtained and returns the GCS-side profile.
+// The JWT is passed as Authorization: Bearer <token> in the Connect header.
+service AuthService {
+  // ValidateSession checks whether the caller's JWT is accepted by this backend.
+  // Returns the operator profile on success. Use on app load before showing the UI.
+  // This is the only RPC that returns a structured error rather than rejecting outright
+  // on an invalid token, so the frontend can distinguish "bad token" from "server error".
+  rpc ValidateSession(ValidateSessionRequest) returns (ValidateSessionResponse);
+
+  // GetCurrentUser returns the profile for the authenticated caller.
+  // Requires a valid JWT — returns UNAUTHENTICATED if the token is missing or invalid.
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (OperatorProfile);
+}
+
+// SecurityService provides the audit log stream.
+// All writes to the audit log are async — this service is read-only from the
+// perspective of the caller. The backend writes audit events as a side-effect
+// of other operations, never blocking on the audit write.
+service SecurityService {
+  // WatchAuditLog streams security-relevant events.
+  // Set include_history = true to replay stored events from Redis Streams before live events.
+  // Requires admin role.
+  rpc WatchAuditLog(WatchAuditRequest) returns (stream AuditEvent);
 }
 
 // PositionTargetAck confirms the backend accepted and forwarded the target message.

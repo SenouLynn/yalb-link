@@ -2,6 +2,7 @@ syntax = "proto3";
 
 package gcs.v1;
 
+import "gcs/v1/security.proto";
 import "gcs/v1/types.proto";
 import "gcs/v1/vehicle.proto";
 import "google/protobuf/timestamp.proto";
@@ -51,8 +52,11 @@ message LinkStatus {
 }
 
 // ConnectLinkRequest opens a new transport connection.
+// uri scheme determines the adapter: udp/tcp/serial/meshtastic/wireguard
+// security applies signing, TLS, and WireGuard configuration for this link.
 message ConnectLinkRequest {
-  string uri = 1; // transport URI; scheme determines adapter (udp/tcp/serial)
+  string uri = 1;
+  LinkSecurityConfig security = 2;
 }
 
 // ConnectLinkResponse returns the assigned link_id on success.

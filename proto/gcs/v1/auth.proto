@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package gcs.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+
+// OperatorRole controls what a user is permitted to do.
+// Enforced by backend middleware on each RPC — not by the client.
+// Roles are carried as claims in the JWT and extracted by the AuthProvider.
+//
+//   observer  — read-only: can subscribe to streams, view state, watch video
+//   operator  — can issue commands, change modes, arm/disarm, upload missions
+//   admin     — can manage links, configure security, access audit log
+enum OperatorRole {
+  OPERATOR_ROLE_UNSPECIFIED = 0;
+  OPERATOR_ROLE_OBSERVER = 1;
+  OPERATOR_ROLE_OPERATOR = 2;
+  OPERATOR_ROLE_ADMIN = 3;
+}
+
+// OperatorProfile is the GCS-side view of an authenticated user.
+// Derived from JWT claims — the backend never trusts client-supplied identity.
+message OperatorProfile {
+  string operator_id = 1;    // stable subject claim (e.g. Supabase user UUID)
+  string email = 2;
+  string display_name = 3;   // from user_metadata or full_name claim
+  repeated OperatorRole roles = 4;
+  google.protobuf.Timestamp token_expires_at = 5;
+}
+
+// ValidateSessionRequest asks the backend to verify the caller's JWT.
+// The JWT is carried in the Connect Authorization header, not this message.
+// This RPC is the only one that succeeds with an expired/invalid token —
+// it returns the validation error rather than rejecting the connection.
+message ValidateSessionRequest {}
+
+// ValidateSessionResponse indicates whether the session is valid.
+message ValidateSessionResponse {
+  bool valid = 1;
+  OperatorProfile profile = 2; // populated when valid = true
+  string error = 3;            // human-readable reason when valid = false
+}
+
+// GetCurrentUserRequest returns the profile for the authenticated caller.
+message GetCurrentUserRequest {}
