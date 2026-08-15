@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package gcs.v1;
+
+import "gcs/v1/types.proto";
+import "gcs/v1/vehicle.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+
+// ParameterValue mirrors PARAM_VALUE (#22).
+// param_id is the 16-character null-padded ASCII name from the wire;
+// trailing nulls are stripped before this message is populated.
+// param_value is always float on the wire; cast per param_type for integer params.
+message ParameterValue {
+  VehicleId vehicle_id = 1;
+  string param_id = 2;          // max 16 ASCII chars
+  float param_value = 3;        // wire value; reinterpret per param_type
+  MavParamType param_type = 4;
+  uint32 param_count = 5;       // total parameter count on this vehicle
+  uint32 param_index = 6;       // 0-based index; 65535 = unknown
+  google.protobuf.Timestamp observed_at = 7;
+}
+
+// ListParametersRequest triggers a full PARAM_REQUEST_LIST from the backend.
+message ListParametersRequest {
+  VehicleId target = 1;
+}
+
+// GetParameterRequest fetches a single parameter by name (PARAM_REQUEST_READ).
+message GetParameterRequest {
+  VehicleId target = 1;
+  string param_id = 2;
+}
+
+// SetParameterRequest sends a PARAM_SET to the vehicle.
+// The vehicle echoes back a PARAM_VALUE on success; the service returns it.
+message SetParameterRequest {
+  VehicleId target = 1;
+  string param_id = 2;
+  float param_value = 3;
+  MavParamType param_type = 4;
+}

@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package gcs.v1;
+
+import "gcs/v1/types.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+
+// VehicleId uniquely identifies a MAVLink node on the network.
+// Corresponds to the (sysid, compid) pair in every MAVLink frame header.
+message VehicleId {
+  uint32 system_id = 1;    // MAVLink system ID (1–255)
+  uint32 component_id = 2; // MAVLink component ID; autopilot = 1
+}
+
+// HeartbeatState is a decoded HEARTBEAT message (#0).
+// Received at ~1 Hz from each active MAVLink node.
+// base_mode is a MAV_MODE_FLAG bitmask expanded into discrete fields below.
+message HeartbeatState {
+  VehicleId id = 1;
+
+  MavType type = 2;
+  MavAutopilot autopilot = 3;
+  MavState system_status = 4;
+
+  // Decoded from HEARTBEAT.base_mode (MAV_MODE_FLAG bitmask).
+  bool armed = 5;
+  bool manual_input_enabled = 6;
+  bool hil_enabled = 7;      // hardware-in-the-loop
+  bool stabilize_enabled = 8;
+  bool guided_enabled = 9;
+  bool auto_enabled = 10;
+  bool test_enabled = 11;
+  bool custom_mode_enabled = 12;
+
+  // HEARTBEAT.custom_mode: firmware-specific flight mode integer.
+  // Decoded into a human-readable name by the firmware adapter layer.
+  uint32 custom_mode = 13;
+  string flight_mode_name = 14; // e.g. "GUIDED", "AUTO", "LOITER"
+
+  uint32 mavlink_version = 15;
+
+  google.protobuf.Timestamp observed_at = 16;
+}
+
+// VehicleSnapshot is the GCS-side aggregated state for a single vehicle.
+// Updated whenever any constituent telemetry message is received.
+// Represents the best-known current state; fields are stale if their
+// observed_at timestamp is old.
+message VehicleSnapshot {
+  VehicleId id = 1;
+  HeartbeatState heartbeat = 2;
+
+  // Populated from GLOBAL_POSITION_INT (#33); lat/lon normalised to degrees.
+  double latitude_deg = 3;
+  double longitude_deg = 4;
+  float altitude_msl_m = 5;       // metres above mean sea level
+  float altitude_relative_m = 6;  // metres above home/takeoff point
+
+  // Populated from ATTITUDE (#30); all values in radians.
+  float roll_rad = 7;
+  float pitch_rad = 8;
+  float yaw_rad = 9;
+
+  // Populated from VFR_HUD (#74).
+  float airspeed_m_s = 10;
+  float groundspeed_m_s = 11;
+  float climb_rate_m_s = 12;
+  int32 heading_deg = 13; // 0–359
+
+  // Populated from SYS_STATUS (#1).
+  uint32 voltage_battery_mv = 14;  // millivolts
+  int32 current_battery_ca = 15;   // centiamperes (10 mA resolution)
+  int32 battery_remaining_pct = 16; // -1 = unknown
+
+  google.protobuf.Timestamp last_updated_at = 17;
+}

@@ -1,0 +1,127 @@
+syntax = "proto3";
+
+package gcs.v1;
+
+import "gcs/v1/calibration.proto";
+import "gcs/v1/commands.proto";
+import "gcs/v1/fleet.proto";
+import "gcs/v1/missions.proto";
+import "gcs/v1/parameters.proto";
+import "gcs/v1/telemetry.proto";
+import "gcs/v1/vehicle.proto";
+
+option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+
+// FleetService manages vehicle discovery and link lifecycle.
+service FleetService {
+  // WatchFleet streams FleetEvents as vehicles join, leave, or change state.
+  // Immediately emits a VEHICLE_DISCOVERED event for each currently known vehicle
+  // so clients bootstrap fleet state without a separate list call.
+  rpc WatchFleet(WatchFleetRequest) returns (stream FleetEvent);
+
+  // ListVehicles returns the current fleet snapshot from Redis.
+  // Use for initial page load; switch to WatchFleet for live updates.
+  rpc ListVehicles(ListVehiclesRequest) returns (ListVehiclesResponse);
+
+  // ConnectLink opens a new MAVLink transport connection on the backend.
+  rpc ConnectLink(ConnectLinkRequest) returns (ConnectLinkResponse);
+
+  // DisconnectLink tears down an existing transport connection.
+  rpc DisconnectLink(DisconnectLinkRequest) returns (DisconnectLinkResponse);
+
+  // WatchLinkStatus streams connection state and quality for all active links.
+  rpc WatchLinkStatus(WatchFleetRequest) returns (stream LinkStatus);
+}
+
+// TelemetryService provides real-time telemetry streams per vehicle.
+service TelemetryService {
+  // StreamTelemetry pushes TelemetryEvents for the requested vehicle.
+  // Each event carries exactly one telemetry payload (see TelemetryEvent.oneof).
+  // The stream continues until the client cancels or the link is lost.
+  rpc StreamTelemetry(StreamTelemetryRequest) returns (stream TelemetryEvent);
+
+  // GetSnapshot returns the last-known aggregated state for a vehicle.
+  // Backed by Redis; returns immediately without waiting for fresh telemetry.
+  rpc GetSnapshot(GetSnapshotRequest) returns (VehicleSnapshot);
+}
+
+// CommandService sends MAVLink commands and returns ack results.
+service CommandService {
+  // SendCommand sends a COMMAND_LONG, retries until ack or timeout,
+  // and returns the final CommandResult.
+  rpc SendCommand(CommandLong) returns (CommandResult);
+
+  // SetArmed arms or disarms the vehicle.
+  rpc SetArmed(SetArmedRequest) returns (CommandResult);
+
+  // SetMode changes the vehicle flight mode.
+  rpc SetMode(SetModeRequest) returns (CommandResult);
+
+  // SetPositionTargetGlobal sends SET_POSITION_TARGET_GLOBAL_INT (#86).
+  // No ack — fire-and-forget at 4–10 Hz in GUIDED mode.
+  // Returns immediately; caller is responsible for rate limiting.
+  rpc SetPositionTargetGlobal(PositionTargetGlobal) returns (PositionTargetAck);
+
+  // SetPositionTargetLocal sends SET_POSITION_TARGET_LOCAL_NED (#84).
+  rpc SetPositionTargetLocal(PositionTargetLocal) returns (PositionTargetAck);
+}
+
+// CalibrationService runs preflight calibration sequences and streams progress.
+service CalibrationService {
+  // StartCalibration initiates the requested calibration type and streams
+  // CalibrationEvents until complete, failed, or client cancels.
+  // For compass: streams MagCalProgress per update, MagCalReport per compass on finish.
+  // For all others: streams CalibrationStatusText from intercepted STATUSTEXT messages.
+  rpc StartCalibration(CalibrationRequest) returns (stream CalibrationEvent);
+}
+
+// ParameterService implements the MAVLink parameter protocol.
+service ParameterService {
+  // ListParameters triggers PARAM_REQUEST_LIST and streams all PARAM_VALUE
+  // responses as they arrive. Ends when param_index == param_count - 1.
+  rpc ListParameters(ListParametersRequest) returns (stream ParameterValue);
+
+  // GetParameter fetches a single parameter by name (PARAM_REQUEST_READ).
+  rpc GetParameter(GetParameterRequest) returns (ParameterValue);
+
+  // SetParameter sends PARAM_SET and returns the vehicle's echoed PARAM_VALUE.
+  rpc SetParameter(SetParameterRequest) returns (ParameterValue);
+}
+
+// MissionService implements the MAVLink mission protocol.
+service MissionService {
+  // UploadMission accepts a stream of MissionItems and executes the full
+  // upload handshake (COUNT → REQUEST → ITEM × N → ACK).
+  rpc UploadMission(stream MissionItem) returns (MissionAck);
+
+  // DownloadMission executes MISSION_REQUEST_LIST then streams each
+  // MISSION_ITEM_INT back to the client in sequence order.
+  rpc DownloadMission(DownloadMissionRequest) returns (stream MissionItem);
+
+  // ClearMission sends MISSION_CLEAR_ALL and returns the ACK.
+  rpc ClearMission(ClearMissionRequest) returns (MissionAck);
+
+  // SetCurrentItem activates a specific waypoint by sequence number.
+  rpc SetCurrentItem(SetCurrentItemRequest) returns (MissionAck);
+}
+
+// -- Request/response types used only by service definitions above --
+
+message StreamTelemetryRequest {
+  VehicleId vehicle_id = 1;
+  // Optional filter: only emit events for these payload types.
+  // Empty list = emit all types.
+  repeated string payload_types = 2; // e.g. "attitude", "global_position"
+}
+
+message GetSnapshotRequest {
+  VehicleId vehicle_id = 1;
+}
+
+// PositionTargetAck confirms the backend accepted and forwarded the target message.
+// It does NOT confirm the vehicle received or acted on it — SET_POSITION_TARGET
+// messages have no MAVLink ack cycle by design.
+message PositionTargetAck {
+  bool accepted = 1;
+  string error = 2; // non-empty if the backend rejected the request (e.g. vehicle not in GUIDED)
+}

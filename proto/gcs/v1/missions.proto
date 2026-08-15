@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package gcs.v1;
+
+import "gcs/v1/types.proto";
+import "gcs/v1/vehicle.proto";
+
+option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+
+// MissionItem mirrors MISSION_ITEM_INT (#73).
+// lat/lon are normalised from degE7 (int32) to degrees (double).
+// For local frames, x/y are in metres and carried as double for consistency.
+// z is always in metres regardless of frame.
+// param1–4 semantics depend on command; see MAVLink common.xml MAV_CMD entries.
+message MissionItem {
+  VehicleId vehicle_id = 1;
+  uint32 seq = 2;               // 0-based waypoint sequence number
+  MavFrame frame = 3;
+  MavCmd command = 4;
+  bool current = 5;             // true if this is the active waypoint
+  bool autocontinue = 6;        // proceed to next item on completion
+
+  float param1 = 7;
+  float param2 = 8;
+  float param3 = 9;
+  float param4 = 10;            // yaw, radians; NaN = not used
+
+  double x = 11;                // latitude (degrees) or local x (metres)
+  double y = 12;                // longitude (degrees) or local y (metres)
+  float z = 13;                 // altitude or local z, metres
+
+  MavMissionType mission_type = 14;
+}
+
+// MissionAck mirrors MISSION_ACK (#47).
+// Returned by the vehicle at the end of an upload, download, or clear operation.
+message MissionAck {
+  VehicleId vehicle_id = 1;
+  MavMissionResult result = 2;
+  MavMissionType mission_type = 3;
+}
+
+// DownloadMissionRequest triggers MISSION_REQUEST_LIST followed by
+// sequential MISSION_REQUEST_INT for each item.
+message DownloadMissionRequest {
+  VehicleId target = 1;
+  MavMissionType mission_type = 2;
+}
+
+// ClearMissionRequest sends MISSION_CLEAR_ALL to the vehicle.
+message ClearMissionRequest {
+  VehicleId target = 1;
+  MavMissionType mission_type = 2;
+}
+
+// SetCurrentItemRequest sends MISSION_SET_CURRENT to activate a waypoint.
+message SetCurrentItemRequest {
+  VehicleId target = 1;
+  uint32 seq = 2;
+}
