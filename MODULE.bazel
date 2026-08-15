@@ -1,0 +1,4 @@
+module(
+    name = "ligma_gcs",
+    version = "0.0.0",
+)
