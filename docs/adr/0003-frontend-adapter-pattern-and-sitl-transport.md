@@ -64,9 +64,35 @@ Each of these works standalone in Storybook against a `MockAdapter`. All of them
 
 ### State management
 
-- **Zustand** for local UI state (panel open/closed, selected vehicle, map viewport)
-- **Connect streaming hooks** (`useServerStream`) for telemetry — data flows into components, not into a global store
-- Telemetry is not stored globally; it is consumed at the point of rendering. Persistence (logs, replay) is a backend concern, not a frontend store concern.
+**React Query (TanStack Query)** is the single state layer for all server-derived data. The division of responsibility:
+
+| Concern | Mechanism |
+|---|---|
+| Parameters, missions, vehicle list | React Query `useQuery` — fetch once, cache, invalidate on mutation |
+| Command results | React Query `useMutation` — optimistic update, rollback on failure |
+| Real-time telemetry (attitude, position, battery) | Connect server stream → `queryClient.setQueryData()` per vehicle |
+| UI-only ephemeral state (panel visibility, map viewport) | `useState` / `useReducer` — local to the component that owns it |
+
+This means every component reads from the same React Query cache regardless of how the data arrived — one-shot fetch or streaming update. No parallel stores, no sync problems.
+
+**Redis layer (backend, not frontend)**
+
+Redis sits between the MAVLink pipeline and the Connect API server on the backend. It is not a frontend concern but it shapes what the frontend receives:
+
+- **Pub/Sub** — the MAVLink vehicle model publishes state updates to Redis channels; the Connect streaming handler subscribes and pushes to connected frontend clients. Multiple backend instances stay consistent without direct coupling.
+- **Last-known state** — new frontend clients (page reload, second tab) receive current fleet state immediately from Redis rather than waiting for the next heartbeat cycle.
+- **Redis Streams** — telemetry history stored as append-only streams (`XADD`). Enables the `ReplayAdapter` to replay a recorded flight by reading from the stream. Also the observation surface for SITL integration tests (assert vehicle state by reading the stream).
+- **Redis is ephemeral** — fleet state is rebuilt from live MAVLink on reconnect. Redis is a cache and fan-out bus, not the system of record.
+
+```
+MAVLink pipeline → vehicle model → PUBLISH redis channel
+                                         ↓
+                               Connect API (SUBSCRIBE)
+                                         ↓
+                               React Query cache (setQueryData)
+                                         ↓
+                               React component (renders)
+```
 
 ---
 

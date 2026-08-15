@@ -43,7 +43,7 @@ React is chosen over Vue and Electron for the initial implementation:
 - **Composability** — component model fits the incremental, scoped UI units design; each component subscribes to exactly the data streams it needs
 - **Electron is a deployment wrapper, not an architecture** — ship as a web app first; wrap in Electron later if desktop filesystem access or offline capability is needed
 
-State management: Zustand for simplicity; XState if UI state machines warrant explicit modeling (mirrors the backend's service protocol state machines — consistent mental model).
+State management: **React Query (TanStack Query)** for all server-derived state — parameters, missions, vehicle snapshots, command results. It owns the cache lifecycle, loading and error states, and stale-while-revalidate behavior for slow-changing data. Real-time telemetry streams feed into the React Query cache via `queryClient.setQueryData()` so components always read from one consistent store regardless of whether data arrived from a one-shot fetch or a Connect stream. See ADR-0003 for detail.
 
 ### Transport between backend and frontend: Connect (Buf)
 
@@ -62,6 +62,7 @@ WebSocket is retained for the SITL test harness specifically — see ADR-0003.
 ```
 docker-compose (local dev / CI)
   ardupilot-sitl   ← MAVLink UDP:14550
+  redis            ← :6379  (fleet state, telemetry pub/sub, replay streams)
   gcs-backend      ← Connect (HTTP) :8080  /  WebSocket :8081 (SITL harness)
   gcs-frontend     ← HTTP :3000
 ```
@@ -89,6 +90,7 @@ Deferred. Potential future use: offloading the MAVLink frame codec to the browse
 - Go requires explicit supervision patterns (no OTP); goroutine lifecycle management is manual
 - Connect + protobuf adds codegen step and `.proto` discipline; schema must be kept in sync with MAVLink semantics
 - React adds JS ecosystem complexity (node_modules, bundler, TypeScript config)
+- Redis adds an infrastructure dependency; must be treated as ephemeral (fleet state is rebuilt from live MAVLink, not persisted across restarts as ground truth)
 
 **Expected benefits:**
 - Goroutine-per-layer maps cleanly to ports and adapters; each layer is independently testable
