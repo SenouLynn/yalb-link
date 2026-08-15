@@ -1,0 +1,83 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    # Error handling
+    - errcheck
+    - errorlint
+    - wrapcheck
+    - nilerr
+    - nilnesserr
+
+    # Correctness
+    - exhaustive
+    - govet
+    - staticcheck
+    - ineffassign
+    - unused
+    - bodyclose
+    - contextcheck
+    - noctx
+
+    # Code quality
+    - gocritic
+    - revive
+    - misspell
+    - unconvert
+    - prealloc
+    - unparam
+    - makezero
+    - wastedassign
+
+    # Complexity / size
+    - cyclop
+    - funlen
+    - gocognit
+
+linters-settings:
+  cyclop:
+    max-complexity: 15
+
+  funlen:
+    lines: 80
+    statements: 50
+
+  gocognit:
+    min-complexity: 20
+
+  govet:
+    enable-all: true
+
+  exhaustive:
+    default-signifies-exhaustive: true
+
+  wrapcheck:
+    ignore-sigs:
+      - "errors.New("
+      - "fmt.Errorf("
+      - ".Errorf("
+
+  revive:
+    rules:
+      - name: exported
+      - name: var-naming
+      - name: unexported-return
+      - name: error-strings
+      - name: error-return
+      - name: if-return
+      - name: indent-error-flow
+      - name: superfluous-else
+      - name: unused-parameter
+      - name: unreachable-code
+      - name: redefines-builtin-id
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+      - performance
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0

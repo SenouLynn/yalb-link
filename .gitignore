@@ -8,3 +8,4 @@
 # React
 /frontend/node_modules/
 /frontend/dist/
+/frontend/.pnpm-store/
