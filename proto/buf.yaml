@@ -1,0 +1,12 @@
+version: v2
+modules:
+  - path: .
+    name: buf.build/ligma-gcs/proto
+lint:
+  use:
+    - STANDARD
+  except:
+    - FIELD_LOWER_SNAKE_CASE  # MAVLink field names are canonical; we preserve them
+breaking:
+  use:
+    - FILE
