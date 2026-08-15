@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package gcs.v1;
+
+import "gcs/v1/track.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+
+// MeshChannel represents a Meshtastic channel slot (0–7).
+// Channels are identified by index; the name and PSK are configured on-device.
+message MeshChannel {
+  uint32 index = 1;           // 0 = primary (default); 1–7 = secondary
+  string name = 2;
+  bool uplink_enabled = 3;    // forward received packets to MQTT
+  bool downlink_enabled = 4;  // forward MQTT packets into mesh
+}
+
+// MeshPacket is a raw decoded Meshtastic mesh packet.
+// Surfaced for debugging, logging, and custom payload dispatch.
+// Canonical application payloads (Position, Telemetry, Text) are translated
+// into Track or ChatMessage by the mesh adapter before reaching services.
+message MeshPacket {
+  uint32 from_node = 1;        // sender Meshtastic node ID
+  uint32 to_node = 2;          // recipient node ID; 0xFFFFFFFF = broadcast
+  uint32 channel = 3;          // channel hash
+  uint32 packet_id = 4;
+  uint32 hop_limit = 5;
+  uint32 hop_start = 6;        // original hop_limit set by sender
+  float rx_snr = 7;
+  int32 rx_rssi = 8;
+  uint32 rx_time = 9;          // epoch seconds when received
+  uint32 port_num = 10;        // Meshtastic PortNum: 1=TEXT, 3=POSITION, 67=TELEMETRY, etc.
+  bytes payload = 11;          // raw decoded payload bytes
+  bool via_mqtt = 12;          // true if this packet arrived via MQTT bridge
+  google.protobuf.Timestamp received_at = 13;
+}
+
+// MeshNodeSummary is a lightweight representation of a Meshtastic node
+// as seen by the GCS — identity, role, and last-heard time.
+// Full state is in the Track via MeshtasticDetail.
+message MeshNodeSummary {
+  NodeId node_id = 1;
+  string long_name = 2;
+  string short_name = 3;
+  MeshtasticRole role = 4;
+  uint32 last_heard_epoch = 5;  // epoch seconds of last received packet
+  float snr = 6;
+  int32 rssi = 7;
+  uint32 hops_away = 8;
+  bool is_mavlink_relay = 9;
+}
+
+// WatchMeshNodesRequest subscribes to mesh node lifecycle events.
+message WatchMeshNodesRequest {
+  string adapter_id = 1; // which Meshtastic adapter to watch; empty = all
+}
+
+// MeshNodeEvent is emitted when a Meshtastic node is first seen, updated, or lost.
+message MeshNodeEvent {
+  enum EventType {
+    EVENT_TYPE_UNSPECIFIED = 0;
+    EVENT_TYPE_DISCOVERED = 1;
+    EVENT_TYPE_UPDATED = 2;
+    EVENT_TYPE_LOST = 3;
+  }
+  EventType type = 1;
+  MeshNodeSummary node = 2;
+  google.protobuf.Timestamp occurred_at = 3;
+}
+
+// SendMeshMessageRequest sends a raw payload to a Meshtastic node or broadcast.
+// For text chat use ChatService.SendMessage; this is for custom/binary payloads.
+message SendMeshMessageRequest {
+  string adapter_id = 1;
+  uint32 to_node = 2;         // target node ID; 0xFFFFFFFF = broadcast
+  uint32 channel_index = 3;
+  uint32 port_num = 4;        // Meshtastic PortNum
+  bytes payload = 5;
+  bool want_ack = 6;
+}
+
+// SendMeshMessageResponse reports delivery status.
+message SendMeshMessageResponse {
+  uint32 packet_id = 1;
+  bool queued = 2;   // true if accepted into radio queue; no guarantee of delivery
+  string error = 3;  // non-empty if the adapter rejected the request
+}
+
+// ListMeshNodesRequest returns the current known node list from Redis.
+message ListMeshNodesRequest {
+  string adapter_id = 1;
+}
+
+// ListMeshNodesResponse carries all known mesh nodes.
+message ListMeshNodesResponse {
+  repeated MeshNodeSummary nodes = 1;
+}
+
+// WatchMeshPacketsRequest subscribes to raw mesh packet stream for an adapter.
+// Intended for debugging and diagnostics; high volume.
+message WatchMeshPacketsRequest {
+  string adapter_id = 1;
+  repeated uint32 port_nums = 2; // filter by PortNum; empty = all
+}

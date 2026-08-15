@@ -1,0 +1,166 @@
+syntax = "proto3";
+
+package gcs.v1;
+
+import "gcs/v1/track.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+
+// VideoStreamType identifies the transport/encoding stack of a video stream.
+// The GCS backend manages the control plane; video data flows over the
+// appropriate protocol directly (WebRTC peer connection, RTSP client, etc.).
+enum VideoStreamType {
+  VIDEO_STREAM_TYPE_UNSPECIFIED = 0;
+  VIDEO_STREAM_TYPE_RTSP = 1;          // RTSP/RTP — IP cameras, encoders, GStreamer pipelines
+  VIDEO_STREAM_TYPE_WEBRTC = 2;        // WebRTC — browser-native, lowest latency
+  VIDEO_STREAM_TYPE_WFB_NG = 3;        // wifibroadcast-ng (OpenIPC digital FPV over UDP)
+  VIDEO_STREAM_TYPE_RTMP = 4;          // RTMP — streaming to/from media servers
+  VIDEO_STREAM_TYPE_HLS = 5;           // HLS — HTTP Live Streaming (playback, higher latency)
+  VIDEO_STREAM_TYPE_USB_WEBCAM = 6;    // direct USB camera on GCS machine
+  VIDEO_STREAM_TYPE_RECORDING = 7;     // stored recording — playback only
+}
+
+// VideoStreamStatus describes the current state of a stream.
+enum VideoStreamStatus {
+  VIDEO_STREAM_STATUS_UNSPECIFIED = 0;
+  VIDEO_STREAM_STATUS_INACTIVE = 1;    // known but not transmitting
+  VIDEO_STREAM_STATUS_CONNECTING = 2;
+  VIDEO_STREAM_STATUS_ACTIVE = 3;
+  VIDEO_STREAM_STATUS_DEGRADED = 4;    // active but with quality issues (loss, latency)
+  VIDEO_STREAM_STATUS_ERROR = 5;
+}
+
+// VideoCodec identifies the video encoding in use.
+enum VideoCodec {
+  VIDEO_CODEC_UNSPECIFIED = 0;
+  VIDEO_CODEC_H264 = 1;
+  VIDEO_CODEC_H265 = 2;   // HEVC
+  VIDEO_CODEC_AV1 = 3;
+  VIDEO_CODEC_MJPEG = 4;
+  VIDEO_CODEC_RAW = 5;    // uncompressed (rare; high bandwidth)
+}
+
+// VideoStream describes a single video stream and its current state.
+// The stream_url or webrtc_offer_endpoint is what the frontend uses to connect;
+// actual video data does not flow through Connect/protobuf.
+message VideoStream {
+  string stream_id = 1;             // GCS-assigned stable identifier
+  NodeId source_node = 2;           // vehicle, operator, or static node hosting the camera
+  string label = 3;                 // human-readable name: "Front", "Gimbal", "Payload"
+  VideoStreamType type = 4;
+  VideoStreamStatus status = 5;
+  VideoCodec codec = 6;
+
+  // Connection info — format depends on type:
+  //   RTSP:      rtsp://<host>:<port>/<path>
+  //   HLS:       http://<host>:<port>/<path>.m3u8
+  //   WFB_NG:    udp://<host>:<port> (raw H264/H265 UDP from wfb_rx)
+  //   RTMP:      rtmp://<host>/<app>/<stream>
+  //   RECORDING: recording://<recording_id>
+  //   WEBRTC:    endpoint URL for SDP offer exchange (see VideoService.ExchangeSdp)
+  string stream_url = 7;
+
+  // Stream properties
+  uint32 width_px = 8;
+  uint32 height_px = 9;
+  float framerate = 10;
+  uint32 bitrate_kbps = 11;
+
+  // Link quality indicators (where the transport provides them)
+  float packet_loss_pct = 12;
+  uint32 latency_ms = 13;
+
+  bool recording_active = 14;       // true if GCS is recording this stream to disk/Redis
+  string active_recording_id = 15;  // populated when recording_active = true
+
+  google.protobuf.Timestamp started_at = 16;
+  google.protobuf.Timestamp observed_at = 17;
+}
+
+// VideoStreamEvent is the streaming envelope for VideoService.WatchStreams.
+message VideoStreamEvent {
+  enum EventType {
+    EVENT_TYPE_UNSPECIFIED = 0;
+    EVENT_TYPE_STREAM_APPEARED = 1;
+    EVENT_TYPE_STREAM_UPDATED = 2;  // status or quality changed
+    EVENT_TYPE_STREAM_ENDED = 3;
+    EVENT_TYPE_RECORDING_STARTED = 4;
+    EVENT_TYPE_RECORDING_STOPPED = 5;
+  }
+  EventType type = 1;
+  VideoStream stream = 2;
+  google.protobuf.Timestamp occurred_at = 3;
+}
+
+// VideoRecording is metadata for a stored video recording.
+// Video data is stored on disk or as Redis Stream segments (for short clips).
+message VideoRecording {
+  string recording_id = 1;
+  string stream_id = 2;             // originating stream
+  NodeId source_node = 3;
+  string label = 4;
+  VideoCodec codec = 5;
+  uint32 width_px = 6;
+  uint32 height_px = 7;
+  uint64 duration_ms = 8;
+  uint64 size_bytes = 9;
+  string storage_path = 10;         // filesystem path or Redis key prefix
+  google.protobuf.Timestamp recorded_at = 11;
+}
+
+// SdpOffer carries a WebRTC SDP offer from the frontend.
+message SdpOffer {
+  string stream_id = 1;
+  string sdp = 2;                   // full SDP offer string
+  repeated string ice_candidates = 3;
+}
+
+// SdpAnswer carries the GCS backend's WebRTC SDP answer.
+message SdpAnswer {
+  string stream_id = 1;
+  string sdp = 2;
+  repeated string ice_candidates = 3;
+  string error = 4;
+}
+
+// WatchStreamsRequest subscribes to video stream lifecycle events.
+// Empty node_ids = watch all streams.
+message WatchStreamsRequest {
+  repeated NodeId node_ids = 1;
+  repeated VideoStreamType types = 2;
+}
+
+// StartRecordingRequest begins recording a stream to persistent storage.
+message StartRecordingRequest {
+  string stream_id = 1;
+}
+
+// StartRecordingResponse returns the assigned recording_id.
+message StartRecordingResponse {
+  string recording_id = 1;
+  string error = 2;
+}
+
+// StopRecordingRequest ends an active recording.
+message StopRecordingRequest {
+  string recording_id = 1;
+}
+
+// StopRecordingResponse returns the completed recording metadata.
+message StopRecordingResponse {
+  VideoRecording recording = 1;
+  string error = 2;
+}
+
+// ListRecordingsRequest filters recordings by node or time range.
+message ListRecordingsRequest {
+  repeated NodeId node_ids = 1;
+  optional google.protobuf.Timestamp after = 2;
+  optional google.protobuf.Timestamp before = 3;
+}
+
+// ListRecordingsResponse carries matching recordings.
+message ListRecordingsResponse {
+  repeated VideoRecording recordings = 1;
+}
