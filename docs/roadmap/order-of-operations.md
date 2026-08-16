@@ -2,8 +2,8 @@
 
 A canonical build order for yalb-gcs. Defines what to build, in what sequence, why, and what must be true before moving on.
 
-`port-plan-v1.md` in this directory maps what to port and where it lands.
-`tiers/` contains one file per tier with chapter-level task breakdown.
+`port-plan.md` in this directory maps what to port and where it lands.
+Tier files are flat in `docs/roadmap/` alongside this document.
 
 ADRs are law. If this document contradicts an ADR, the ADR wins.
 
@@ -60,13 +60,13 @@ These are closed. Do not re-open without an ADR.
 
 Parallel tracks are marked **[parallel ok]**. Sequential dependencies are marked with their gate condition.
 
-Tier files: `docs/wip/tiers/tier-N-*.md`
+Tier files: `docs/roadmap/tier-N-*.md`
 
 ---
 
 ### Tier 0 — Proto Contracts + Proto Fix
 
-**Detail:** `tiers/tier-0-proto-contracts.md`
+**Detail:** `tier-0-proto-contracts.md`
 
 Fix `SetArmedRequest.force` field removal before codegen. Confirm buf lint passes.
 
@@ -76,7 +76,7 @@ Fix `SetArmedRequest.force` field removal before codegen. Confirm buf lint passe
 
 ### Tier 1 — Pure Domain Logic [parallel ok: Go + TS simultaneously]
 
-**Detail:** `tiers/tier-1-pure-domain-logic.md`
+**Detail:** `tier-1-pure-domain-logic.md`
 
 Go: gomavlib codec wrapper + message decode → TelemetryEvent (18 receive families).
 TS: all resolver functions + sampleFromEvent shim. No sockets, no goroutines, no Redis.
@@ -87,7 +87,7 @@ TS: all resolver functions + sampleFromEvent shim. No sockets, no goroutines, no
 
 ### Tier 2 — Parity Apparatus + Test Vectors [parallel ok with Tier 1]
 
-**Detail:** `tiers/tier-2-parity-apparatus.md`
+**Detail:** `tier-2-parity-apparatus.md`
 
 Go capability matrix (18 receive + 11 send + framing cases). TS known-answer fixture tables. Golden byte migration from flight-path-hud.
 
@@ -97,7 +97,7 @@ Go capability matrix (18 receive + 11 send + framing cases). TS known-answer fix
 
 ### Tier 3 — Codegen Infrastructure
 
-**Detail:** `tiers/tier-3-codegen.md`
+**Detail:** `tier-3-codegen.md`
 
 `buf.gen.yaml` → Go stubs in `internal/gen/`, TS client in `frontend/src/gen/`. CI gates. Commit generated files.
 
@@ -107,7 +107,7 @@ Go capability matrix (18 receive + 11 send + framing cases). TS known-answer fix
 
 ### Tier 4 — Bridge Core (pure fold, injected clock)
 
-**Detail:** `tiers/tier-4-bridge-core.md`
+**Detail:** `tier-4-bridge-core.md`
 
 Vehicle fold, route table, fleet:active SET. Docker Compose scaffolding with multi-stage SITL Dockerfile **[parallel ok with pure code]**.
 
@@ -117,7 +117,7 @@ Vehicle fold, route table, fleet:active SET. Docker Compose scaffolding with mul
 
 ### Tier 5 — Transport Adapter + Live Bridge
 
-**Detail:** `tiers/tier-5-transport-live.md`
+**Detail:** `tier-5-transport-live.md`
 
 UDP transport, Redis client, GCS heartbeat goroutine, goroutine supervision, /healthz. First live SITL connection.
 
@@ -129,7 +129,7 @@ UDP transport, Redis client, GCS heartbeat goroutine, goroutine supervision, /he
 
 ### Tier 6 — First Connect Services + Track Layer + Telemetry Log
 
-**Detail:** `tiers/tier-6-connect-services.md`
+**Detail:** `tier-6-connect-services.md`
 
 FleetService, TelemetryService, track layer (MAVLink path), TrackService. Frontend adapter context + TelemetryLog component.
 
@@ -141,7 +141,7 @@ FleetService, TelemetryService, track layer (MAVLink path), TrackService. Fronte
 
 ### Tier 7 — Read Protocol Transactions
 
-**Detail:** `tiers/tier-7-read-transactions.md`
+**Detail:** `tier-7-read-transactions.md`
 
 Parameter read/list folds + mission download fold (pure). ParameterService, MissionService. ParametersPanel (read-only), MissionPanel.
 
@@ -153,7 +153,7 @@ Parameter read/list folds + mission download fold (pure). ParameterService, Miss
 
 ### Tier 8 — Write Protocol Transactions
 
-**Detail:** `tiers/tier-8-write-transactions.md`
+**Detail:** `tier-8-write-transactions.md`
 
 Command registry first. Then ordered by risk: 8a message interval → 8b param write → 8c mission upload → 8d mode change → 8e arm/disarm → MapPanel (required before 8f) → 8f guided reposition → 8g guided workflow lifecycle.
 
@@ -165,7 +165,7 @@ Command registry first. Then ordered by risk: 8a message interval → 8b param w
 
 ### Tier 9 — Additional Protocol Adapters
 
-**Detail:** `tiers/tier-9-protocol-adapters.md`
+**Detail:** `tier-9-protocol-adapters.md`
 
 ADS-B (MAVLink ADSB_VEHICLE + dump1090/Beast) and Meshtastic adapters. Both normalize to Track proto. Map renders all sources without importing MAVLink.
 
@@ -175,7 +175,7 @@ ADS-B (MAVLink ADSB_VEHICLE + dump1090/Beast) and Meshtastic adapters. Both norm
 
 ### Tier 10 — UI Composition
 
-**Detail:** `tiers/tier-10-ui-composition.md`
+**Detail:** `tier-10-ui-composition.md`
 
 Base component modules → trusted instrument tier → composed layout tier. Instruments not scheduled until resolvers proven at logic + service layer.
 
