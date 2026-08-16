@@ -1,7 +1,7 @@
 version: v2
 modules:
   - path: .
-    name: buf.build/ligma-gcs/proto
+    name: buf.build/yalb-gcs/proto
 lint:
   use:
     - STANDARD
