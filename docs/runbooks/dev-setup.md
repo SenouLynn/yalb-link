@@ -40,6 +40,16 @@ make gate-tier-1    # codec + resolver tests          (from Tier 1 onward)
 make gate-tier-2    # capability matrix               (from Tier 2 onward)
 ```
 
+Two build paths, deliberately:
+
+```sh
+make test           # fast local loop — go test + vitest via their own runners
+make bazel-test     # checkpoint signal — same tests, pinned toolchains, both
+                    # languages, nothing depending on what you have installed
+```
+
+They should never disagree. If they do, trust Bazel.
+
 `make help` lists everything.
 
 ## Regenerating protos
@@ -76,10 +86,18 @@ the working directory, so `cd proto && buf breaking --against '.git#...'` looks 
 compared ref. `make proto-breaking` has the correct invocation; use it rather than
 retyping.
 
-**`bazel test //...` exits 4 until Tier 1.** "No test targets were found" is a real
-error code, not a pass. CI runs `bazel build //...` until the first test lands.
+**`bazel build //frontend:typecheck` does not typecheck anything.** `ts_project` runs
+tsc in a separate action whose outputs live in the `typecheck` output group; building
+the default outputs succeeds with type errors in the tree. The real target is
+`//frontend:typecheck_typecheck_test`, which `bazel test //...` picks up.
 
-**rules_go must keep pace with the Go SDK.** rules_go 0.52.0 passes
-`GOEXPERIMENT=coverageredesign`, which Go 1.25 removed, so the stdlib build fails with
-`unknown GOEXPERIMENT coverageredesign`. If you bump the Go version in `go.mod` and
-`MODULE.bazel`, bump `rules_go` with it.
+**Toolchain versions are coupled — bump them as a batch.** rules_go ↔ Go SDK ↔
+gazelle, and aspect_rules_js ↔ Bazel version. rules_go 0.52.0 passes
+`GOEXPERIMENT=coverageredesign`, removed in Go 1.25, so the stdlib build fails with an
+error that names neither rules_go nor the SDK. aspect_rules_js 3.x declares
+`bazel_compatibility = [">=7.6.0"]`. Read ADR-0006 before attempting an upgrade, and
+check a ruleset's `bazel_compatibility` on the BCR before adding it.
+
+**Do not put build outputs under `node_modules/`.** Bazel materialises that tree from
+`pnpm-lock.yaml` and cannot also accept outputs into it — this is why
+`tsBuildInfoFile` lives at `frontend/tsconfig.app.tsbuildinfo`.

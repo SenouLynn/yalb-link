@@ -207,10 +207,18 @@ make gate-tier-3
 - `go build ./internal/gen/...` passes
 - `pnpm typecheck` passes
 - `bazel build //internal/gen/...` passes
+- `bazel test //frontend:vitest_test //frontend:typecheck_typecheck_test` passes
 - `buf lint` passes
 - `buf breaking` wired in CI with `fetch-depth: 0`
 
-**Known gap:** the frontend is not under Bazel. `# gazelle:exclude frontend` is set,
-and `rules_js` + pnpm lockfile integration + a vitest runner is a separate piece of
-work. ADR-0001 asks for one build system across all languages, so this is a real
-outstanding item, not a decision — `pnpm` is the frontend build until it is done.
+**The frontend is under Bazel too.** `aspect_rules_js` materialises `node_modules`
+from `pnpm-lock.yaml` (the lockfile stays the source of truth, as `go.mod` does for
+Go), `ts_project` typechecks `src/` including the generated Connect types, and
+`vitest` runs as a Bazel test. `frontend/BUILD.bazel` is hand-written —
+`# gazelle:exclude frontend` keeps gazelle, which only understands Go, away from it.
+
+Two traps worth knowing, both of which pass while doing nothing (see ADR-0006 §4):
+`bazel build //frontend:typecheck` does **not** run tsc — typechecking lives in a
+separate output group, and the real gate is the generated
+`//frontend:typecheck_typecheck_test`. And a vitest target with no test files
+passes by finding nothing to run.

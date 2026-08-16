@@ -62,10 +62,25 @@ Findings and full reasoning: `docs/roadmap/tier-0-3-adversarial-review.md`.
 - `MODULE.bazel.lock` committed; `make bazel-tidy` runs go mod tidy → gazelle →
   bazel mod tidy in that order
 - Generated stubs committed (`internal/gen`, `frontend/src/gen`) — Tier 3 executed
-- `bazel test //...` exits 4 (no test targets) until Tier 1; CI runs `bazel build`
-  until then, and the Makefile says so rather than swallowing the code
-- Known gap: the frontend is not under Bazel. `rules_js` + pnpm + a vitest runner is
-  separate work; `pnpm` remains the frontend build
+- **Frontend under Bazel** — `aspect_rules_js` 3.4.0 + `aspect_rules_ts` 3.10.0.
+  `npm_translate_lock` reads `frontend/pnpm-lock.yaml`, so the lockfile stays the source
+  of truth for JS versions the way go.mod is for Go. `ts_project` typechecks src
+  including the generated Connect types; `vitest` runs as a Bazel test.
+  `bazel test //...` is now one signal across both languages
+- Bazel 7.4.1 → **8.7.0** — forced by `aspect_rules_js`'s
+  `bazel_compatibility = [">=7.6.0"]`
+- `tsBuildInfoFile` moved out of `node_modules/.tmp/` — Bazel materialises that tree
+  from the lockfile and cannot also own outputs in it
+- Opted out of `aspect_tools_telemetry` in `.bazelrc`; it arrived transitively with
+  `aspect_rules_js` and announced it would begin collecting usage data
+- Added `frontend/src/codegen.smoke.test.ts` — round-trips a generated `TelemetryEvent`
+  through binary. Typechecking proves the generated code compiles; this proves it loads
+  and works at runtime, and gives the vitest target something real to run
+- **ADR-0006 — Toolchain Version Coupling and Dependency Risk.** Records the five-step
+  forced-upgrade chain, the coupling table (rules_go ↔ Go SDK ↔ gazelle,
+  aspect_rules_js ↔ Bazel, npm_translate_lock ↔ pnpm lockfile format, protobuf-es major
+  ↔ buf plugin set), and the rule that a gate is not trusted until it has been made to
+  fail on purpose — two gates here passed while checking nothing
 
 **Build:**
 - `proto/buf.gen.yaml` added — v2 `remote:` plugins, no `connectrpc/es` (protobuf-es v2
