@@ -49,7 +49,11 @@ test-go: ## Go tests with the race detector
 test-ts: ## Frontend logic tests
 	cd frontend && $(PNPM) vitest run
 
-test: test-go test-ts ## Both suites
+test: test-go test-ts ## Both suites via their native runners
+
+# `make test` is the fast local loop. `make bazel-test` is the checkpoint signal:
+# same tests, pinned toolchains, hermetic dependencies, one command across both
+# languages. They should never disagree; if they do, trust bazel.
 
 lint-go: ## golangci-lint
 	golangci-lint run
@@ -68,6 +72,8 @@ gate-tier-3: ## Tier 3: generated stubs exist, compile, and are current
 	test -d frontend/src/gen/gcs/v1 || { echo "FAIL: frontend/src/gen/gcs/v1 missing — run make proto-gen"; exit 1; }
 	$(GO) build ./internal/gen/...
 	cd frontend && $(PNPM) tsc --noEmit
+	bazel build //internal/gen/...
+	bazel test //frontend:vitest_test //frontend:typecheck_typecheck_test
 
 gate-tier-1: ## Tier 1: codec and resolvers pass known-answer tests
 	$(GO) test -race ./internal/codec/...
@@ -79,12 +85,21 @@ gate-tier-2: ## Tier 2: capability matrix complete and fixtures present
 
 # --- bazel ------------------------------------------------------------------
 # ADR-0001 keeps bazel as the hermetic checkpoint signal. go.mod stays the source
-# of truth for versions; gazelle generates BUILD files from it.
+# of truth for Go dependency versions; gazelle generates BUILD files from it.
+#
+# After adding a Go dependency or a new package, run `make bazel-tidy`. Order
+# matters: go mod tidy first (go.mod is upstream of everything), then gazelle to
+# write BUILD files, then bazel mod tidy to sync MODULE.bazel's use_repo list to
+# whatever those BUILD files now reference.
 
-.PHONY: bazel-tidy bazel-test
-bazel-tidy: ## Regenerate BUILD files and MODULE.bazel use_repo entries
-	bazel mod tidy
+.PHONY: bazel-tidy bazel-build bazel-test
+bazel-tidy: ## Sync go.mod -> BUILD files -> MODULE.bazel use_repo
+	$(GO) mod tidy
 	bazel run //:gazelle
+	bazel mod tidy
 
-bazel-test: ## Hermetic test signal
+bazel-build: ## Hermetic build signal
+	bazel build //...
+
+bazel-test: ## Hermetic test signal — Go and frontend, one command
 	bazel test //...

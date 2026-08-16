@@ -1,6 +1,15 @@
 load("@gazelle//:def.bzl", "gazelle")
 
+# buf is the only protobuf generator. Generated Go is committed to internal/gen
+# and compiled by Bazel like any other source. Without this directive gazelle
+# emits proto_library + go_proto_library rules that claim the same importpath as
+# the buf output — two generators racing for one package, which is exactly the
+# drift the committed-generated-files decision exists to prevent.
+# gazelle:proto disable_global
+
 # gazelle:prefix yalb.gcs
+
+# The frontend is not yet under Bazel — see docs/roadmap/tier-3-codegen.md.
 # gazelle:exclude frontend
-# gazelle:exclude internal/gen
+
 gazelle(name = "gazelle")

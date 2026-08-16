@@ -31,7 +31,7 @@ semantics were reproduced.
 |---|---|
 | **Fixed and verified by execution** | B4, B5, B6, BE2, BE4, BE5, F1, F2, F6, P2, P5, P6 |
 | **Fixed in contract or plan** (enforcement lands in its own tier) | B1, B2, B3, B7, B8, N1, N2, N4, N5, BE3, F3, F4, F5, P3, P4 |
-| **Wired, unverified** | BE1 — `go_deps` + gazelle are in `MODULE.bazel` and `BUILD.bazel`, but bazel is not installed on the authoring machine, so `bazel mod tidy` / `bazel test //...` have not been run. Verify on a machine that has it. Frontend-under-Bazel (`rules_js`) is not attempted and remains a known gap. |
+| **Fixed and verified, with caveats** | BE1 — `bazel build //...` passes over 5 targets including the generated proto library and Connect stubs. Required bumping rules_go 0.52.0 → 0.62.0 and gazelle 0.40.0 → 0.52.2 (0.52.0 passes `GOEXPERIMENT=coverageredesign`, removed in Go 1.25), pinning the Go SDK instead of `go_sdk.host()`, and setting `# gazelle:proto disable_global` so gazelle stops emitting a second, broken codegen path. Frontend-under-Bazel (`rules_js`) remains a known gap. |
 | **Stated now, enforced in a later tier** | P1 — the force-arm control is stated on `CommandLong` and in the resolved decisions; the SendCommand allowlist is implemented with the Tier 8 command registry. N3 — the threat model is written into Tier 4; `InKey` and the bind-address change land with the live transport in Tier 5. |
 
 Decisions taken where the review left a choice open:
@@ -40,7 +40,7 @@ Decisions taken where the review left a choice open:
   than renaming ~40 messages. Scoping per file rather than module-wide is what
   surfaced `TrackAffiliation`, a GCS-native enum genuinely missing its `_UNSPECIFIED`
   zero value.
-- **Bazel** — wired rather than deferred; ADR-0001 is left intact.
+- **Bazel** — wired rather than deferred; ADR-0001 is left intact. `bazel build //...` is green and wired into CI; `bazel test //...` becomes the gate when Tier 1 adds the first test target.
 - **Tier numbering** — numbers kept as stable identifiers, sequence stated explicitly
   (0 → 3 → 1 ∥ 2). Renaming four files and every cross-reference was judged worse
   churn than one explicit sequence line.

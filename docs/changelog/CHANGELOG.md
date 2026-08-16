@@ -47,15 +47,36 @@ Findings and full reasoning: `docs/roadmap/tier-0-3-adversarial-review.md`.
 - `.golangci.yml` migrated to the v2 schema; the previous file used the v1
   `linters-settings` key and was rejected outright, so none of its settings applied
 
+**Bazel (ADR-0001's hermetic signal, now actually running):**
+- `bazel build //...` green over 5 targets, including the generated proto library and
+  Connect stubs; wired into CI with a BUILD-files-are-current check
+- `rules_go` 0.52.0 → **0.62.0**, `gazelle` 0.40.0 → **0.52.2**. The pinned versions
+  predated the host toolchain: rules_go 0.52.0 passes `GOEXPERIMENT=coverageredesign`,
+  which Go 1.25 removed, so the stdlib build failed outright
+- `go_sdk.host()` → `go_sdk.download(version = "1.25.0")`. A host SDK makes the build
+  depend on ambient environment state, which is the thing ADR-0001 exists to avoid
+- `# gazelle:proto disable_global` — gazelle was emitting `proto_library` +
+  `go_proto_library` claiming the same importpath as the committed buf output (two
+  generators for one package), with deps resolving to `//gcs/v1:*` labels that do not
+  exist. buf is the only protobuf generator; Bazel compiles its output as ordinary Go
+- `MODULE.bazel.lock` committed; `make bazel-tidy` runs go mod tidy → gazelle →
+  bazel mod tidy in that order
+- Generated stubs committed (`internal/gen`, `frontend/src/gen`) — Tier 3 executed
+- `bazel test //...` exits 4 (no test targets) until Tier 1; CI runs `bazel build`
+  until then, and the Makefile says so rather than swallowing the code
+- Known gap: the frontend is not under Bazel. `rules_js` + pnpm + a vitest runner is
+  separate work; `pnpm` remains the frontend build
+
 **Build:**
 - `proto/buf.gen.yaml` added — v2 `remote:` plugins, no `connectrpc/es` (protobuf-es v2
   emits service descriptors itself), `--template` required
 - `buf.yaml` lint exceptions scoped per file rather than module-wide
 - `MODULE.bazel` wires gazelle's `go_deps` from `go.mod`; root `BUILD.bazel` adds a
-  gazelle target. Unverified — bazel is not installed on the authoring machine
+  gazelle target
 - vitest, `@bufbuild/protobuf`, `@connectrpc/connect{,-web}` added to the frontend;
   `@/` alias configured in both `vite.config.ts` and `tsconfig.app.json`
 - 7.9 MB compiled `gcs` binary untracked and gitignored
+- `docs/runbooks/dev-setup.md` — toolchain install, gate commands, and the gotchas
 
 **Docs:**
 - Build sequence changed to **0 → 3 → (1 ∥ 2)** — codegen depends on nothing in Tiers 1–2,

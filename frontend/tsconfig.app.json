@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    // Neutral path: node_modules/ is materialised by Bazel from pnpm-lock and
+    // cannot also hold build outputs. Both pnpm and Bazel read this one config.
+    "tsBuildInfoFile": "./tsconfig.app.tsbuildinfo",
     "target": "ES2020",
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],

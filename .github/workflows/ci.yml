@@ -66,6 +66,31 @@ jobs:
         with:
           version: latest
 
+  bazel:
+    # ADR-0001's hermetic checkpoint, covering both languages. Nothing here
+    # depends on what happens to be installed on the runner: the Go SDK is pinned
+    # in MODULE.bazel, Go dependency versions come from go.mod via gazelle's
+    # go_deps, and JS dependency versions come from pnpm-lock.yaml via
+    # npm_translate_lock. The go/ and frontend/ jobs above are the fast native
+    # signal; this is the one that has to be right.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bazel-contrib/setup-bazel@0.9.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+      - run: bazel build //...
+      - run: bazel test //...
+      - name: BUILD files are current
+        # gazelle is deterministic; a diff here means someone added a package or
+        # a dependency without running `make bazel-tidy`. Scoped to BUILD files so
+        # the failure message points at the cause.
+        run: |
+          bazel run //:gazelle
+          git diff --exit-code -- '*BUILD.bazel' 'MODULE.bazel'
+
   frontend:
     runs-on: ubuntu-latest
     defaults:

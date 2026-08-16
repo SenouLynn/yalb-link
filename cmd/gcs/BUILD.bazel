@@ -1,8 +1,15 @@
-load("@rules_go//go:def.bzl", "go_binary")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 go_binary(
     name = "gcs",
-    srcs = ["main.go"],
+    embed = [":gcs_lib"],
     importpath = "yalb.gcs/cmd/gcs",
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "gcs_lib",
+    srcs = ["main.go"],
+    importpath = "yalb.gcs/cmd/gcs",
+    visibility = ["//visibility:private"],
 )

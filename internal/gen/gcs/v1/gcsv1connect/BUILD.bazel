@@ -1,0 +1,12 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "gcsv1connect",
+    srcs = ["services.connect.go"],
+    importpath = "yalb.gcs/internal/gen/gcs/v1/gcsv1connect",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/gen/gcs/v1:gcs",
+        "@com_connectrpc_connect//:connect",
+    ],
+)

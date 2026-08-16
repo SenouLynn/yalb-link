@@ -108,9 +108,18 @@ Connect stubs land in a `gcsv1connect/` subpackage, and there is exactly one bec
 only `services.proto` declares services. Do not expect `telemetry.connect.go` /
 `commands.connect.go` — that layout assumes services spread across files.
 
-**Validation:** `go build ./internal/gen/...` passes. Verified that the generated
-Connect stub imports `yalb.gcs/internal/gen/gcs/v1` and compiles — which is the
-check that `go_package` matches the module path.
+**Validation:** `go build ./internal/gen/...` and `bazel build //internal/gen/...`
+both pass. Verified that the generated Connect stub imports
+`yalb.gcs/internal/gen/gcs/v1` and compiles — which is the check that `go_package`
+matches the module path.
+
+**Bazel compiles this as ordinary Go source.** `make bazel-tidy` runs gazelle, which
+writes a `go_library` over the committed `.pb.go` files plus one for the
+`gcsv1connect/` subpackage. It does **not** generate protos — `# gazelle:proto
+disable_global` is set in the root `BUILD.bazel`. Without it gazelle emits
+`proto_library` + `go_proto_library` rules claiming the same `importpath` as the buf
+output, which is two generators racing for one package (and, as it happens, rules
+whose deps resolve to `//gcs/v1:*` labels that do not exist).
 
 **Rules:**
 - No hand edits in `internal/gen/`. buf owns the directory; `.golangci.yml` excludes
@@ -197,5 +206,11 @@ make gate-tier-3
 - `internal/gen/gcs/v1/` and `frontend/src/gen/gcs/v1/` exist and are committed
 - `go build ./internal/gen/...` passes
 - `pnpm typecheck` passes
+- `bazel build //internal/gen/...` passes
 - `buf lint` passes
 - `buf breaking` wired in CI with `fetch-depth: 0`
+
+**Known gap:** the frontend is not under Bazel. `# gazelle:exclude frontend` is set,
+and `rules_js` + pnpm lockfile integration + a vitest runner is a separate piece of
+work. ADR-0001 asks for one build system across all languages, so this is a real
+outstanding item, not a decision — `pnpm` is the frontend build until it is done.

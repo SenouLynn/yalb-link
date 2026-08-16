@@ -3,3 +3,8 @@ build --incompatible_strict_action_env
 
 test --test_output=errors
 test --build_tests_only
+
+# aspect_rules_js pulls in aspect_tools_telemetry, which phones home with ruleset
+# usage data by default. Opt out at the repo level so it is a property of the
+# checkout rather than of whoever happens to be running the build.
+common --repo_env=ASPECT_TOOLS_TELEMETRY_OPTOUT=1

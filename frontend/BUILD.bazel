@@ -1,0 +1,66 @@
+load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@npm//frontend:vitest/package_json.bzl", vitest_bin = "bin")
+
+exports_files([
+    "package.json",
+    "pnpm-lock.yaml",
+])
+
+# Materialises node_modules from pnpm-lock.yaml. pnpm-lock stays the source of
+# truth for JS dependency versions, the way go.mod does for Go.
+npm_link_all_packages(name = "node_modules")
+
+# Typecheck only — noEmit matches tsconfig.app.json. Bazel does not build the
+# production bundle; vite owns that. What Bazel guarantees here is that the
+# committed generated Connect types and the hand-written source typecheck
+# together, hermetically, against the locked dependency versions.
+ts_project(
+    name = "typecheck",
+    srcs = glob([
+        "src/**/*.ts",
+        "src/**/*.tsx",
+    ]),
+    no_emit = True,
+    ts_build_info_file = "tsconfig.app.tsbuildinfo",
+    tsconfig = "tsconfig.app.json",
+    visibility = ["//visibility:public"],
+    deps = [
+        ":node_modules/@bufbuild/protobuf",
+        ":node_modules/@connectrpc/connect",
+        ":node_modules/@connectrpc/connect-web",
+        ":node_modules/@tanstack/react-query",
+        ":node_modules/@types/node",
+        ":node_modules/@types/react",
+        ":node_modules/@types/react-dom",
+        ":node_modules/react",
+        ":node_modules/react-dom",
+        ":node_modules/vite",
+        ":node_modules/vitest",
+    ],
+)
+
+# vitest under Bazel: same runner, same config, hermetic node and dependencies.
+# `pnpm test` stays available for the fast local loop; this is the checkpoint
+# signal ADR-0001 asks for.
+vitest_bin.vitest_test(
+    name = "vitest_test",
+    size = "small",
+    args = [
+        "run",
+        "--config",
+        "vite.config.ts",
+    ],
+    chdir = package_name(),
+    data = [
+        "package.json",
+        "tsconfig.app.json",
+        "tsconfig.json",
+        "tsconfig.node.json",
+        "vite.config.ts",
+        ":node_modules",
+    ] + glob([
+        "src/**/*.ts",
+        "src/**/*.tsx",
+    ]),
+)

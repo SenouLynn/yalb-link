@@ -12,3 +12,6 @@
 
 # Compiled binaries
 /gcs
+
+# TypeScript incremental build metadata
+/frontend/*.tsbuildinfo
