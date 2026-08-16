@@ -2,7 +2,7 @@
 
 ## Overview
 
-Connect the pure fold to a live UDP socket, wire Redis, and spawn the GCS heartbeat goroutine. This is the first tier with goroutines in the codebase. The pipeline goes: UDP socket → frame codec → message decoder → router → vehicle fold → Redis. Every boundary is a typed channel with an explicit buffer. Shutdown is coordinated; there are zero goroutine leaks past context cancellation.
+Connect the pure fold to a live UDP socket, wire Redis, and configure the GCS heartbeat (gomavlib emits it — Chapter 3). This is the first tier with goroutines of our own in the codebase. The pipeline goes: UDP socket → frame codec → message decoder → router → vehicle fold → Redis. Every boundary is a typed channel with an explicit buffer. Shutdown is coordinated; there are zero goroutine leaks past context cancellation.
 
 ## Dependencies
 
@@ -98,25 +98,46 @@ if err := g.Wait(); err != nil { log.Fatal(err) }
 
 ---
 
-### Chapter 3: GCS Heartbeat Goroutine
+### Chapter 3: GCS Heartbeat — configure, do not write
 
-**Goal:** Send `HEARTBEAT` at 1 Hz per discovered vehicle. Without this, ArduPilot GCS failsafe fires within 5 seconds and silent-rejects guided commands.
+**Goal:** Emit `HEARTBEAT` at 1 Hz on each link. Without it, ArduPilot's GCS failsafe
+fires within a few seconds and silently rejects guided commands.
 
-**File:** `internal/vehicle/heartbeat.go`
+**There is no heartbeat file to write.** gomavlib already does this. Verified against
+v3.3.5 `node.go`: `HeartbeatDisable` defaults to *false*, `HeartbeatPeriod` defaults
+to 5s, `HeartbeatSystemType` defaults to `6` (MAV_TYPE_GCS) and
+`HeartbeatAutopilotType` to `0` (MAV_AUTOPILOT_GENERIC). The only change needed is
+the rate:
 
-**Behavior:**
-- Spawned once per vehicle, on first received HEARTBEAT from that vehicle
-- `sync.Once` guard in the vehicle goroutine — two rapid HEARTBEATs from the same vehicle must not spawn two goroutines
-- Ticks at 1 Hz using `time.NewTicker(time.Second)`
-- On each tick: encode `common.MessageHeartbeat{Type: 6, Autopilot: 0, BaseMode: 0, CustomMode: 0, SystemStatus: 4}` via gomavlib node with sysId=255, compId=190
-- Push encoded bytes to transport send channel with vehicle's return address from route table
-- Goroutine exits when vehicle's context is cancelled (vehicle lost or main shutdown)
+```go
+node := &gomavlib.Node{
+    // ...
+    HeartbeatDisable: false,
+    HeartbeatPeriod:  time.Second,
+    OutSystemID:      255,
+    OutComponentID:   190,
+}
+```
 
-**Why not in the transport layer:** The heartbeat is per-vehicle, not per-socket. A single socket may serve multiple vehicles; each vehicle needs its own 1 Hz heartbeat to its own return address.
+**Per link, not per vehicle.** The earlier plan called for a goroutine per discovered
+vehicle with a `sync.Once` guard. That is wrong twice. It double-emits, because the
+library's heartbeat is already running unless disabled. And the cardinality is wrong:
+HEARTBEAT is a node-level broadcast announcing *this GCS* on a link, not a message
+addressed to a peer. Twenty vehicles on the shared `0.0.0.0:14550` socket would
+produce twenty identical frames per second from (255,190) — on a 57.6 kbps SiK link
+roughly 400 B/s of pure duplication in the scarce direction, inflating
+`RADIO_STATUS.txbuf`, which is the back-pressure signal `fleet.proto` documents as
+the most actionable field.
+
+gomavlib's per-channel heartbeat already has the right cardinality. Use it.
 
 **Validation procedure (required for exit gate):**
-1. Stop heartbeat goroutine (or don't start it) → send `MAV_CMD_COMPONENT_ARM_DISARM` → confirm STATUSTEXT "GCS Failsafe" or COMMAND_ACK with result DENIED
-2. Start heartbeat goroutine → send same command → confirm COMMAND_ACK ACCEPTED
+1. `HeartbeatDisable: true` → send `MAV_CMD_COMPONENT_ARM_DISARM` → confirm STATUSTEXT
+   "GCS Failsafe" or COMMAND_ACK with result DENIED
+2. `HeartbeatDisable: false, HeartbeatPeriod: time.Second` → send the same command →
+   confirm COMMAND_ACK ACCEPTED
+3. Capture 10s of traffic with one vehicle connected, then with two. The GCS heartbeat
+   count must not scale with vehicle count.
 
 ---
 

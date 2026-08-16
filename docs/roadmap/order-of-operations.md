@@ -166,7 +166,7 @@ Vehicle fold, route table, fleet:active SET. Docker Compose scaffolding with mul
 
 **Detail:** `tier-5-transport-live.md`
 
-UDP transport, Redis client, GCS heartbeat goroutine, goroutine supervision, /healthz. First live SITL connection.
+UDP transport, Redis client, GCS heartbeat configured on the gomavlib node (not hand-rolled), goroutine supervision, /healthz. First live SITL connection.
 
 **Gate:** Tier 4 fold + Docker Compose complete.
 
