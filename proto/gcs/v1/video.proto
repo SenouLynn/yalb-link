@@ -5,7 +5,7 @@ package gcs.v1;
 import "gcs/v1/track.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // VideoStreamType identifies the transport/encoding stack of a video stream.
 // The GCS backend manages the control plane; video data flows over the

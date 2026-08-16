@@ -5,7 +5,7 @@ package gcs.v1;
 import "gcs/v1/track.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // ChatOrigin identifies which protocol/adapter a message arrived on.
 // The same channel may receive messages from multiple origins simultaneously.

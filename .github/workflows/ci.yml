@@ -1,0 +1,84 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  proto:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # buf breaking resolves .git#branch=origin/main from local history.
+          # The default fetch-depth of 1 leaves that ref unresolvable, and the
+          # failure mode is a gate that reports success on every PR.
+          fetch-depth: 0
+
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ github.token }}
+
+      - name: buf lint
+        run: buf lint proto
+
+      - name: tier 0 contract gate
+        run: ./scripts/check-tier-0.sh
+
+      - name: buf breaking
+        if: github.event_name == 'pull_request'
+        # Run from the repo root: the .git input is resolved relative to the
+        # working directory, so `cd proto` makes buf look for proto/.git.
+        # subdir=proto is required or imports do not resolve in the ref.
+        run: buf breaking proto --against '.git#branch=origin/main,subdir=proto'
+
+  proto-gen-freshness:
+    # Advisory only. This step runs `buf generate`, which fetches remote plugins
+    # from the BSR. A BSR outage would otherwise block every PR — an external
+    # dependency has no business gating the pipeline. Read the annotation; if it
+    # is red, run `make proto-gen` and commit the result.
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-setup-action@v1
+        with:
+          github_token: ${{ github.token }}
+      - name: generated stubs are current
+        run: |
+          make proto-gen
+          git diff --exit-code internal/gen/ frontend/src/gen/
+
+  go:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test -race ./...
+      - uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test -- --passWithNoTests

@@ -6,100 +6,103 @@ import "gcs/v1/types.proto";
 import "gcs/v1/vehicle.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // Attitude mirrors ATTITUDE (#30).
 // Angular orientation and body rates in the NED frame.
 message Attitude {
-  VehicleId vehicle_id = 1;
-  uint32 time_boot_ms = 2;  // ms since system boot
+  uint32 time_boot_ms = 1;  // ms since system boot
 
-  float roll_rad = 3;        // roll angle, radians, -pi..+pi
-  float pitch_rad = 4;       // pitch angle, radians, -pi/2..+pi/2
-  float yaw_rad = 5;         // yaw angle, radians, -pi..+pi
+  float roll_rad = 2;        // roll angle, radians, -pi..+pi
+  float pitch_rad = 3;       // pitch angle, radians, -pi/2..+pi/2
+  float yaw_rad = 4;         // yaw angle, radians, -pi..+pi
 
-  float rollspeed_rad_s = 6;   // body frame roll angular rate, rad/s
-  float pitchspeed_rad_s = 7;  // body frame pitch angular rate, rad/s
-  float yawspeed_rad_s = 8;    // body frame yaw angular rate, rad/s
+  float rollspeed_rad_s = 5;   // body frame roll angular rate, rad/s
+  float pitchspeed_rad_s = 6;  // body frame pitch angular rate, rad/s
+  float yawspeed_rad_s = 7;    // body frame yaw angular rate, rad/s
 
-  google.protobuf.Timestamp observed_at = 9;
+  google.protobuf.Timestamp observed_at = 8;
 }
 
 // GlobalPosition mirrors GLOBAL_POSITION_INT (#33).
 // Fused position and velocity estimate from the autopilot.
 // Lat/lon are normalised from degE7 (int32) to degrees (double).
 message GlobalPosition {
-  VehicleId vehicle_id = 1;
-  uint32 time_boot_ms = 2;
+  uint32 time_boot_ms = 1;
 
-  double lat_deg = 3;           // degrees, -90..+90
-  double lon_deg = 4;           // degrees, -180..+180
-  float alt_msl_m = 5;          // altitude MSL, metres
-  float alt_relative_m = 6;     // altitude above home/takeoff, metres
+  double lat_deg = 2;           // degrees, -90..+90
+  double lon_deg = 3;           // degrees, -180..+180
+  float alt_msl_m = 4;          // altitude MSL, metres
+  float alt_relative_m = 5;     // altitude above home/takeoff, metres
 
   // NED velocity components, m/s
-  float vx_m_s = 7;
-  float vy_m_s = 8;
-  float vz_m_s = 9;             // positive = descending
+  float vx_m_s = 6;
+  float vy_m_s = 7;
+  float vz_m_s = 8;             // positive = descending
 
-  uint32 hdg_cdeg = 10;         // vehicle heading, centidegrees (0–35999), UINT16_MAX = unknown
+  uint32 hdg_cdeg = 9;         // vehicle heading, centidegrees (0–35999), UINT16_MAX = unknown
 
-  google.protobuf.Timestamp observed_at = 11;
+  google.protobuf.Timestamp observed_at = 10;
 }
 
 // GpsRaw mirrors GPS_RAW_INT (#24).
 // Raw GPS sensor data before fusion. Use GlobalPosition for fused output.
+//
+// Altitude datum warning: alt_msl_m is above mean sea level. GlobalPosition
+// carries both alt_msl_m and alt_relative_m (above home). A resolver that falls
+// back from GlobalPosition to GpsRaw must not silently substitute MSL for
+// relative altitude — the two differ by field elevation. Carry the reference
+// frame alongside the value.
 message GpsRaw {
-  VehicleId vehicle_id = 1;
-  uint64 time_usec = 2;         // µs since UNIX epoch or system boot
+  uint64 time_usec = 1;         // µs since UNIX epoch or system boot
 
-  GpsFixType fix_type = 3;
-  double lat_deg = 4;           // normalised from degE7
-  double lon_deg = 5;
-  float alt_msl_m = 6;          // normalised from mm
+  GpsFixType fix_type = 2;
+  double lat_deg = 3;           // normalised from degE7
+  double lon_deg = 4;
+  float alt_msl_m = 5;          // normalised from mm
 
-  uint32 eph = 7;               // GPS HDOP * 100 (cm); UINT16_MAX = unknown
-  uint32 epv = 8;               // GPS VDOP * 100 (cm); UINT16_MAX = unknown
-  uint32 vel_cm_s = 9;          // ground speed, cm/s; UINT16_MAX = unknown
-  uint32 cog_cdeg = 10;         // course over ground, centidegrees; UINT16_MAX = unknown
-  uint32 satellites_visible = 11; // 255 = unknown
+  uint32 eph = 6;               // GPS HDOP * 100 (cm); UINT16_MAX = unknown
+  uint32 epv = 7;               // GPS VDOP * 100 (cm); UINT16_MAX = unknown
+  uint32 vel_cm_s = 8;          // ground speed, cm/s; UINT16_MAX = unknown
+  uint32 cog_cdeg = 9;         // course over ground, centidegrees; UINT16_MAX = unknown
+  uint32 satellites_visible = 10; // 255 = unknown
 
-  google.protobuf.Timestamp observed_at = 12;
+  google.protobuf.Timestamp observed_at = 11;
 }
 
 // SystemStatus mirrors SYS_STATUS (#1).
 // Onboard sensor health and power state.
 message SystemStatus {
-  VehicleId vehicle_id = 1;
-
   // Raw MAV_SYS_STATUS_SENSOR bitmasks — interpreted by the firmware adapter.
-  uint32 sensors_present = 2;
-  uint32 sensors_enabled = 3;
-  uint32 sensors_health = 4;
+  uint32 sensors_present = 1;
+  uint32 sensors_enabled = 2;
+  uint32 sensors_health = 3;
 
-  uint32 load_d_pct = 5;          // CPU load, d% (100 = 1%)
-  uint32 voltage_battery_mv = 6;  // mV; UINT16_MAX = unknown
-  int32 current_battery_ca = 7;   // cA (10 mA); -1 = unknown
-  int32 battery_remaining_pct = 8; // %; -1 = unknown
-  uint32 drop_rate_comm_c_pct = 9; // communication drop rate, c%
-  uint32 errors_comm = 10;         // communication errors (UART, I2C, etc.)
+  uint32 load_d_pct = 4;          // CPU load, d% (100 = 1%)
+  uint32 voltage_battery_mv = 5;  // mV; UINT16_MAX = unknown
+  int32 current_battery_ca = 6;   // cA (10 mA); -1 = unknown
+  int32 battery_remaining_pct = 7; // %; -1 = unknown
+  uint32 drop_rate_comm_c_pct = 8; // communication drop rate, c%
+  uint32 errors_comm = 9;         // communication errors (UART, I2C, etc.)
 
-  google.protobuf.Timestamp observed_at = 11;
+  google.protobuf.Timestamp observed_at = 10;
 }
 
 // VfrHud mirrors VFR_HUD (#74).
 // Values intended for a traditional flight HUD display.
 message VfrHud {
-  VehicleId vehicle_id = 1;
+  float airspeed_m_s = 1;    // current indicated airspeed, m/s
+  float groundspeed_m_s = 2; // current ground speed, m/s
+  // Current heading, degrees. int16_t on the wire (MAVLink documents 0–360);
+  // ArduPilot may report negative values, so consumers must normalise with
+  // ((h % 360) + 360) % 360. There is no unknown sentinel on this field —
+  // UINT16_MAX applies to GlobalPosition.hdg_cdeg and GpsRaw.cog_cdeg, not here.
+  int32 heading_deg = 3;
+  uint32 throttle_pct = 4;   // throttle setting, % (0–100)
+  float alt_msl_m = 5;       // current altitude MSL, m
+  float climb_m_s = 6;       // current climb rate, m/s
 
-  float airspeed_m_s = 2;    // current indicated airspeed, m/s
-  float groundspeed_m_s = 3; // current ground speed, m/s
-  int32 heading_deg = 4;     // current heading, degrees (0–359)
-  uint32 throttle_pct = 5;   // throttle setting, % (0–100)
-  float alt_msl_m = 6;       // current altitude MSL, m
-  float climb_m_s = 7;       // current climb rate, m/s
-
-  google.protobuf.Timestamp observed_at = 8;
+  google.protobuf.Timestamp observed_at = 7;
 }
 
 // NamedValueFloat mirrors NAMED_VALUE_FLOAT (#252).
@@ -107,89 +110,83 @@ message VfrHud {
 // variables, and any arbitrary float the firmware wants to expose.
 // name is a null-terminated ASCII key, max 10 chars.
 message NamedValueFloat {
-  VehicleId vehicle_id = 1;
-  uint32 time_boot_ms = 2;
-  string name = 3;
-  float value = 4;
-  google.protobuf.Timestamp observed_at = 5;
+  uint32 time_boot_ms = 1;
+  string name = 2;
+  float value = 3;
+  google.protobuf.Timestamp observed_at = 4;
 }
 
 // NamedValueInt mirrors NAMED_VALUE_INT (#251).
 message NamedValueInt {
-  VehicleId vehicle_id = 1;
-  uint32 time_boot_ms = 2;
-  string name = 3;
-  int32 value = 4;
-  google.protobuf.Timestamp observed_at = 5;
+  uint32 time_boot_ms = 1;
+  string name = 2;
+  int32 value = 3;
+  google.protobuf.Timestamp observed_at = 4;
 }
 
 // StatusText mirrors STATUSTEXT (#253).
 // Autopilot log messages — arm/disarm events, calibration feedback, warnings.
 // Chunked messages (id > 0, chunk_seq > 0) must be reassembled before display.
 message StatusText {
-  VehicleId vehicle_id = 1;
-  MavSeverity severity = 2;
-  string text = 3;       // up to 50 chars; may be one chunk of a longer message
-  uint32 id = 4;         // unique ID for chunk reassembly; 0 = not chunked
-  uint32 chunk_seq = 5;  // chunk index; 0 = first or only
-  google.protobuf.Timestamp observed_at = 6;
+  MavSeverity severity = 1;
+  string text = 2;       // up to 50 chars; may be one chunk of a longer message
+  uint32 id = 3;         // unique ID for chunk reassembly; 0 = not chunked
+  uint32 chunk_seq = 4;  // chunk index; 0 = first or only
+  google.protobuf.Timestamp observed_at = 5;
 }
 
 // NavControllerOutput mirrors NAV_CONTROLLER_OUTPUT (#62).
 // Navigation controller internal state: bearing errors, crosstrack error,
 // waypoint distance. Useful for monitoring precision of path following.
 message NavControllerOutput {
-  VehicleId vehicle_id = 1;
-  float nav_roll_deg = 2;       // roll commanded by nav controller, degrees
-  float nav_pitch_deg = 3;      // pitch commanded, degrees
-  int32 nav_bearing_deg = 4;    // current desired heading, -180..+180
-  int32 target_bearing_deg = 5; // bearing to active waypoint, -180..+180
-  uint32 wp_dist_m = 6;         // distance to active waypoint, metres
-  float alt_error_m = 7;        // altitude error, metres (positive = too high)
-  float aspd_error_m_s = 8;     // airspeed error, m/s
-  float xtrack_error_m = 9;     // crosstrack error, metres
-  google.protobuf.Timestamp observed_at = 10;
+  float nav_roll_deg = 1;       // roll commanded by nav controller, degrees
+  float nav_pitch_deg = 2;      // pitch commanded, degrees
+  int32 nav_bearing_deg = 3;    // current desired heading, -180..+180
+  int32 target_bearing_deg = 4; // bearing to active waypoint, -180..+180
+  uint32 wp_dist_m = 5;         // distance to active waypoint, metres
+  float alt_error_m = 6;        // altitude error, metres (positive = too high)
+  float aspd_error_m_s = 7;     // airspeed error, m/s
+  float xtrack_error_m = 8;     // crosstrack error, metres
+  google.protobuf.Timestamp observed_at = 9;
 }
 
 // MissionCurrent mirrors MISSION_CURRENT (#42).
 // Active waypoint index and overall mission execution state.
 // total and mission_state are MAVLink 2 extensions; may be 0/UNKNOWN on older firmware.
 message MissionCurrent {
-  VehicleId vehicle_id = 1;
-  uint32 seq = 2;               // 0-based active waypoint index
-  uint32 total = 3;             // total mission items; 0 = not reported by firmware
-  MissionState mission_state = 4;
-  uint32 mission_mode = 5;      // executor mode, firmware-specific
-  google.protobuf.Timestamp observed_at = 6;
+  uint32 seq = 1;               // 0-based active waypoint index
+  uint32 total = 2;             // total mission items; 0 = not reported by firmware
+  MissionState mission_state = 3;
+  uint32 mission_mode = 4;      // executor mode, firmware-specific
+  google.protobuf.Timestamp observed_at = 5;
 }
 
 // HomePosition mirrors HOME_POSITION (#242).
 // Reference point for relative altitude calculations and RTL behaviour.
 // Lat/lon normalised from degE7; altitude normalised from mm MSL.
 message HomePosition {
-  VehicleId vehicle_id = 1;
-  double lat_deg = 2;
-  double lon_deg = 3;
-  float alt_msl_m = 4;
+  double lat_deg = 1;
+  double lon_deg = 2;
+  float alt_msl_m = 3;
 
   // Local NED position of home relative to the EKF origin, metres.
-  float local_x_m = 5;
-  float local_y_m = 6;
-  float local_z_m = 7;
+  float local_x_m = 4;
+  float local_y_m = 5;
+  float local_z_m = 6;
 
   // Quaternion attitude at home (for landed heading reference). w,x,y,z order.
-  float q_w = 8;
-  float q_x = 9;
-  float q_y = 10;
-  float q_z = 11;
+  float q_w = 7;
+  float q_x = 8;
+  float q_y = 9;
+  float q_z = 10;
 
   // Unit vector in the landing approach direction.
-  float approach_x = 12;
-  float approach_y = 13;
-  float approach_z = 14;
+  float approach_x = 11;
+  float approach_y = 12;
+  float approach_z = 13;
 
-  uint64 time_usec = 15;        // µs since UNIX epoch; 0 = not set
-  google.protobuf.Timestamp observed_at = 16;
+  uint64 time_usec = 14;        // µs since UNIX epoch; 0 = not set
+  google.protobuf.Timestamp observed_at = 15;
 }
 
 // PidTuning mirrors PID_TUNING (#194, ArduPilot dialect).
@@ -198,17 +195,16 @@ message HomePosition {
 // Disable when not actively tuning — the stream is high frequency and
 // consumes significant radio bandwidth.
 message PidTuning {
-  VehicleId vehicle_id = 1;
-  PidTuningAxis axis = 2;
-  float desired = 3;    // desired rate (units: deg/s for angle axes, m/s² for ACCZ)
-  float achieved = 4;   // achieved rate
-  float ff = 5;         // feed-forward contribution
-  float p = 6;          // proportional term output
-  float i = 7;          // integral term output
-  float d = 8;          // derivative term output
-  float s_rate = 9;     // slew rate limit applied (MAVLink 2 extension)
-  float pd_mod = 10;    // P/D modifier from notch filter (MAVLink 2 extension)
-  google.protobuf.Timestamp observed_at = 11;
+  PidTuningAxis axis = 1;
+  float desired = 2;    // desired rate (units: deg/s for angle axes, m/s² for ACCZ)
+  float achieved = 3;   // achieved rate
+  float ff = 4;         // feed-forward contribution
+  float p = 5;          // proportional term output
+  float i = 6;          // integral term output
+  float d = 7;          // derivative term output
+  float s_rate = 8;     // slew rate limit applied (MAVLink 2 extension)
+  float pd_mod = 9;    // P/D modifier from notch filter (MAVLink 2 extension)
+  google.protobuf.Timestamp observed_at = 10;
 }
 
 // BatteryStatus mirrors BATTERY_STATUS (#147).
@@ -216,17 +212,16 @@ message PidTuning {
 // carries per-cell voltages, richer charge state, and multi-battery support.
 // cell_voltages_mv: up to 14 cells; UINT16_MAX (65535) = cell not present.
 message BatteryStatus {
-  VehicleId vehicle_id = 1;
-  uint32 id = 2;                        // battery instance, 0-indexed
-  int32 temperature_cdeg = 3;           // centicelsius; INT16_MAX = unknown
-  repeated uint32 cell_voltages_mv = 4; // per-cell mV; 65535 = not populated
-  int32 current_battery_ca = 5;         // cA (10 mA resolution); -1 = not measured
-  int32 current_consumed_mah = 6;       // mAh consumed since boot; -1 = not provided
-  int32 energy_consumed_hj = 7;         // hJ (100 mJ) consumed; -1 = not provided
-  int32 battery_remaining_pct = 8;      // %; -1 = not provided
-  int32 time_remaining_s = 9;           // estimated seconds remaining; 0 = not provided
-  MavBatteryChargeState charge_state = 10;
-  google.protobuf.Timestamp observed_at = 11;
+  uint32 id = 1;                        // battery instance, 0-indexed
+  int32 temperature_cdeg = 2;           // centicelsius; INT16_MAX = unknown
+  repeated uint32 cell_voltages_mv = 3; // per-cell mV; 65535 = not populated
+  int32 current_battery_ca = 4;         // cA (10 mA resolution); -1 = not measured
+  int32 current_consumed_mah = 5;       // mAh consumed since boot; -1 = not provided
+  int32 energy_consumed_hj = 6;         // hJ (100 mJ) consumed; -1 = not provided
+  int32 battery_remaining_pct = 7;      // %; -1 = not provided
+  int32 time_remaining_s = 8;           // estimated seconds remaining; 0 = not provided
+  MavBatteryChargeState charge_state = 9;
+  google.protobuf.Timestamp observed_at = 10;
 }
 
 // RadioStatus mirrors RADIO_STATUS (#109).
@@ -234,15 +229,14 @@ message BatteryStatus {
 // txbuf_pct is the most actionable field: high fill (> 90%) means the GCS
 // is producing more data than the radio can transmit — reduce stream rates.
 message RadioStatus {
-  VehicleId vehicle_id = 1;
-  uint32 rssi = 2;        // local signal strength, 0–254; 254 = unknown
-  uint32 remrssi = 3;     // remote (vehicle) signal strength, same scale
-  uint32 txbuf_pct = 4;   // transmit buffer fill %; high = back-pressure
-  uint32 noise = 5;        // local noise floor
-  uint32 remnoise = 6;     // remote noise floor
-  uint32 rxerrors = 7;     // accumulated receive errors
-  uint32 fixed = 8;        // packets recovered by error correction
-  google.protobuf.Timestamp observed_at = 9;
+  uint32 rssi = 1;        // local signal strength, 0–254; 254 = unknown
+  uint32 remrssi = 2;     // remote (vehicle) signal strength, same scale
+  uint32 txbuf_pct = 3;   // transmit buffer fill %; high = back-pressure
+  uint32 noise = 4;        // local noise floor
+  uint32 remnoise = 5;     // remote noise floor
+  uint32 rxerrors = 6;     // accumulated receive errors
+  uint32 fixed = 7;        // packets recovered by error correction
+  google.protobuf.Timestamp observed_at = 8;
 }
 
 // EkfStatusReport mirrors EKF_STATUS_REPORT (#193, ArduPilot dialect).
@@ -261,20 +255,52 @@ message RadioStatus {
 //   512  EKF_PRED_POS_HORIZ_ABS   predicted horiz pos (absolute) good
 //   1024 EKF_UNINITIALIZED        filter not yet initialised — do not fly
 message EkfStatusReport {
-  VehicleId vehicle_id = 1;
-  uint32 flags = 2;                   // EKF_STATUS_FLAGS bitmask
-  float velocity_variance = 3;
-  float pos_horiz_variance = 4;
-  float pos_vert_variance = 5;
-  float compass_variance = 6;
-  float terrain_alt_variance = 7;
-  float airspeed_variance = 8;        // MAVLink 2 extension; 0 if not reported
-  google.protobuf.Timestamp observed_at = 9;
+  uint32 flags = 1;                   // EKF_STATUS_FLAGS bitmask
+  float velocity_variance = 2;
+  float pos_horiz_variance = 3;
+  float pos_vert_variance = 4;
+  float compass_variance = 5;
+  float terrain_alt_variance = 6;
+  float airspeed_variance = 7;        // MAVLink 2 extension; 0 if not reported
+  google.protobuf.Timestamp observed_at = 8;
+}
+
+// TelemetryPayloadType names each variant of the TelemetryEvent oneof.
+// Used by StreamTelemetryRequest to filter a subscription server-side.
+// Values correspond 1:1 to the oneof field numbers in TelemetryEvent.
+enum TelemetryPayloadType {
+  TELEMETRY_PAYLOAD_TYPE_UNSPECIFIED = 0;
+  TELEMETRY_PAYLOAD_TYPE_ATTITUDE = 1;
+  TELEMETRY_PAYLOAD_TYPE_GLOBAL_POSITION = 2;
+  TELEMETRY_PAYLOAD_TYPE_GPS_RAW = 3;
+  TELEMETRY_PAYLOAD_TYPE_VFR_HUD = 4;
+  TELEMETRY_PAYLOAD_TYPE_NAV_CONTROLLER_OUTPUT = 5;
+  TELEMETRY_PAYLOAD_TYPE_SYSTEM_STATUS = 6;
+  TELEMETRY_PAYLOAD_TYPE_BATTERY_STATUS = 7;
+  TELEMETRY_PAYLOAD_TYPE_RADIO_STATUS = 8;
+  TELEMETRY_PAYLOAD_TYPE_EKF_STATUS_REPORT = 9;
+  TELEMETRY_PAYLOAD_TYPE_MISSION_CURRENT = 10;
+  TELEMETRY_PAYLOAD_TYPE_HOME_POSITION = 11;
+  TELEMETRY_PAYLOAD_TYPE_PID_TUNING = 12;
+  TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_FLOAT = 13;
+  TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_INT = 14;
+  TELEMETRY_PAYLOAD_TYPE_STATUS_TEXT = 15;
 }
 
 // TelemetryEvent is the envelope type for all streamed telemetry.
 // The Connect TelemetryService streams these to subscribed clients.
 // Exactly one payload field is set per message.
+//
+// Vehicle identity lives here and nowhere else. Payload messages deliberately
+// carry no vehicle_id: duplicating it per payload doubles the wire cost at
+// telemetry rates and creates two sources of truth that can disagree. The codec
+// reads (system_id, component_id) from the MAVLink frame header once and sets
+// it on the envelope.
+//
+// This envelope carries streaming telemetry only. MAVLink transaction responses
+// (PARAM_VALUE, MISSION_COUNT, MISSION_ITEM_INT, MISSION_ACK, COMMAND_ACK) are
+// not telemetry — they correlate against an in-flight request registry and are
+// carried by ProtocolEvent in protocol.proto.
 message TelemetryEvent {
   VehicleId vehicle_id = 1;
 

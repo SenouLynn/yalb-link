@@ -1,0 +1,6 @@
+load("@gazelle//:def.bzl", "gazelle")
+
+# gazelle:prefix yalb.gcs
+# gazelle:exclude frontend
+# gazelle:exclude internal/gen
+gazelle(name = "gazelle")

@@ -1,3 +1,5 @@
+# golangci-lint v2 schema. Settings live under `linters.settings` in v2 —
+# a top-level `linters-settings:` key is a v1 spelling and is rejected.
 version: "2"
 
 linters:
@@ -35,48 +37,53 @@ linters:
     - funlen
     - gocognit
 
-linters-settings:
-  cyclop:
-    max-complexity: 15
+  settings:
+    cyclop:
+      max-complexity: 15
 
-  funlen:
-    lines: 80
-    statements: 50
+    funlen:
+      lines: 80
+      statements: 50
 
-  gocognit:
-    min-complexity: 20
+    gocognit:
+      min-complexity: 20
 
-  govet:
-    enable-all: true
+    govet:
+      enable-all: true
 
-  exhaustive:
-    default-signifies-exhaustive: true
+    exhaustive:
+      default-signifies-exhaustive: true
 
-  wrapcheck:
-    ignore-sigs:
-      - "errors.New("
-      - "fmt.Errorf("
-      - ".Errorf("
+    wrapcheck:
+      ignore-sigs:
+        - "errors.New("
+        - "fmt.Errorf("
+        - ".Errorf("
 
-  revive:
-    rules:
-      - name: exported
-      - name: var-naming
-      - name: unexported-return
-      - name: error-strings
-      - name: error-return
-      - name: if-return
-      - name: indent-error-flow
-      - name: superfluous-else
-      - name: unused-parameter
-      - name: unreachable-code
-      - name: redefines-builtin-id
+    revive:
+      rules:
+        - name: exported
+        - name: var-naming
+        - name: unexported-return
+        - name: error-strings
+        - name: error-return
+        - name: if-return
+        - name: indent-error-flow
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
 
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+
+  exclusions:
+    # internal/gen is owned by buf; never hand-edited, never linted.
+    paths:
+      - internal/gen
 
 issues:
   max-issues-per-linter: 0

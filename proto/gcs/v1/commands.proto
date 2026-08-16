@@ -6,11 +6,26 @@ import "gcs/v1/types.proto";
 import "gcs/v1/vehicle.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // CommandLong is a GCS-originated COMMAND_LONG (#76) request.
 // param1–param7 semantics are command-specific; see MAVLink common.xml.
 // confirmation increments on each retry; start at 0.
+//
+// SAFETY — this message is the open command surface. Removing
+// SetArmedRequest.force does not close force-arm: any caller able to reach
+// SendCommand can send MAV_CMD_COMPONENT_ARM_DISARM (400) with param2 = 21196
+// directly, and raw_command admits command IDs outside the MavCmd enum. The
+// field removal states intent; it is not the control.
+//
+// The control is server-side validation in CommandService.SendCommand, which
+// MUST:
+//   1. reject command 400 with param2 == 21196 (force-arm magic) outright;
+//   2. reject any command not on an explicit allowlist, including via
+//      raw_command — unknown commands are denied, not passed through;
+//   3. apply the per-command role requirement before dispatch.
+// Implemented with the command registry in Tier 8. Until then no write path
+// is exposed.
 message CommandLong {
   VehicleId target = 1;
   MavCmd command = 2;
@@ -25,7 +40,8 @@ message CommandLong {
   float param7 = 10;
 
   // Populated when command is not in the MavCmd enum.
-  // The backend passes the raw uint32 through without interpretation.
+  // Subject to the same allowlist as `command` — the backend does NOT pass
+  // unrecognised command IDs through to the vehicle.
   uint32 raw_command = 11;
 }
 
@@ -50,8 +66,9 @@ message CommandResult {
 }
 
 // SetArmedRequest arms or disarms the vehicle via MAV_CMD_COMPONENT_ARM_DISARM.
-// Force-arm (param2=21196) is never permitted — the field is intentionally absent.
-// Callers cannot bypass pre-arm checks from the GCS.
+// Force-arm (param2=21196) is never permitted. The absence of a force field
+// states that intent; enforcement is the SendCommand allowlist described on
+// CommandLong above, which this RPC shares.
 message SetArmedRequest {
   VehicleId target = 1;
   bool arm = 2;

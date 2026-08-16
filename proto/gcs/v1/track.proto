@@ -6,7 +6,7 @@ import "gcs/v1/types.proto";
 import "gcs/v1/vehicle.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // NodeProtocol identifies which adapter produced a Track.
 // A single physical device may appear under multiple protocols simultaneously
@@ -45,12 +45,17 @@ enum TrackType {
 }
 
 // TrackAffiliation follows MIL-STD-2525 / CoT conventions for situational awareness.
+// This is a GCS-native enum, not a protocol mirror, so zero means "not set".
+// UNKNOWN is a deliberate classification (observed, classified, still unknown)
+// and must stay distinguishable from an unpopulated field — the map colours by
+// affiliation and the two cases warrant different treatment.
 enum TrackAffiliation {
-  TRACK_AFFILIATION_UNKNOWN = 0;
-  TRACK_AFFILIATION_PENDING = 1;   // observed but not yet classified
-  TRACK_AFFILIATION_FRIENDLY = 2;
-  TRACK_AFFILIATION_NEUTRAL = 3;
-  TRACK_AFFILIATION_HOSTILE = 4;
+  TRACK_AFFILIATION_UNSPECIFIED = 0; // field not populated by the adapter
+  TRACK_AFFILIATION_UNKNOWN = 1;     // classified, affiliation indeterminate
+  TRACK_AFFILIATION_PENDING = 2;     // observed but not yet classified
+  TRACK_AFFILIATION_FRIENDLY = 3;
+  TRACK_AFFILIATION_NEUTRAL = 4;
+  TRACK_AFFILIATION_HOSTILE = 5;
 }
 
 // TrackEventType classifies lifecycle transitions in the track layer.

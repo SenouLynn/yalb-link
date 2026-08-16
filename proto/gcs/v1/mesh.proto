@@ -5,7 +5,7 @@ package gcs.v1;
 import "gcs/v1/track.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // MeshChannel represents a Meshtastic channel slot (0–7).
 // Channels are identified by index; the name and PSK are configured on-device.

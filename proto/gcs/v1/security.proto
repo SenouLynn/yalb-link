@@ -2,9 +2,10 @@ syntax = "proto3";
 
 package gcs.v1;
 
+import "gcs/v1/auth.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // TlsConfig specifies transport-layer encryption for a network connection.
 // Applied at link open time — zero per-message overhead after handshake.
@@ -49,7 +50,7 @@ message OperatorContext {
   string operator_id = 1;    // stable subject claim from JWT (e.g. Supabase user UUID)
   string display_name = 2;
   string session_id = 3;     // connection-scoped ID for tracing
-  repeated string roles = 4; // e.g. ["operator"], ["admin"], ["observer"]
+  repeated OperatorRole roles = 4; // typed; matches OperatorProfile.roles
 }
 
 // AuditEventType classifies security-relevant actions.

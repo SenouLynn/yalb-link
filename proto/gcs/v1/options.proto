@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package gcs.v1;
+
+import "gcs/v1/auth.proto";
+import "google/protobuf/descriptor.proto";
+
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
+
+// required_role declares the minimum operator role permitted to call an RPC.
+//
+// ADR-0005 requires role enforcement in backend middleware for every RPC. This
+// option is what middleware reads: the check is driven by the method descriptor,
+// not by a hand-maintained method-name table that silently goes stale when an
+// RPC is added.
+//
+// Middleware contract:
+//   - An RPC with no required_role option fails closed (deny). Adding an RPC and
+//     forgetting the annotation makes it unreachable, not public.
+//   - An explicit OPERATOR_ROLE_UNSPECIFIED means the RPC is deliberately public
+//     (pre-authentication). AuthService.ValidateSession is the only such case:
+//     it must answer callers whose token is invalid.
+//   - Roles are ordered: OBSERVER < OPERATOR < ADMIN. A caller satisfies an RPC
+//     if any role in its OperatorContext is at or above the declared level.
+//   - The client cannot assert its own role; roles come from validated JWT claims.
+//
+// Usage:
+//   rpc SetArmed(SetArmedRequest) returns (CommandResult) {
+//     option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+//   }
+extend google.protobuf.MethodOptions {
+  OperatorRole required_role = 50001;
+}

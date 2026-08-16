@@ -2,10 +2,24 @@ syntax = "proto3";
 
 package gcs.v1;
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
-// MavType mirrors MAV_TYPE in common.xml.
+// MavType mirrors MAV_TYPE in common.xml (minimal dialect).
 // Identifies the vehicle class reported in HEARTBEAT.type.
+//
+// This enum is the single source of truth for vehicle classification. Any code
+// that needs to know "is this a fixed-wing airframe" derives it from these
+// generated constants — never from a retyped list of integers. The values were
+// renumbered upstream when the VTOL types were renamed (MAV_TYPE_VTOL_DUOROTOR
+// became MAV_TYPE_VTOL_TAILSITTER_DUOROTOR); a hand-copied table from an older
+// revision silently maps ROCKET(9) and GROUND_ROVER(10) onto KITE and
+// FLAPPING_WING.
+//
+// Airframes that generate lift aerodynamically and therefore have a stall
+// speed: FIXED_WING(1), FLAPPING_WING(16), KITE(17), and the VTOL family
+// (19–25, 47). Note that a VTOL in multicopter mode has no meaningful stall
+// speed — vehicle type alone is the wrong discriminator for a stall gate; use
+// airspeed availability. See tier-1-pure-domain-logic.md.
 enum MavType {
   MAV_TYPE_GENERIC = 0;
   MAV_TYPE_FIXED_WING = 1;
@@ -32,12 +46,31 @@ enum MavType {
   MAV_TYPE_VTOL_FIXEDROTOR = 22;
   MAV_TYPE_VTOL_TAILSITTER = 23;
   MAV_TYPE_VTOL_TILTWING = 24;
+  MAV_TYPE_VTOL_RESERVED5 = 25;
   MAV_TYPE_GIMBAL = 26;
   MAV_TYPE_ADSB = 27;
   MAV_TYPE_PARAFOIL = 28;
   MAV_TYPE_DODECAROTOR = 29;
   MAV_TYPE_CAMERA = 30;
+  MAV_TYPE_CHARGING_STATION = 31;
+  MAV_TYPE_FLARM = 32;
+  MAV_TYPE_SERVO = 33;
+  MAV_TYPE_ODID = 34;
+  MAV_TYPE_DECAROTOR = 35;
+  MAV_TYPE_BATTERY = 36;
   MAV_TYPE_PARACHUTE = 37;
+  MAV_TYPE_LOG = 38;
+  MAV_TYPE_OSD = 39;
+  MAV_TYPE_IMU = 40;
+  MAV_TYPE_GPS = 41;
+  MAV_TYPE_WINCH = 42;
+  MAV_TYPE_GENERIC_MULTIROTOR = 43;
+  MAV_TYPE_ILLUMINATOR = 44;
+  MAV_TYPE_SPACECRAFT_ORBITER = 45;
+  MAV_TYPE_GROUND_QUADRUPED = 46;
+  MAV_TYPE_VTOL_GYRODYNE = 47;
+  MAV_TYPE_GRIPPER = 48;
+  MAV_TYPE_RADIO = 49;
 }
 
 // MavAutopilot mirrors MAV_AUTOPILOT in common.xml.

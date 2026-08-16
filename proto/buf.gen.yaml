@@ -1,0 +1,22 @@
+version: v2
+
+# Managed mode is deliberately off: go_package is declared explicitly in every
+# .proto so the import path is visible where the contract lives, not inferred
+# from generator config.
+
+plugins:
+  - remote: buf.build/protocolbuffers/go
+    out: internal/gen
+    opt: paths=source_relative
+
+  - remote: buf.build/connectrpc/go
+    out: internal/gen
+    opt: paths=source_relative
+
+  # protobuf-es v2 emits message types and service descriptors in one file.
+  # There is no separate connectrpc/es plugin in the v2 line — @connectrpc/connect
+  # v2 consumes the descriptors that this plugin already generates. Adding
+  # buf.build/connectrpc/es here would be a v1-era config.
+  - remote: buf.build/bufbuild/es
+    out: frontend/src/gen
+    opt: target=ts

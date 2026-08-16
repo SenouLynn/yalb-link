@@ -7,7 +7,7 @@ import "gcs/v1/types.proto";
 import "gcs/v1/vehicle.proto";
 import "google/protobuf/timestamp.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // CalibrationRequest initiates a preflight calibration sequence.
 // Translates to MAV_CMD_PREFLIGHT_CALIBRATION (#241) with the appropriate

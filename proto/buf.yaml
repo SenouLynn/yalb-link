@@ -5,8 +5,32 @@ modules:
 lint:
   use:
     - STANDARD
-  except:
-    - FIELD_LOWER_SNAKE_CASE  # MAVLink field names are canonical; we preserve them
+  # Exceptions are scoped to the files that need them, never module-wide, so
+  # GCS-native enums and services keep full checking. Each entry states why.
+  ignore_only:
+    # types.proto mirrors MAVLink enums value-for-value so the codec's mapping is
+    # mechanical and reviewable against common.xml. MAVLink's own names do not
+    # follow buf's conventions: MAV_MISSION_RESULT holds MAV_MISSION_ACCEPTED,
+    # and MAV_TYPE_GENERIC = 0 is a meaningful value, not a placeholder.
+    # Renaming them would break the correspondence the codec depends on.
+    ENUM_VALUE_PREFIX:
+      - gcs/v1/types.proto
+    ENUM_ZERO_VALUE_SUFFIX:
+      - gcs/v1/types.proto
+      # Same reason for the two protocol mirrors in track.proto:
+      # MeshtasticRole mirrors Config.DeviceConfig.Role (CLIENT = 0) and
+      # AdsbEmitterType mirrors ADSB_EMITTER_TYPE (NO_INFO = 0). TrackAffiliation
+      # is GCS-native and does carry an explicit _UNSPECIFIED zero value.
+      - gcs/v1/track.proto
+    # RPCs are named for the MAVLink transaction they perform and take/return the
+    # domain message rather than a Method+Request/Response wrapper: SendCommand
+    # takes a CommandLong because that is what it sends.
+    RPC_REQUEST_STANDARD_NAME:
+      - gcs/v1/services.proto
+    RPC_RESPONSE_STANDARD_NAME:
+      - gcs/v1/services.proto
+    RPC_REQUEST_RESPONSE_UNIQUE:
+      - gcs/v1/services.proto
 breaking:
   use:
     - FILE

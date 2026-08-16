@@ -4,7 +4,7 @@ package gcs.v1;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // OperatorRole controls what a user is permitted to do.
 // Enforced by backend middleware on each RPC — not by the client.

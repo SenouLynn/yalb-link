@@ -9,6 +9,7 @@ import "gcs/v1/commands.proto";
 import "gcs/v1/fleet.proto";
 import "gcs/v1/mesh.proto";
 import "gcs/v1/missions.proto";
+import "gcs/v1/options.proto";
 import "gcs/v1/parameters.proto";
 import "gcs/v1/security.proto";
 import "gcs/v1/telemetry.proto";
@@ -16,27 +17,37 @@ import "gcs/v1/track.proto";
 import "gcs/v1/vehicle.proto";
 import "gcs/v1/video.proto";
 
-option go_package = "ligma-gcs/proto/gcs/v1;gcsv1";
+option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // FleetService manages vehicle discovery and link lifecycle.
 service FleetService {
   // WatchFleet streams FleetEvents as vehicles join, leave, or change state.
   // Immediately emits a VEHICLE_DISCOVERED event for each currently known vehicle
   // so clients bootstrap fleet state without a separate list call.
-  rpc WatchFleet(WatchFleetRequest) returns (stream FleetEvent);
+  rpc WatchFleet(WatchFleetRequest) returns (stream FleetEvent) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // ListVehicles returns the current fleet snapshot from Redis.
   // Use for initial page load; switch to WatchFleet for live updates.
-  rpc ListVehicles(ListVehiclesRequest) returns (ListVehiclesResponse);
+  rpc ListVehicles(ListVehiclesRequest) returns (ListVehiclesResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // ConnectLink opens a new MAVLink transport connection on the backend.
-  rpc ConnectLink(ConnectLinkRequest) returns (ConnectLinkResponse);
+  rpc ConnectLink(ConnectLinkRequest) returns (ConnectLinkResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_ADMIN;
+  }
 
   // DisconnectLink tears down an existing transport connection.
-  rpc DisconnectLink(DisconnectLinkRequest) returns (DisconnectLinkResponse);
+  rpc DisconnectLink(DisconnectLinkRequest) returns (DisconnectLinkResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_ADMIN;
+  }
 
   // WatchLinkStatus streams connection state and quality for all active links.
-  rpc WatchLinkStatus(WatchFleetRequest) returns (stream LinkStatus);
+  rpc WatchLinkStatus(WatchFleetRequest) returns (stream LinkStatus) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 }
 
 // TelemetryService provides real-time telemetry streams per vehicle.
@@ -44,32 +55,46 @@ service TelemetryService {
   // StreamTelemetry pushes TelemetryEvents for the requested vehicle.
   // Each event carries exactly one telemetry payload (see TelemetryEvent.oneof).
   // The stream continues until the client cancels or the link is lost.
-  rpc StreamTelemetry(StreamTelemetryRequest) returns (stream TelemetryEvent);
+  rpc StreamTelemetry(StreamTelemetryRequest) returns (stream TelemetryEvent) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // GetSnapshot returns the last-known aggregated state for a vehicle.
   // Backed by Redis; returns immediately without waiting for fresh telemetry.
-  rpc GetSnapshot(GetSnapshotRequest) returns (VehicleSnapshot);
+  rpc GetSnapshot(GetSnapshotRequest) returns (VehicleSnapshot) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 }
 
 // CommandService sends MAVLink commands and returns ack results.
 service CommandService {
   // SendCommand sends a COMMAND_LONG, retries until ack or timeout,
   // and returns the final CommandResult.
-  rpc SendCommand(CommandLong) returns (CommandResult);
+  rpc SendCommand(CommandLong) returns (CommandResult) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 
   // SetArmed arms or disarms the vehicle.
-  rpc SetArmed(SetArmedRequest) returns (CommandResult);
+  rpc SetArmed(SetArmedRequest) returns (CommandResult) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 
   // SetMode changes the vehicle flight mode.
-  rpc SetMode(SetModeRequest) returns (CommandResult);
+  rpc SetMode(SetModeRequest) returns (CommandResult) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 
   // SetPositionTargetGlobal sends SET_POSITION_TARGET_GLOBAL_INT (#86).
   // No ack — fire-and-forget at 4–10 Hz in GUIDED mode.
   // Returns immediately; caller is responsible for rate limiting.
-  rpc SetPositionTargetGlobal(PositionTargetGlobal) returns (PositionTargetAck);
+  rpc SetPositionTargetGlobal(PositionTargetGlobal) returns (PositionTargetAck) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 
   // SetPositionTargetLocal sends SET_POSITION_TARGET_LOCAL_NED (#84).
-  rpc SetPositionTargetLocal(PositionTargetLocal) returns (PositionTargetAck);
+  rpc SetPositionTargetLocal(PositionTargetLocal) returns (PositionTargetAck) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 }
 
 // CalibrationService runs preflight calibration sequences and streams progress.
@@ -78,46 +103,63 @@ service CalibrationService {
   // CalibrationEvents until complete, failed, or client cancels.
   // For compass: streams MagCalProgress per update, MagCalReport per compass on finish.
   // For all others: streams CalibrationStatusText from intercepted STATUSTEXT messages.
-  rpc StartCalibration(CalibrationRequest) returns (stream CalibrationEvent);
+  rpc StartCalibration(CalibrationRequest) returns (stream CalibrationEvent) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 }
 
 // ParameterService implements the MAVLink parameter protocol.
 service ParameterService {
   // ListParameters triggers PARAM_REQUEST_LIST and streams all PARAM_VALUE
   // responses as they arrive. Ends when param_index == param_count - 1.
-  rpc ListParameters(ListParametersRequest) returns (stream ParameterValue);
+  rpc ListParameters(ListParametersRequest) returns (stream ParameterValue) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // GetParameter fetches a single parameter by name (PARAM_REQUEST_READ).
-  rpc GetParameter(GetParameterRequest) returns (ParameterValue);
+  rpc GetParameter(GetParameterRequest) returns (ParameterValue) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // SetParameter sends PARAM_SET and returns the vehicle's echoed PARAM_VALUE.
-  rpc SetParameter(SetParameterRequest) returns (ParameterValue);
+  rpc SetParameter(SetParameterRequest) returns (ParameterValue) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 }
 
 // MissionService implements the MAVLink mission protocol.
 service MissionService {
-  // UploadMission accepts a stream of MissionItems and executes the full
-  // upload handshake (COUNT → REQUEST → ITEM × N → ACK).
-  rpc UploadMission(stream MissionItem) returns (MissionAck);
+  // UploadMission accepts a complete mission and executes the full upload
+  // handshake (COUNT → REQUEST → ITEM × N → ACK).
+  // Unary, not client-streaming: connect-web cannot call client-streaming
+  // RPCs from a browser. See UploadMissionRequest in missions.proto.
+  rpc UploadMission(UploadMissionRequest) returns (MissionAck) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 
   // DownloadMission executes MISSION_REQUEST_LIST then streams each
   // MISSION_ITEM_INT back to the client in sequence order.
-  rpc DownloadMission(DownloadMissionRequest) returns (stream MissionItem);
+  rpc DownloadMission(DownloadMissionRequest) returns (stream MissionItem) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // ClearMission sends MISSION_CLEAR_ALL and returns the ACK.
-  rpc ClearMission(ClearMissionRequest) returns (MissionAck);
+  rpc ClearMission(ClearMissionRequest) returns (MissionAck) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 
   // SetCurrentItem activates a specific waypoint by sequence number.
-  rpc SetCurrentItem(SetCurrentItemRequest) returns (MissionAck);
+  rpc SetCurrentItem(SetCurrentItemRequest) returns (MissionAck) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 }
 
 // -- Request/response types used only by service definitions above --
 
 message StreamTelemetryRequest {
   VehicleId vehicle_id = 1;
-  // Optional filter: only emit events for these payload types.
-  // Empty list = emit all types.
-  repeated string payload_types = 2; // e.g. "attitude", "global_position"
+  // Server-side subscription filter. Empty = emit all payload types.
+  repeated TelemetryPayloadType payload_types = 2;
 }
 
 message GetSnapshotRequest {
@@ -132,10 +174,14 @@ service TrackService {
   // WatchTracks streams TrackEvents for all matching nodes.
   // On subscription, immediately emits a APPEARED event for each currently known track
   // so clients bootstrap the map without a separate list call.
-  rpc WatchTracks(WatchTracksRequest) returns (stream TrackEvent);
+  rpc WatchTracks(WatchTracksRequest) returns (stream TrackEvent) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // GetTrack returns the last-known track for a node from Redis.
-  rpc GetTrack(GetTrackRequest) returns (Track);
+  rpc GetTrack(GetTrackRequest) returns (Track) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 }
 
 // MeshService manages Meshtastic adapter connections and mesh node state.
@@ -143,17 +189,25 @@ service TrackService {
 // For chat and position, use ChatService and TrackService respectively.
 service MeshService {
   // WatchMeshNodes streams lifecycle events for Meshtastic mesh nodes.
-  rpc WatchMeshNodes(WatchMeshNodesRequest) returns (stream MeshNodeEvent);
+  rpc WatchMeshNodes(WatchMeshNodesRequest) returns (stream MeshNodeEvent) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // ListMeshNodes returns all currently known mesh nodes from Redis.
-  rpc ListMeshNodes(ListMeshNodesRequest) returns (ListMeshNodesResponse);
+  rpc ListMeshNodes(ListMeshNodesRequest) returns (ListMeshNodesResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // SendMeshMessage sends a raw payload to a node or channel on the mesh.
   // For text chat use ChatService.SendMessage.
-  rpc SendMeshMessage(SendMeshMessageRequest) returns (SendMeshMessageResponse);
+  rpc SendMeshMessage(SendMeshMessageRequest) returns (SendMeshMessageResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 
   // WatchMeshPackets streams raw decoded mesh packets for debugging and diagnostics.
-  rpc WatchMeshPackets(WatchMeshPacketsRequest) returns (stream MeshPacket);
+  rpc WatchMeshPackets(WatchMeshPacketsRequest) returns (stream MeshPacket) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_ADMIN;
+  }
 }
 
 // ChatService provides cross-protocol text messaging backed by Redis pub/sub and Streams.
@@ -162,14 +216,20 @@ service MeshService {
 service ChatService {
   // WatchMessages subscribes to one or more channels.
   // Set include_history = true to receive stored messages before live ones.
-  rpc WatchMessages(WatchMessagesRequest) returns (stream ChatMessage);
+  rpc WatchMessages(WatchMessagesRequest) returns (stream ChatMessage) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // SendMessage sends a text message to a channel or specific node.
   // The backend routes it to the appropriate protocol adapter(s).
-  rpc SendMessage(ChatMessageRequest) returns (ChatMessageAck);
+  rpc SendMessage(ChatMessageRequest) returns (ChatMessageAck) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // ListChannels returns known channels with unread counts.
-  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse);
+  rpc ListChannels(ListChannelsRequest) returns (ListChannelsResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 }
 
 // VideoService manages video stream discovery, WebRTC negotiation, and recording.
@@ -178,21 +238,31 @@ service ChatService {
 service VideoService {
   // WatchStreams streams VideoStreamEvents as streams appear, change state, or end.
   // Immediately emits STREAM_APPEARED for each currently active stream on subscribe.
-  rpc WatchStreams(WatchStreamsRequest) returns (stream VideoStreamEvent);
+  rpc WatchStreams(WatchStreamsRequest) returns (stream VideoStreamEvent) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // ExchangeSdp performs the WebRTC offer/answer handshake for a WEBRTC stream.
   // The frontend sends an SDP offer; the backend (GCS media server) returns an SDP answer.
   // ICE candidates are included inline (trickle ICE not supported in this version).
-  rpc ExchangeSdp(SdpOffer) returns (SdpAnswer);
+  rpc ExchangeSdp(SdpOffer) returns (SdpAnswer) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 
   // StartRecording begins recording a stream to persistent storage.
-  rpc StartRecording(StartRecordingRequest) returns (StartRecordingResponse);
+  rpc StartRecording(StartRecordingRequest) returns (StartRecordingResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 
   // StopRecording ends an active recording and returns the completed metadata.
-  rpc StopRecording(StopRecordingRequest) returns (StopRecordingResponse);
+  rpc StopRecording(StopRecordingRequest) returns (StopRecordingResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
+  }
 
   // ListRecordings returns stored recordings filtered by node or time range.
-  rpc ListRecordings(ListRecordingsRequest) returns (ListRecordingsResponse);
+  rpc ListRecordings(ListRecordingsRequest) returns (ListRecordingsResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 }
 
 // AuthService validates operator sessions and returns identity profiles.
@@ -205,11 +275,15 @@ service AuthService {
   // Returns the operator profile on success. Use on app load before showing the UI.
   // This is the only RPC that returns a structured error rather than rejecting outright
   // on an invalid token, so the frontend can distinguish "bad token" from "server error".
-  rpc ValidateSession(ValidateSessionRequest) returns (ValidateSessionResponse);
+  rpc ValidateSession(ValidateSessionRequest) returns (ValidateSessionResponse) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_UNSPECIFIED;
+  }
 
   // GetCurrentUser returns the profile for the authenticated caller.
   // Requires a valid JWT — returns UNAUTHENTICATED if the token is missing or invalid.
-  rpc GetCurrentUser(GetCurrentUserRequest) returns (OperatorProfile);
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (OperatorProfile) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 }
 
 // SecurityService provides the audit log stream.
@@ -220,7 +294,9 @@ service SecurityService {
   // WatchAuditLog streams security-relevant events.
   // Set include_history = true to replay stored events from Redis Streams before live events.
   // Requires admin role.
-  rpc WatchAuditLog(WatchAuditRequest) returns (stream AuditEvent);
+  rpc WatchAuditLog(WatchAuditRequest) returns (stream AuditEvent) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_ADMIN;
+  }
 }
 
 // PositionTargetAck confirms the backend accepted and forwarded the target message.

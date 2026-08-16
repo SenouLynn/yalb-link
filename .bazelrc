@@ -1,2 +1,5 @@
 build --enable_bzlmod
 build --incompatible_strict_action_env
+
+test --test_output=errors
+test --build_tests_only

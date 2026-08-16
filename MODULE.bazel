@@ -1,5 +1,5 @@
 module(
-    name = "ligma_gcs",
+    name = "yalb_gcs",
     version = "0.0.0",
 )
 
@@ -8,3 +8,9 @@ bazel_dep(name = "gazelle", version = "0.40.0")
 
 go_sdk = use_extension("@rules_go//go:extensions.bzl", "go_sdk")
 go_sdk.host()
+
+# Go module dependencies are resolved from go.mod — go.mod stays the single
+# source of truth for versions. After adding a dependency there, run
+# `bazel mod tidy` to regenerate the use_repo list below.
+go_deps = use_extension("@gazelle//:extensions.bzl", "go_deps")
+go_deps.from_file(go_mod = "//:go.mod")
