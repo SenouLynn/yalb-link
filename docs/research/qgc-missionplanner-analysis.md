@@ -23,6 +23,13 @@ LinkInterface (serial/UDP/TCP, per-thread)
 
 Clean transport → protocol → domain separation. Each link runs on its own thread.
 
+> **Scheduling note.** The two patterns marked "we want this" below —
+> `FirmwarePlugin` and `FactSystem` — are endorsed but **not yet scheduled in any
+> tier**. `HeartbeatState.flight_mode_name` is documented as "decoded by the firmware
+> adapter layer", and that layer does not exist, so the field stays empty through
+> Tier 8. Either schedule a minimal ArduCopter mode table in Tier 1 (it is a map
+> literal) or mark the field reserved so no UI is built on it.
+
 ### FirmwarePlugin — the pattern worth lifting
 
 ArduPilot and PX4 share MAVLink but diverge on flight mode enumerations, command behaviors, and parameter naming. QGC isolates all firmware-specific logic behind a `FirmwarePlugin` interface. The `Vehicle` class stays clean. This is a textbook adapter. We want this.
@@ -54,7 +61,14 @@ Plugins via `IPlugin` DLL interface + IronPython scripting. Two extension surfac
 
 ### MAVLink code generation
 
-Both QGC and MP generate typed message structs from the MAVLink XML definitions rather than handwriting them. We do the same — Bazel `genrule` reading `common.xml`, emitting Go structs.
+Both QGC and MP generate typed message structs from the MAVLink XML definitions
+rather than handwriting them. The principle holds; our mechanism differs.
+
+> **Superseded.** We do not run a Bazel `genrule` over `common.xml`. `gomavlib v3`
+> ships pre-generated dialect structs (`common`, `ardupilotmega`) that are exactly
+> this output, already maintained upstream. See the gomavlib decision in
+> `docs/roadmap/order-of-operations.md`. Our codegen pipeline is `buf` over our own
+> `.proto` contracts — a different boundary, not the MAVLink wire format.
 
 ### What they got wrong
 

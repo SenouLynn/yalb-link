@@ -2,13 +2,22 @@
 
 ## Overview
 
-The two most important vertical slices of the system — the Go MAVLink codec and the TypeScript resolver functions — built in isolation from all infrastructure. No sockets, no goroutines, no Redis, no Docker. Both tracks can proceed simultaneously once Tier 0 is merged. The exit gate is comprehensive known-answer testing; nothing moves to Tier 2+ until both pass.
+The two most important vertical slices — the Go MAVLink codec and the TypeScript
+resolvers — built in isolation from infrastructure. No UDP socket, no Redis, no
+Docker. Both tracks proceed simultaneously, and in parallel with Tier 2. The exit
+gate is comprehensive known-answer testing.
+
+Every gomavlib symbol in this document was verified against
+`github.com/bluenviron/gomavlib/v3@v3.3.5`. Where a name here differs from what you
+remember, this document is the one that was checked.
 
 ## Dependencies
 
-- Tier 0 complete (`buf lint` passing, `force` field removed)
-- `gomavlib v3` added to `go.mod`
-- `@bufbuild/protobuf` and `@connectrpc/connect-web` in `frontend/package.json` (or at minimum the TS types for proto messages available via path alias)
+- **Tier 3 complete.** The TS shim imports generated `TelemetryEvent` types. Codegen
+  runs immediately after Tier 0 precisely so this tier never needs a hand-written
+  proto stub kept in sync by hand.
+- `github.com/bluenviron/gomavlib/v3` in `go.mod` (then `bazel mod tidy`).
+- `@bufbuild/protobuf` and `@connectrpc/connect-web` in `frontend/package.json`.
 
 ## Chapters
 
@@ -16,248 +25,359 @@ The two most important vertical slices of the system — the Go MAVLink codec an
 
 ### Chapter 1: Go — gomavlib Node Wrapper
 
-**Goal:** Wrap gomavlib's `Node` type in a testable interface that hides the real socket behind a channel. This allows Tier 1 tests to feed raw bytes without opening a UDP port.
+**Goal:** Wrap gomavlib's `Node` behind a port so tests feed raw bytes without
+opening a UDP port.
 
 **File:** `internal/codec/frame.go`
 
-**Interface:**
+**Port:**
+
 ```go
 type FrameSource interface {
     Events() <-chan gomavlib.Event
-    WriteMessage(msg interface{}) error
+    WriteTo(link LinkID, msg message.Message) error
     Close() error
 }
 ```
 
-**Real implementation:** `UDPFrameSource` wraps a `gomavlib.Node` configured with the ardupilotmega dialect.
+**`WriteTo`, not `WriteMessage`.** gomavlib has no `WriteMessage(msg)`; the API is
+`WriteMessageTo(*Channel, message.Message)`, `WriteMessageAll`, and
+`WriteMessageExcept`. A port shaped `WriteMessage(msg)` can only be satisfied by
+`WriteMessageAll`, which transmits to every channel — every SITL instance, every
+radio link. That means N× uplink bandwidth on the constrained direction, a
+COMMAND_LONG for sysid 2 physically sent over vehicle 1's radio, and two vehicles
+sharing a sysid on different links both acting on it. The destination is part of
+the signature. An unaddressable target is rejected, never broadcast.
 
-**Test implementation:** `ChanFrameSource` wraps a `gomavlib.Node` configured with `gomavlib.EndpointCustomConn` (in-memory io.Pipe) — raw bytes are written to the pipe, gomavlib decodes them through its full frame parser (CRC validation, signing check, dialect struct population), and the resulting `gomavlib.Event` objects emerge from `Events()`. This exercises the real decode path, including CRC_EXTRA. Do not hand-craft `gomavlib.EventFrame` structs directly — that would bypass the codec under test.
+Also note the argument type: `message.Message`, not `interface{}`. The typed port is
+the point.
 
-**gomavlib Node config:**
+**Node configuration.** `gomavlib.NodeConf` and `gomavlib.NewNode` are both marked
+`Deprecated` in v3 ("configuration has been moved inside Node"). `staticcheck`
+SA1019 is enabled in `.golangci.yml`, so the deprecated path fails our own lint
+gate. Configure the struct and call `Initialize()`:
+
 ```go
-gomavlib.NodeConf{
-    Endpoints:      []gomavlib.EndpointConf{...}, // injected by caller
-    Dialect:        ardupilotmega.Dialect,
-    OutVersion:     gomavlib.V2,
-    OutSystemID:    255,
-    OutComponentID: 190,
+node := &gomavlib.Node{
+    Endpoints:        []gomavlib.EndpointConf{...}, // injected by caller
+    Dialect:          ardupilotmega.Dialect,
+    OutVersion:       gomavlib.V2,
+    OutSystemID:      255,
+    OutComponentID:   190,
+
+    // gomavlib sends its own HEARTBEAT unless disabled — see below.
+    HeartbeatDisable: false,
+    HeartbeatPeriod:  time.Second,
 }
+if err := node.Initialize(); err != nil { ... }
+defer node.Close()
 ```
 
-**Key constraint:** The codec package must not import anything above `internal/codec/`. It has no knowledge of Redis, services, or vehicles.
+**The heartbeat is already handled.** `HeartbeatDisable` defaults to *false*, and
+the defaults are `HeartbeatPeriod = 5s`, `HeartbeatSystemType = 6` (MAV_TYPE_GCS),
+`HeartbeatAutopilotType = 0` (MAV_AUTOPILOT_GENERIC) — which is exactly the GCS
+heartbeat we want, at the wrong rate. Set the period and use it. Do **not** add a
+hand-rolled per-vehicle ticker: it double-emits, and heartbeat is a per-link
+broadcast rather than a per-peer message (see the heartbeat cardinality decision in
+`order-of-operations.md`).
+
+**`StreamRequestEnable`** defaults to false. SITL over UDP streams telemetry
+anyway, so Tiers 5–6 will look healthy; a real ArduPilot link may deliver almost
+nothing until SET_MESSAGE_INTERVAL is sent, which is Tier 8a. Leave it false and
+carry the note forward — the first hardware bring-up should not be a surprise.
+
+**Test endpoint.** Use `EndpointCustomClient` with `net.Pipe()`. (`EndpointCustom`
+exists but is deprecated in favour of it; `EndpointCustomConn` does not exist.)
+
+```go
+harness, nodeSide := net.Pipe()
+ep := gomavlib.EndpointCustomClient{
+    Connect: func(context.Context) (net.Conn, error) { return nodeSide, nil },
+    Label:   "test",
+}
+// write golden .bin bytes to `harness`; gomavlib's parser handles STX detection,
+// length extraction, CRC_EXTRA validation and dialect struct population before
+// any test logic sees an event.
+```
+
+Do not hand-craft `gomavlib.EventFrame` structs — that bypasses the codec under test.
+
+**Key constraint:** `internal/codec/` imports nothing above itself. No Redis, no
+services, no vehicle model.
 
 ---
 
-### Chapter 2: Go — Message Decode → TelemetryEvent
+### Chapter 2: Go — Message Decode
 
-**Goal:** Switch on gomavlib message type and map each of the 18 priority receive families to a `TelemetryEvent` proto oneof variant.
+**Goal:** Map each priority receive family onto its proto envelope.
 
 **File:** `internal/codec/message.go`
 
-**18 receive families to handle:**
+**Two envelopes, not one.** Of the 18 priority receive families, 13 are streaming
+telemetry and 5 are transaction responses that must correlate against an in-flight
+request registry. They go to different places:
 
-| Family | gomavlib type | Proto oneof field |
-|---|---|---|
-| HEARTBEAT (0) | `common.MessageHeartbeat` | `heartbeat` |
-| SYS_STATUS (1) | `common.MessageSysStatus` | `sys_status` |
-| PARAM_VALUE (22) | `common.MessageParamValue` | `param_value` |
-| GPS_RAW_INT (24) | `common.MessageGpsRawInt` | `gps_raw_int` |
-| ATTITUDE (30) | `common.MessageAttitude` | `attitude` |
-| GLOBAL_POSITION_INT (33) | `common.MessageGlobalPositionInt` | `global_position_int` |
-| MISSION_CURRENT (42) | `common.MessageMissionCurrent` | `mission_current` |
-| MISSION_COUNT (44) | `common.MessageMissionCount` | `mission_count` |
-| MISSION_ACK (47) | `common.MessageMissionAck` | `mission_ack` |
-| NAV_CONTROLLER_OUTPUT (62) | `common.MessageNavControllerOutput` | `nav_controller_output` |
-| MISSION_ITEM_INT (73) | `common.MessageMissionItemInt` | `mission_item_int` |
-| VFR_HUD (74) | `common.MessageVfrHud` | `vfr_hud` |
-| COMMAND_ACK (77) | `common.MessageCommandAck` | `command_ack` |
-| RADIO_STATUS (109) | `common.MessageRadioStatus` | `radio_status` |
-| BATTERY_STATUS (147) | `common.MessageBatteryStatus` | `battery_status` |
-| HOME_POSITION (242) | `common.MessageHomePosition` | `home_position` |
-| STATUSTEXT (253) | `common.MessageStatustext` | `statustext` |
-| EKF_STATUS_REPORT (193) | `ardupilotmega.MessageEkfStatusReport` | `ekf_status_report` |
-
-**Pattern:**
 ```go
-func Decode(evt gomavlib.Event) (*TelemetryEvent, error) {
-    switch e := evt.(type) {
-    case *gomavlib.EventParseError:
-        // Log with error metrics — distinguish from unrecognized message
-        log.Printf("codec parse error: %v", e.Error)
-        return nil, nil
-    case *gomavlib.EventFrame:
-        switch msg := e.Message().(type) {
-        case *common.MessageHeartbeat:
-            return &TelemetryEvent{Payload: &TelemetryEvent_Heartbeat{...}}, nil
-        // ...
-        case *ardupilotmega.MessageEkfStatusReport:
-            return &TelemetryEvent{Payload: &TelemetryEvent_EkfStatusReport{...}}, nil
-        default:
-            return nil, nil // unrecognized message family — drop silently
-        }
-    default:
-        return nil, nil
-    }
+type Decoded struct {
+    SysID, CompID, Seq uint8
+    Telemetry   *gcsv1.TelemetryEvent // 13 streaming families
+    Transaction *gcsv1.ProtocolEvent  // PARAM_VALUE, MISSION_*, COMMAND_ACK
 }
 ```
 
-**Parse error vs unrecognized message:** `EventParseError` (bad CRC, truncated frame, signing failure) must be distinguishable from a message ID we don't handle. Both result in a nil return, but parse errors should increment a counter (`codec_parse_errors_total`) for observability. Silent drop of unrecognized message IDs is correct; silent drop of parse errors hides hardware noise and replay tampering.
+**Streaming telemetry → `TelemetryEvent`:** HEARTBEAT(0), SYS_STATUS(1),
+GPS_RAW_INT(24), ATTITUDE(30), GLOBAL_POSITION_INT(33), MISSION_CURRENT(42),
+NAV_CONTROLLER_OUTPUT(62), VFR_HUD(74), RADIO_STATUS(109), BATTERY_STATUS(147),
+HOME_POSITION(242), STATUSTEXT(253), EKF_STATUS_REPORT(193/ardupilotmega).
 
-**Frame metadata to preserve:** sysId, compId, sequence number from `e.SystemID()`, `e.ComponentID()`, `e.Frame.GetSequence()`. Verify these API names against the actual gomavlib v3 tagged release before committing — they changed from v2. In v3: system ID is on the frame via `e.Frame.GetSystemID()` for raw access; check the v3 API surface in `pkg/frame/frame.go` before assuming the method names shown here.
+**Transaction responses → `ProtocolEvent`:** PARAM_VALUE(22), MISSION_COUNT(44),
+MISSION_ITEM_INT(73), MISSION_ACK(47), COMMAND_ACK(77).
 
-**sysId architecture note:** sysId/compId travel with the event and are used by the Tier 4 fold for per-vehicle routing. They are NOT part of `TelemetrySample`. The boundary is: codec emits `(sysId, TelemetryEvent)` pairs; the fold dispatches by sysId; resolvers operate on `TelemetrySample` without vehicle identity. This is intentional — resolvers are pure sensor projections, not vehicle-aware. Document this explicitly in `internal/codec/message.go` so no one adds sysId to TelemetrySample thinking it belongs there.
+**Dispatch table, not a switch.** An 18-case type switch with a proto construction
+per case runs 90–120 lines at cyclomatic complexity ~20, and fails three limits in
+our own `.golangci.yml` (`funlen` 80 lines / 50 statements, `cyclop` 15,
+`gocognit` 20). Use a table:
+
+```go
+var telemetryDecoders = map[uint32]func(message.Message) *gcsv1.TelemetryEvent{
+    30: decodeAttitude,       // ATTITUDE
+    33: decodeGlobalPosition, // GLOBAL_POSITION_INT
+    // ...
+}
+
+var protocolDecoders = map[uint32]func(message.Message) *gcsv1.ProtocolEvent{
+    22: decodeParamValue,     // PARAM_VALUE
+    // ...
+}
+```
+
+One small converter per family, each independently testable and each well under
+every limit. The table is also what makes the Tier 2 capability matrix mechanically
+verifiable: a test asserts `keys(telemetryDecoders) ∪ keys(protocolDecoders)` equals
+the matrix rows, so the matrix stops being prose.
+
+**Normalisation happens here and only here.** The protos are SI: `lat_deg` is
+degrees (double), `alt_msl_m` is metres, `vz_m_s` is m/s. The wire is not — E7
+degrees, millimetres, cm/s. Every conversion lives in these converter functions.
+Nothing downstream divides by 1e7, 1000 or 100.
+
+**Parse error vs unrecognised message.** `EventParseError` (bad CRC, truncated
+frame, signing failure) must be distinguishable from a message ID we do not handle.
+Both yield no envelope, but parse errors increment `codec_parse_errors_total`.
+Silently dropping unknown IDs is correct; silently dropping parse errors hides
+hardware noise and replay tampering.
+
+**Frame metadata.** `*gomavlib.EventFrame` exposes `SystemID()`, `ComponentID()` and
+`Message()`. The sequence number is on the frame: `e.Frame.GetSequenceNumber()` —
+not `GetSequence()`.
+
+**sysId boundary.** `(sysId, compId)` travel on the `Decoded` struct and are set on
+the envelope's `vehicle_id`. They are **not** part of `TelemetrySample`. The fold
+dispatches by sysId; resolvers are pure sensor projections with no vehicle identity.
+Telemetry payload messages carry no `vehicle_id` — identity is on the envelope.
+Document this in `message.go` so nobody re-adds it.
 
 ---
 
 ### Chapter 3: Go — 11 Priority Send Encoders
 
-**Goal:** One encode function per outbound message family. Each takes a typed struct, returns gomavlib-ready message.
-
 **File:** `internal/codec/encode.go`
 
-**11 send families:**
+One encode function per outbound family, each returning a typed message struct:
+`EncodeHeartbeat`, `EncodeCommandLong`, `EncodeSetPositionTargetGlobalInt`
+(type_mask `0xDF8`, frame `MAV_FRAME_GLOBAL_RELATIVE_ALT_INT(6)`), `EncodeParamSet`,
+`EncodeParamRequestList`, `EncodeParamRequestRead`, `EncodeMissionCount`,
+`EncodeMissionItemInt`, `EncodeMissionRequestInt`, `EncodeMissionAck`,
+`EncodeMissionClearAll`.
 
-| Function | gomavlib type | Notes |
-|---|---|---|
-| `EncodeHeartbeat()` | `common.MessageHeartbeat` | GCS keepalive; fixed fields |
-| `EncodeCommandLong(...)` | `common.MessageCommandLong` | arm, mode, takeoff, land, MAV_CMD_SET_MESSAGE_INTERVAL |
-| `EncodeSetPositionTargetGlobalInt(...)` | `common.MessageSetPositionTargetGlobalInt` | type_mask=0xDF8; frame=MAV_FRAME_GLOBAL_RELATIVE_ALT_INT(6) |
-| `EncodeParamSet(...)` | `common.MessageParamSet` | param write |
-| `EncodeParamRequestList(...)` | `common.MessageParamRequestList` | triggers full param download |
-| `EncodeParamRequestRead(...)` | `common.MessageParamRequestRead` | single param read |
-| `EncodeMissionCount(...)` | `common.MessageMissionCount` | mission upload initiation |
-| `EncodeMissionItemInt(...)` | `common.MessageMissionItemInt` | mission item upload |
-| `EncodeMissionRequestInt(...)` | `common.MessageMissionRequestInt` | request specific item |
-| `EncodeMissionAck(...)` | `common.MessageMissionAck` | upload complete confirmation |
-| `EncodeMissionClearAll(...)` | `common.MessageMissionClearAll` | wipe vehicle mission |
+**Constraint:** encoders are pure — they produce `message.Message` values, not
+bytes. gomavlib handles CRC_EXTRA and framing at write time. Never compute
+CRC_EXTRA by hand.
 
-**Constraint:** Encoder functions are pure — they produce message structs, not bytes. gomavlib handles CRC_EXTRA and framing when the message is passed to `node.WriteMessage()`. Do not compute CRC_EXTRA manually.
+**Constraint:** encoders do not choose a destination. Addressing is the transport
+port's job (`WriteTo`), which keeps the "never broadcast" rule in one place.
 
 ---
 
-### Chapter 4: TypeScript — sampleFromEvent Shim
+### Chapter 4: TypeScript — `sampleFromEvent` Shim
 
-**Goal:** A single function that flattens a `TelemetryEvent` proto oneof into a flat `TelemetrySample` shape. All resolver logic operates on this flat shape; only the shim knows proto structure.
+**Goal:** Flatten a `TelemetryEvent` oneof into a flat `TelemetrySample`. Only the
+shim knows proto structure.
 
 **File:** `frontend/src/logic/sample.ts`
 
-**TelemetrySample shape (illustrative — derive from what resolvers actually need):**
+**Units are SI and degrees — the protos already normalised.** This is the single
+most important thing in the file. The predecessor's `TelemetrySample` used raw wire
+units (`latDegE7`, `altMslMm`, `vxCms`) because that repo had no normalising proto
+boundary. This one does. Carrying wire-unit field names here reintroduces the
+division a second time: position 1e7 too small, altitude 1000× too small, climb
+100× too small. Every value stays finite, so a "NaN never returned" gate passes
+happily, and Tier 2 then locks the wrong numbers in as known answers.
+
 ```typescript
 interface TelemetrySample {
-  // Attitude
+  // Attitude (radians)
   rollRad?: number;
   pitchRad?: number;
   yawRad?: number;
-  // Angular rates (from ATTITUDE message — required for full CTRV trajectory model)
   rollspeedRadS?: number;
   pitchspeedRadS?: number;
   yawspeedRadS?: number;
-  // Position
-  latDegE7?: number;
-  lonDegE7?: number;
-  altMslMm?: number;
-  relativeAltMm?: number;
-  // Velocity (NED, cm/s)
-  vxCms?: number;
-  vyCms?: number;
-  vzCms?: number; // positive down (NED)
+
+  // Position — degrees and metres, already normalised by the codec
+  latDeg?: number;
+  lonDeg?: number;
+  altMslM?: number;         // above mean sea level
+  altRelativeM?: number;    // above home/takeoff
+
+  // Velocity — NED, m/s
+  vxMs?: number;
+  vyMs?: number;
+  vzMs?: number;            // positive down (NED)
+
   // VFR
   groundspeedMps?: number;
   airspeedMps?: number;
-  headingDeg?: number; // 0–359
-  climbMps?: number;   // positive up (already flipped in VFR_HUD)
-  // Vehicle identity
-  vehicleType?: number; // MAV_TYPE enum value
+  headingDeg?: number;      // may arrive negative; normalise
+  climbMps?: number;        // positive up (VFR_HUD is already positive-up)
+
+  // Vehicle identity/state
+  vehicleType?: number;     // MavType enum value
   customMode?: number;
   baseMode?: number;
   systemStatus?: number;
-  // EKF
+
   ekfFlags?: number;
-  // Battery
   batteryVoltagesMv?: number[];
-  batteryCurrentCa?: number;
+  batteryCurrentA?: number;
   batteryRemainingPct?: number;
-  // Source tracking
-  sourceMessage: string; // e.g. "ATTITUDE", "GLOBAL_POSITION_INT"
+
+  sourceMessage: string;    // e.g. "ATTITUDE"
   receivedAtMs: number;
 }
 ```
 
-**Rule:** The shim is the only place that touches proto-generated field names. Resolvers take `TelemetrySample` — they are not coupled to proto codegen output.
-
-**Accumulation pattern — critical:** `TelemetryEvent` is a oneof: each event carries exactly one message family. `TelemetrySample` spans all families. The shim returns a partial sample per event (most fields undefined). The caller — the per-vehicle fold in Tier 4 — maintains a running `TelemetrySample` and merges each partial into it with a shallow spread:
+**Accumulation.** `TelemetryEvent` is a oneof: one family per event. `TelemetrySample`
+spans families. The shim returns a *partial* sample per event and holds no state.
+The Tier 4 per-vehicle fold merges partials:
 
 ```typescript
-// Each event arrives separately — shim returns partial
-const partial = sampleFromEvent(event);
-// Caller merges into accumulated state (per vehicle)
-accumulated = { ...accumulated, ...partial };
+accumulated = { ...accumulated, ...sampleFromEvent(event) };
 ```
 
-The shim does NOT maintain internal state. The shim does NOT accumulate across events. Callers that try to pass a single-event partial directly to resolvers expecting a full sample will get null returns — which is correct behavior, not a bug. Document this in the shim's JSDoc.
-
-**Tier 1 / Tier 3 parallelism note:** The shim imports proto-generated types for the `TelemetryEvent` oneof. If Tier 3 codegen is not yet complete when Tier 1 TS work begins, stub the types by hand in `frontend/src/logic/_proto_stubs.ts` and replace with the generated import once Tier 3 merges. Do not let the stub diverge — match field names exactly to what buf will generate. Delete the stub file at Tier 3 merge; do not let it coexist with generated types.
+Passing a single-event partial straight to a resolver yields null. That is correct
+behaviour, not a bug. Say so in the shim's JSDoc.
 
 ---
 
 ### Chapter 5: TypeScript — Resolver Functions
 
-**Goal:** Six pure resolver functions, each returning a typed result with a `source` field.
+Each resolver is pure and returns a `source` naming the MAVLink message it used.
 
-**File per resolver:**
+**`attitude.ts`** — `{ pitchDeg, rollDeg, source: 'ATTITUDE' } | null`. Null when
+the attitude fields are absent.
 
-**`frontend/src/logic/attitude.ts`**
-- Input: `TelemetrySample`
-- Output: `{ pitchDeg: number; rollDeg: number; source: 'ATTITUDE' } | null`
-- Source: always ATTITUDE; return null if attitude fields absent
+**`heading.ts`** — `{ headingDeg, source, isFallback } | null`.
 
-**`frontend/src/logic/heading.ts`**
-- Input: `TelemetrySample`
-- Output: `{ headingDeg: number; source: 'VFR_HUD' | 'ATTITUDE' | 'GLOBAL_POSITION_INT'; isFallback: boolean } | null`
-- Fallback chain: VFR_HUD.heading (reject if 65535) → ATTITUDE.yaw (convert rad→deg, normalize 0–360) → GLOBAL_POSITION_INT.hdg (÷100)
-- `isFallback: true` when not using primary source
+Fallback chain: `VFR_HUD.heading` → `ATTITUDE.yaw` (rad→deg, normalised 0–360) →
+`GLOBAL_POSITION_INT.hdg` (÷100).
 
-**`frontend/src/logic/flightPath.ts`**
-- Input: `TelemetrySample`
-- Output: `{ trackDeg: number; groundSpeedMps: number; climbMps: number; fpaRad: number; source: string } | null`
-- **Climb source preference:** Use VFR_HUD.climbMps as primary when present (positive-up, no flip needed, more accurate for airspeed-derived flight path). Fall back to GPI.vzCms when climbMps is absent — and apply the NED sign flip: `climbMps = -(sample.vzCms / 100)`. Never mix both sources in the same output. The `source` field must name the winner: `'VFR_HUD'` or `'GLOBAL_POSITION_INT'`.
-- **NED sign flip:** `climbMps = -(sample.vzCms / 100)` when sourced from GLOBAL_POSITION_INT. VFR_HUD.climbMps is already positive-up — do NOT flip.
-- `fpaRad = Math.atan2(climbMps, groundSpeedMps)`
+**The 65535 sentinel belongs to GLOBAL_POSITION_INT, not VFR_HUD.** `VFR_HUD.heading`
+is `int16_t` on the wire (verified in gomavlib's generated `common` dialect:
+`Heading int16`), so it cannot hold 65535 — testing for it tests an impossible
+input. UINT16_MAX-as-unknown applies to `GlobalPosition.hdg_cdeg` and
+`GpsRaw.cog_cdeg`, and the reject belongs there.
 
-**`frontend/src/logic/trajectory.ts`**
-- Input: `TelemetrySample`, `vehicleType: number` (MAV_TYPE enum value)
-- Output: `Array<{ northM: number; eastM: number }>` (10 points, 5s horizon)
-- **Turn rate model:** Use the full CTRV body-rate formula when angular rates are present: `ψ̇ = (sinφ·q + cosφ·r) / cosθ` (requires `rollspeedRadS`, `pitchspeedRadS`, `yawspeedRadS` from ATTITUDE message — now in TelemetrySample). Fall back to bank-angle approximation `ψ̇ = g·tan(φ) / V` when angular rates are absent. The fallback produces accurate results for coordinated flight; use it as the degraded path, not the primary.
-- Stall gate: `const stallSpeed = isFixedWing(vehicleType) ? 14 : 0; const forwardProgress = Math.max(0, speed - stallSpeed);`
-- **`isFixedWing` — exact MAV_TYPE values:** Return `true` for: MAV_TYPE_FIXED_WING(1), MAV_TYPE_KITE(9), MAV_TYPE_FLAPPING_WING(10), MAV_TYPE_VTOL_DUOROTOR(19), MAV_TYPE_VTOL_QUADROTOR(20), MAV_TYPE_VTOL_TILTROTOR(21), MAV_TYPE_VTOL_TAILSITTER_DUOROTOR(22), and VTOL reserved types 23–25. Return `false` for: MAV_TYPE_QUADROTOR(2), HEXAROTOR(13), OCTOROTOR(14), TRICOPTER(15), COAXIAL(8), and all others not listed above. Do not use a range check — enumerate the list explicitly so additions require a deliberate edit. Test each fixed-wing and rotor type individually in Tier 2.
+What is actually needed on the VFR_HUD path is normalisation: ArduPilot may report
+heading as a negative int16. Use `((h % 360) + 360) % 360`.
 
-**`frontend/src/logic/position.ts`**
-- Input: `TelemetrySample`
-- Output: `{ latDeg: number; lonDeg: number; altM: number; source: string } | null`
-- Primary: GLOBAL_POSITION_INT lat/lon (÷1e7), alt (relativeAltMm÷1000)
-- Fallback: GPS_RAW_INT (when GLOBAL_POSITION_INT absent)
+**`flightPath.ts`** — `{ trackDeg, groundSpeedMps, climbMps, fpaRad, source } | null`.
 
-**`frontend/src/logic/track.ts`**
-- Input: `prev: ENU[]`, `TelemetrySample`, `origin: { latDeg: number; lonDeg: number }`
-- Output: `ENU[]` — ring buffer, max 500 points
-- ENU projection:
-  ```
-  northM = Δlat_deg × 111319.49
-  eastM  = Δlon_deg × 111319.49 × cos(lat0_rad)
-  ```
+Climb source preference: `VFR_HUD.climbMps` when present (already positive-up — do
+not flip). Otherwise `GLOBAL_POSITION_INT`, where the NED flip is `climbMps = -vzMs`
+— note **no /100**, because the proto already carries m/s. Never mix sources in one
+output; `source` names the winner. `fpaRad = Math.atan2(climbMps, groundSpeedMps)`.
 
-**`frontend/src/logic/freshness.ts`**
-- `isFresh(lastSeenMs: number, nowMs: number, ttlMs: number): boolean`
-- `ageMs(lastSeenMs: number, nowMs: number): number`
+**`position.ts`** — `{ latDeg, lonDeg, altM, altRef, source } | null`.
+
+Primary: GLOBAL_POSITION_INT. Fallback: GPS_RAW_INT.
+
+**Carry the altitude reference frame.** GLOBAL_POSITION_INT gives altitude above
+home; GPS_RAW_INT only gives MSL. They differ by field elevation — routinely
+hundreds of metres — so a fallback that drops both into `altM` silently changes what
+the number means, and `source` naming the message does not convey that. Return
+`altRef: 'RELATIVE' | 'MSL'` and let `AltitudeTape` refuse a datum it was not
+configured for.
+
+**`trajectory.ts`** — `resolvePredictiveTrajectory(sample, stallSpeedMps)` →
+`Array<{ northM, eastM }>` (10 points, 5s horizon).
+
+Turn rate: full CTRV body-rate formula when angular rates are present,
+`ψ̇ = (sinφ·q + cosφ·r) / cosθ`. Degraded path when they are absent: bank-angle
+approximation `ψ̇ = g·tan(φ) / V`, accurate for coordinated flight.
+
+**Stall gate keys on flight regime, not vehicle type.** Apply the floor only when
+`airspeedMps` is present and below `stallSpeedMps`; otherwise use groundspeed with
+no floor. Gating on MAV_TYPE means a VTOL hovering or translating at 10 m/s in
+multicopter mode shows no predicted track — the phase where an operator most wants
+one. `stallSpeedMps` is a parameter (`ARSPD_FBW_MIN`), passed in from day one so
+Tier 7's parameter read can supply it rather than forcing a signature change later.
+
+**If a vehicle-class predicate is still needed**, derive it from the generated
+`MavType` constants — never from a retyped integer list:
+
+```typescript
+import { MavType } from '@/gen/gcs/v1/types_pb';
+
+function isFixedWingAirframe(t: MavType): boolean {
+  switch (t) {
+    case MavType.FIXED_WING:
+    case MavType.FLAPPING_WING:
+    case MavType.KITE:
+    case MavType.VTOL_TAILSITTER_DUOROTOR:
+    // ... remaining VTOL values
+      return true;
+    default:
+      return false;
+  }
+}
+```
+
+A hand-copied table from an older MAVLink revision maps ROCKET(9) and
+GROUND_ROVER(10) onto KITE and FLAPPING_WING, and COAXIAL onto FREE_BALLOON —
+upstream renumbered these when the VTOL types were renamed. Importing the generated
+constants makes a proto edit a compile error instead of silent drift.
+
+**`track.ts`** — `accumulateTrack(prev: ENU[], sample, origin)` → `ENU[]`, ring
+buffer capped at 500.
+
+```
+northM = Δlat_deg × 111319.49
+eastM  = Δlon_deg × 111319.49 × cos(lat0_rad)
+```
+
+**`freshness.ts`** — `isFresh(lastSeenMs, nowMs, ttlMs)`, `ageMs(lastSeenMs, nowMs)`.
+Convention: fresh when `nowMs - lastSeenMs < ttlMs` (strictly less). Exactly at TTL
+is stale. Documented in the file so `FreshnessRing` does not invent its own boundary.
 
 ---
 
 ## Tier Exit Gate
 
-- `go test -race ./internal/codec/...` passes — no sockets, no goroutines
-- Golden byte vectors from `flight-path-hud/contracts/mavlink/` validate decode path
-- `vitest ./frontend/src/logic/...` passes with known-answer vectors
-- NaN never returned from any resolver (assert in tests)
-- Each resolver output carries a `source` field naming the MAVLink message used
-- Stall gate test: copter (MAV_TYPE=2) at 10 m/s → nonzero forward trajectory points; plane (MAV_TYPE=1) at 10 m/s → zero forward trajectory
-- NED sign flip test: `vzCms = +500` (descending) → `climbMps = -5.0`; VFR_HUD climbMps passthrough unchanged
+```
+make gate-tier-1
+```
+
+- `go test -race ./internal/codec/...` passes against golden byte vectors
+- `pnpm vitest run src/logic` passes against named fixtures
+- NaN never returned from any resolver (asserted in tests)
+- Every resolver output carries a `source` naming the MAVLink message used
+- Position output carries `altRef`; a GPS_RAW fallback is not reported as relative altitude
+- Stall gate: copter at 10 m/s with no airspeed → nonzero forward trajectory;
+  fixed-wing at 10 m/s with airspeed 10 and stall 14 → zero forward progress;
+  **VTOL hovering with no airspeed → nonzero trajectory** (the regression the
+  vehicle-type gate caused)
+- NED flip: `vzMs = +5.0` (descending) → `climbMps = -5.0`; VFR_HUD climb passes through
+- No goroutine leaks: every node created in a test is closed (`goleak`). Note that
+  `Node.Initialize()` starts three goroutines, so "no goroutines" is not the claim —
+  "none leaked" is.

@@ -19,6 +19,37 @@ two numerically wrong safety behaviours in "known-answer" fixtures.
 
 ---
 
+## Resolution status
+
+Every finding below has been actioned. Where a fix was verifiable on this machine it
+was executed, not asserted — `buf lint` and `buf breaking` were run against the real
+protos, codegen was run end to end and the generated Go compiled, the `golangci-lint`
+config was checked in both its broken and fixed forms, and the Tier 2 gate's shell
+semantics were reproduced.
+
+| Status | Findings |
+|---|---|
+| **Fixed and verified by execution** | B4, B5, B6, BE2, BE4, BE5, F1, F2, F6, P2, P5, P6 |
+| **Fixed in contract or plan** (enforcement lands in its own tier) | B1, B2, B3, B7, B8, N1, N2, N4, N5, BE3, F3, F4, F5, P3, P4 |
+| **Wired, unverified** | BE1 — `go_deps` + gazelle are in `MODULE.bazel` and `BUILD.bazel`, but bazel is not installed on the authoring machine, so `bazel mod tidy` / `bazel test //...` have not been run. Verify on a machine that has it. Frontend-under-Bazel (`rules_js`) is not attempted and remains a known gap. |
+| **Stated now, enforced in a later tier** | P1 — the force-arm control is stated on `CommandLong` and in the resolved decisions; the SendCommand allowlist is implemented with the Tier 8 command registry. N3 — the threat model is written into Tier 4; `InKey` and the bind-address change land with the live transport in Tier 5. |
+
+Decisions taken where the review left a choice open:
+
+- **buf lint posture** — kept `STANDARD` with per-file `ignore_only` exceptions rather
+  than renaming ~40 messages. Scoping per file rather than module-wide is what
+  surfaced `TrackAffiliation`, a GCS-native enum genuinely missing its `_UNSPECIFIED`
+  zero value.
+- **Bazel** — wired rather than deferred; ADR-0001 is left intact.
+- **Tier numbering** — numbers kept as stable identifiers, sequence stated explicitly
+  (0 → 3 → 1 ∥ 2). Renaming four files and every cross-reference was judged worse
+  churn than one explicit sequence line.
+
+The findings below are preserved as written, including the original severity
+assessments, so the reasoning stays auditable against what was changed.
+
+---
+
 ## Recommended structural change: run codegen at Tier 0.5, not Tier 3
 
 Tier 1's TS shim needs the generated `TelemetryEvent` types. The plan's answer is a hand-written

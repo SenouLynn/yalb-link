@@ -7,8 +7,73 @@ Format: `## [version] - YYYY-MM-DD`. Unreleased changes accumulate at the top.
 
 ## [Unreleased]
 
+### Changed — adversarial review of Tiers 0–3 (2026-08-16)
+
+Findings and full reasoning: `docs/roadmap/tier-0-3-adversarial-review.md`.
+
+**Contracts (Tier 0 decisions taken before codegen, where they are free):**
+- `ProtocolEvent` added (`protocol.proto`) — PARAM_VALUE, MISSION_COUNT, MISSION_ITEM_INT,
+  MISSION_ACK and COMMAND_ACK are transaction responses and no longer forced into
+  `TelemetryEvent`. `MissionCount` message added; it did not exist
+- Vehicle identity moved to the envelope only — `vehicle_id` removed from all 15
+  telemetry payload messages (fields renumbered from 1; safe pre-codegen)
+- `MissionService.UploadMission` converted from client-streaming to unary over
+  `UploadMissionRequest` — connect-web cannot call client-streaming RPCs from a browser
+- `StreamTelemetryRequest.payload_types` typed as `TelemetryPayloadType` (was
+  `repeated string`); `OperatorContext.roles` typed as `OperatorRole`
+- `options.proto` adds `required_role` method option; all 37 RPCs annotated. Absent
+  option = deny, so a new unannotated RPC is unreachable rather than public
+- `go_package` corrected to `yalb.gcs/internal/gen/gcs/v1;gcsv1`; project name settled on
+  `yalb-gcs` across go.mod, MODULE.bazel, buf module and BUILD files
+- `MavType` replaced with the complete current MAV_TYPE list (0–49). The roadmap's
+  hand-copied fixed-wing table was pre-2019 and mapped ROCKET(9) and GROUND_ROVER(10)
+  onto KITE and FLAPPING_WING
+- `TrackAffiliation` gains an explicit `_UNSPECIFIED = 0`; "unknown affiliation" is a
+  classification and must stay distinguishable from an unpopulated field
+- Force-arm control stated on `CommandLong`: removing `SetArmedRequest.force` does not
+  close force-arm, since `SendCommand` accepts cmd 400 with param2=21196 and a
+  `raw_command` passthrough. Enforcement is the Tier 8 allowlist
+
+**Gates that could not fail, now do:**
+- `Makefile` with `gate-tier-0` … `gate-tier-3`; every exit gate is a command with an
+  exit code rather than prose
+- `.github/workflows/ci.yml` — first CI in the repo. `fetch-depth: 0`, and
+  `buf breaking proto --against '.git#branch=origin/main,subdir=proto'` run from the
+  repo root. Both parts verified: without `subdir=` imports do not resolve, and run
+  from `proto/` buf looks for `proto/.git` and fails
+- `scripts/check-matrix.sh` replaces the Tier 2 one-liner, whose trailing `|| true`
+  made it print ERROR and exit 0
+- `scripts/check-tier-0.sh` — five contract checks buf lint cannot express
+- `.golangci.yml` migrated to the v2 schema; the previous file used the v1
+  `linters-settings` key and was rejected outright, so none of its settings applied
+
+**Build:**
+- `proto/buf.gen.yaml` added — v2 `remote:` plugins, no `connectrpc/es` (protobuf-es v2
+  emits service descriptors itself), `--template` required
+- `buf.yaml` lint exceptions scoped per file rather than module-wide
+- `MODULE.bazel` wires gazelle's `go_deps` from `go.mod`; root `BUILD.bazel` adds a
+  gazelle target. Unverified — bazel is not installed on the authoring machine
+- vitest, `@bufbuild/protobuf`, `@connectrpc/connect{,-web}` added to the frontend;
+  `@/` alias configured in both `vite.config.ts` and `tsconfig.app.json`
+- 7.9 MB compiled `gcs` binary untracked and gitignored
+
+**Docs:**
+- Build sequence changed to **0 → 3 → (1 ∥ 2)** — codegen depends on nothing in Tiers 1–2,
+  and running it late means hand-maintaining a proto type stub for two tiers
+- Tier 0, 1 and 3 rewritten; Tier 2 and 4 substantially revised. Every gomavlib symbol
+  verified against v3.3.5: `EndpointCustomConn` does not exist, `NodeConf`/`NewNode` are
+  deprecated, sequence is `GetSequenceNumber()`, and there is no `WriteMessage`
+- Heartbeat decision corrected — gomavlib already sends one (5s, MAV_TYPE_GCS) unless
+  disabled; the planned hand-rolled per-vehicle ticker would have double-emitted
+- Stall gate rekeyed on flight regime rather than vehicle type, so a hovering VTOL keeps
+  its predicted track
+- Unit normalisation fixed to happen exactly once, at the proto boundary; the planned
+  `TelemetrySample` used raw wire units against already-normalised protos
+- `port-plan.md` scoped to algorithms and file mapping; superseded tooling statements
+  marked inline and all five Open Questions closed
+
 ### Added
-- Go module (`ligma.gcs`) with `cmd/gcs` entrypoint — minimal HTTP server on `:8080` with `/healthz`
+- Go module (`yalb.gcs`) with `cmd/gcs` entrypoint — minimal HTTP server on `:8080` with `/healthz`
 - React frontend scaffold — Vite 6, React 19, TypeScript 5.7, TanStack Query 5 wired at root
 - `pnpm` as package manager (pinned `10.30.1`); all frontend deps pinned to exact versions with 1-week stability buffer policy
 - TypeScript strict compiler suite: `verbatimModuleSyntax`, `noImplicitReturns`, `noImplicitOverride`, `noUncheckedIndexedAccess`, `noPropertyAccessFromIndexSignature`, `exactOptionalPropertyTypes`, `allowUnreachableCode: false`
@@ -32,4 +97,7 @@ Infrastructure still needed before feature work starts:
 4. **WebSocket SITL adapter** — backend `:8081` endpoint for the test harness (ADR-0003)
 5. **Redis adapter stub** — pub/sub and last-known-state scaffolding
 6. **Frontend adapter context** — `ConnectAdapter` / `WebSocketAdapter` / `MockAdapter` provider shell; no component logic yet (ADR-0003)
-7. **CI pipeline** — `bazel test //...` as the canonical health signal; lint + build gates
+7. ~~**CI pipeline**~~ — done: `.github/workflows/ci.yml` runs buf lint, the Tier 0
+   contract gate, buf breaking on PRs, Go build/vet/test/lint, and frontend
+   typecheck/test. `bazel test //...` becomes the canonical signal once BUILD files are
+   generated (`make bazel-tidy`)

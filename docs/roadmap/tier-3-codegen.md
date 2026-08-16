@@ -2,188 +2,200 @@
 
 ## Overview
 
-Wire protobuf codegen so that generated Go stubs and TypeScript clients are available for all subsequent service and frontend tiers. The generated files are committed to source control — they are not regenerated at build time. `buf generate` is a developer command run deliberately, not a build step.
+Generate Go stubs and TypeScript types from the protos. Generated files are
+committed — `buf generate` is a developer command, never a build step.
+
+**This runs second, immediately after Tier 0**, not after Tiers 1 and 2. Nothing
+here depends on them, and Tier 1's TS shim needs the generated `TelemetryEvent`
+types. Running codegen late means hand-writing a proto type stub and keeping it in
+sync by hand across two tiers before deleting it — pure drift risk for no gain.
+
+Every command and filename below was verified by running it against these protos.
 
 ## Dependencies
 
-- Tier 0 complete (`buf lint` passing, `force` field removed)
-- buf CLI installed and on PATH
-- `buf.build/connectrpc/go` and `buf.build/bufbuild/es` plugins accessible (via BSR remote plugins or local install)
+- Tier 0 complete (`make gate-tier-0` green)
+- buf CLI on PATH
 
-**BSR internet dependency — addressed upfront:** The `buf.gen.yaml` below uses remote BSR plugins. `buf generate` fetches and executes them via the BSR API. This requires internet access and BSR availability at the moment of regeneration only — not at build time (generated files are committed). For air-gapped CI or field machines, install plugins locally and use the `local:` variant:
+**BSR dependency.** The plugins below are remote: `buf generate` fetches and
+executes them via the BSR, so regeneration needs internet access. Build does not —
+generated files are committed. For air-gapped work, install the plugins locally and
+swap `remote:` for `local:`:
 
 ```yaml
-# Local plugin alternative (air-gapped / offline)
 plugins:
   - local: protoc-gen-go
-    out: ../internal/gen
+    out: internal/gen
     opt: paths=source_relative
   - local: protoc-gen-connect-go
-    out: ../internal/gen
+    out: internal/gen
     opt: paths=source_relative
   - local: protoc-gen-es
-    out: ../frontend/src/gen
-  - local: protoc-gen-connect-es
-    out: ../frontend/src/gen
+    out: frontend/src/gen
+    opt: target=ts
 ```
 
-Document local plugin install commands in `docs/dev-setup.md`. The CI freshness check (Chapter 5) uses BSR variant; provide an escape hatch (`PROTO_GEN_LOCAL=1 make proto-gen`) that selects the local variant.
+---
 
 ## Chapters
 
----
+### Chapter 1: `proto/buf.gen.yaml`
 
-### Chapter 1: buf.gen.yaml
-
-**Goal:** Configure codegen output paths for both Go and TypeScript plugins.
-
-**File:** `proto/buf.gen.yaml`
-
-**Content:**
 ```yaml
 version: v2
+
 plugins:
-  - plugin: buf.build/protocolbuffers/go
-    out: ../internal/gen
+  - remote: buf.build/protocolbuffers/go
+    out: internal/gen
     opt: paths=source_relative
-  - plugin: buf.build/connectrpc/go
-    out: ../internal/gen
+
+  - remote: buf.build/connectrpc/go
+    out: internal/gen
     opt: paths=source_relative
-  - plugin: buf.build/bufbuild/es
-    out: ../frontend/src/gen
-  - plugin: buf.build/connectrpc/es
-    out: ../frontend/src/gen
+
+  - remote: buf.build/bufbuild/es
+    out: frontend/src/gen
+    opt: target=ts
 ```
 
-**Notes:**
-- `paths=source_relative` keeps Go package paths clean (no deep nesting)
-- Run from `proto/` directory: `cd proto && buf generate`
-- Output directories must exist before running; create with `mkdir -p internal/gen frontend/src/gen` in Makefile
+Three things here differ from a v1-era config and each one is a failure if carried
+over:
+
+- **`remote:`, not `plugin:`.** `plugin:` is the v1 key.
+- **No `buf.build/connectrpc/es`.** protobuf-es v2 emits message types *and* service
+  descriptors in one file, and `@connectrpc/connect` v2 consumes those descriptors
+  directly. The separate connect-es plugin belongs to the v1 line. `package.json`
+  pins `@bufbuild/protobuf` 2.x and `@connectrpc/connect` 2.x, so this is the
+  matching generator.
+- **`out:` paths are relative to the working directory**, which is the repo root —
+  not `../internal/gen` relative to `proto/`.
+
+**Managed mode is off deliberately.** `go_package` is declared in every `.proto`, so
+the import path is visible where the contract lives rather than inferred from
+generator config.
 
 ---
 
-### Chapter 2: Generated Go Stubs
+### Chapter 2: Running it
 
-**Goal:** Confirm generated Go files exist and import correctly.
-
-**Expected output at `internal/gen/gcs/v1/`:**
 ```
-telemetry.pb.go
-telemetry_grpc.pb.go        (or telemetry.connect.go for connectrpc)
-commands.pb.go
-commands.connect.go
-services.pb.go
-services.connect.go
+make proto-gen
+```
+
+which is:
+
+```
+buf generate proto --template proto/buf.gen.yaml
+```
+
+**`--template` is required.** buf looks for `buf.gen.yaml` in the working directory,
+not in the input directory, so `buf generate proto` alone fails with
+`read buf.gen.yaml: file does not exist` while returning output that looks like a
+missing-config problem rather than a path problem.
+
+---
+
+### Chapter 3: Generated Go
+
+**Actual output** (verified — 18 files):
+
+```
+internal/gen/gcs/v1/*.pb.go                          one per .proto
+internal/gen/gcs/v1/gcsv1connect/services.connect.go  service stubs
+```
+
+Connect stubs land in a `gcsv1connect/` subpackage, and there is exactly one because
+only `services.proto` declares services. Do not expect `telemetry.connect.go` /
+`commands.connect.go` — that layout assumes services spread across files.
+
+**Validation:** `go build ./internal/gen/...` passes. Verified that the generated
+Connect stub imports `yalb.gcs/internal/gen/gcs/v1` and compiles — which is the
+check that `go_package` matches the module path.
+
+**Rules:**
+- No hand edits in `internal/gen/`. buf owns the directory; `.golangci.yml` excludes
+  it from linting.
+- No `//go:generate` directives there — `go generate` runs from the package
+  directory, making relative paths to `../../proto` fragile. `make proto-gen` only.
+- `.gitattributes` marks `internal/gen/**` and `frontend/src/gen/**` as
+  `linguist-generated=true` so regeneration noise does not drown out reviewable
+  changes. Add it before the first generated commit.
+
+---
+
+### Chapter 4: Generated TypeScript
+
+**Actual output** (verified — 17 files):
+
+```
+frontend/src/gen/gcs/v1/telemetry_pb.ts
+frontend/src/gen/gcs/v1/services_pb.ts
+frontend/src/gen/gcs/v1/commands_pb.ts
 ...
 ```
 
-**Validation:**
-- `go build ./internal/gen/...` must succeed
-- No hand-edited files in `internal/gen/` — treat entire directory as owned by buf
-- Do NOT add `//go:generate` directives in `internal/gen/` — `go generate` runs from the package directory, making relative paths to `../../proto` fragile and surprising. Use `make proto-gen` exclusively.
+`*_pb.ts` only — no `*_connect.ts`, for the reason in Chapter 1.
 
-**`.gitattributes` — required, not optional:** Add the following to `.gitattributes` before the first generated file commit. Generated file noise in PRs kills review quality — this is not a cosmetic concern.
+**Validation:** `pnpm typecheck` passes after codegen.
 
-```
-internal/gen/**          linguist-generated=true
-frontend/src/gen/**      linguist-generated=true
-```
+Import path: `import { TelemetryEvent } from '@/gen/gcs/v1/telemetry_pb'`. The `@/`
+alias is configured in both `vite.config.ts` (for vite and vitest) and
+`tsconfig.app.json` (for tsc) — it must be in both or tests and typecheck disagree.
 
 ---
 
-### Chapter 3: Generated TypeScript Client
+### Chapter 5: Makefile targets
 
-**Goal:** Confirm generated TS files exist and the import path is clean.
+`make proto-lint`, `make proto-breaking`, `make proto-gen`, `make proto`.
 
-**Expected output at `frontend/src/gen/gcs/v1/`:**
-```
-telemetry_pb.ts
-telemetry_connect.ts      (service client — verify naming against actual connectrpc/es plugin version)
-commands_pb.ts
-commands_connect.ts
-...
-```
-
-**File naming caveat:** `buf.build/connectrpc/es` plugin output naming (`*_connect.ts` vs `*_connectweb.ts`) depends on the plugin version. Confirm the actual filenames by running `buf generate` once and checking what lands in `frontend/src/gen/` — then update this document. Do not assume filenames match this doc until verified.
-
-**Validation:**
-- `cd frontend && pnpm tsc --noEmit` must pass after codegen
-- Import path example: `import { TelemetryEvent } from '@/gen/gcs/v1/telemetry_pb'`
-- Configure `@/` alias in `vite.config.ts` to resolve to `frontend/src/`
-- The `sampleFromEvent` shim in Tier 1 must switch its import from the hand-written stub (if used during parallel Tier 1 work) to the generated type at this point. Verify the generated field names match what the shim expected — any mismatch is a compile error, which is the desired behavior.
+CI does **not** run codegen; it validates that committed generated files are current
+(Chapter 6).
 
 ---
 
-### Chapter 4: Makefile Targets
+### Chapter 6: CI gates
 
-**Goal:** Developer ergonomics — one command to regenerate, one to validate.
+Wired in `.github/workflows/ci.yml`.
 
-**File:** `Makefile` (repo root)
+**buf lint** — every push.
 
-```makefile
-.PHONY: proto-gen proto-lint proto-breaking
-
-proto-gen:
-	mkdir -p internal/gen frontend/src/gen
-	cd proto && buf generate
-
-proto-lint:
-	cd proto && buf lint
-
-proto-breaking:
-	cd proto && buf breaking --against '.git#branch=main'
-
-proto: proto-lint proto-gen
-```
-
-**Constraint:** `make proto-gen` is for developer use. CI does NOT run codegen — it validates that committed generated files are up-to-date. See Chapter 5.
-
----
-
-### Chapter 5: CI Gates
-
-**Goal:** Two CI checks: lint always, breaking change on PRs to main.
-
-**buf lint job** (runs on every push):
-```yaml
-- name: buf lint
-  run: cd proto && buf lint
-```
-
-**buf breaking job** (runs on PRs to main):
-```yaml
-- name: buf breaking
-  run: cd proto && buf breaking --against '.git#branch=main'
-```
-
-**Generated file freshness check (recommended with caveats):**
-```yaml
-- name: check proto gen is up-to-date
-  run: |
-    make proto-gen
-    git diff --exit-code internal/gen/ frontend/src/gen/
-```
-
-This fails if a developer edits `.proto` files without regenerating. Good discipline. **Caveat:** This step calls `make proto-gen`, which calls `buf generate`, which hits BSR. The CI job needs internet access and BSR must be reachable. If BSR is unavailable, this step fails and blocks the whole PR pipeline — unacceptable for a production gate. Mitigate: run the freshness check as a non-blocking advisory job, or use the local plugin variant in CI (see Dependencies section).
-
-**`buf breaking` CI — shallow clone gotcha:** `buf breaking --against '.git#branch=main'` requires the full git history. Shallow clones (GitHub Actions default `fetch-depth: 1`) will fail with a "branch not found" or empty diff error. The CI checkout step must set `fetch-depth: 0`:
+**buf breaking** — pull requests to main:
 
 ```yaml
 - uses: actions/checkout@v4
   with:
     fetch-depth: 0
+- run: buf breaking proto --against '.git#branch=origin/main,subdir=proto'
 ```
 
-Without this, the breaking-change gate silently passes on every PR (empty diff = no breaking changes detected), defeating its purpose entirely.
+All three details matter and each produces a silently-passing gate when wrong. See
+Tier 0 Chapter 10 — the command is stated once there and encoded once in
+`make proto-breaking`.
+
+**Generated-file freshness** — advisory, `continue-on-error: true`:
+
+```yaml
+- run: |
+    make proto-gen
+    git diff --exit-code internal/gen/ frontend/src/gen/
+```
+
+This catches a `.proto` edit that was not regenerated. It is deliberately
+non-blocking because it calls `buf generate`, which fetches remote plugins from the
+BSR: a BSR outage would otherwise block every PR, and an external service has no
+business gating the pipeline. If the annotation is red, run `make proto-gen` and
+commit.
 
 ---
 
 ## Tier Exit Gate
 
-- `buf generate` produces Go stubs in `internal/gen/gcs/v1/`
-- `buf generate` produces TS client in `frontend/src/gen/gcs/v1/`
+```
+make gate-tier-3
+```
+
+- `internal/gen/gcs/v1/` and `frontend/src/gen/gcs/v1/` exist and are committed
 - `go build ./internal/gen/...` passes
-- `cd frontend && pnpm tsc --noEmit` passes
+- `pnpm typecheck` passes
 - `buf lint` passes
-- `buf breaking` job wired in CI config
-- Generated files committed to source control
+- `buf breaking` wired in CI with `fetch-depth: 0`

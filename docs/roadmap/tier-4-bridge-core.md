@@ -99,11 +99,22 @@ func Fold(state VehicleState, msg *codec.DecodedMessage, nowMs int64) (VehicleSt
 type RouteEntry struct {
     SysID      uint8
     CompID     uint8
-    SrcIP      string
-    SrcPort    int
+    Channel    *gomavlib.Channel // the link this vehicle was last heard on
+    SrcIP      string            // diagnostics only — not the send address
+    SrcPort    int               // diagnostics only
     LastSeenMs int64
 }
 ```
+
+**The channel is the routable address, not the IP/port.** Outbound writes go through
+`node.WriteMessageTo(channel, msg)`; gomavlib owns the socket and the peer address.
+Storing only IP/port leaves the send path with no way to address a single link, and
+the only API that compiles without one is `WriteMessageAll` — which transmits every
+command to every link. See the outbound targeting decision in `order-of-operations.md`.
+
+**An unaddressable target is rejected, never broadcast.** If `Lookup` misses, the
+send fails with a clear error. Falling back to broadcast means a command for sysid 2
+is physically transmitted over vehicle 1's radio.
 
 **Operations:**
 - `Upsert(entry RouteEntry, nowMs int64)` — set or update; record first-seen srcIP/port
@@ -113,6 +124,53 @@ type RouteEntry struct {
 **No background goroutine.** Eviction happens lazily on Lookup. This keeps the route table pure and testable without concurrency.
 
 **Concurrent access:** the table is accessed from the transport receive goroutine and the command send goroutine. Protect with `sync.RWMutex`.
+
+---
+
+### Chapter 3b: Liveness — one clock, not two
+
+Two independent timeouts govern the same question and will disagree:
+
+- gomavlib closes a channel after `IdleTimeout` (default **60s**).
+- The fold emits `VEHICLE_LOST` after its own heartbeat TTL.
+
+The window between them is where "vehicle lost but link still open" and its inverse
+live. Pick one as authoritative and derive the other:
+
+**The fold's heartbeat TTL is authoritative** for vehicle liveness — it is the thing
+tests can drive with an injected clock, and it is per-vehicle rather than per-link.
+Set gomavlib's `IdleTimeout` comfortably longer than the fold TTL so channel
+teardown never front-runs a `VEHICLE_LOST` event, and treat channel closure as a
+link event (`LinkStatus`), not a vehicle event.
+
+Record both values in one place so they cannot drift apart silently.
+
+---
+
+### Chapter 3c: Transport threat model
+
+One paragraph, written down, so the trust boundary is explicit rather than assumed.
+
+**What the bridge trusts today.** It binds `0.0.0.0:14550` and accepts frames from
+any source that can reach the port. There is no source validation and, with
+`GCS_MAVLINK_SIGNING_KEY` empty, no authentication. A host on the same network can
+inject a spoofed HEARTBEAT and create a phantom vehicle in `fleet:active`, or feed
+STATUSTEXT and EKF_STATUS_REPORT that an operator will act on.
+
+**Why that is acceptable now.** Inside Docker Compose the socket is on a private
+bridge network reachable only by the SITL containers. This holds for local
+development and CI and stops holding the moment the backend runs on a field box on
+shared WiFi.
+
+**What closes it, when it needs closing:**
+- `Node.InKey` — gomavlib validates MAVLink 2 signatures and drops unsigned frames
+  outright. This is the real control; it costs nothing per packet in application code.
+- Bind to a specific interface rather than `0.0.0.0` by default.
+- An allowlist of source addresses on the route table's `Upsert` path.
+
+**Now, regardless:** log the posture at startup. When signing is disabled the backend
+prints a warning naming the bind address and the fact that frames are unauthenticated.
+A default that is silent is a default nobody revisits.
 
 ---
 

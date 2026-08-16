@@ -1,6 +1,18 @@
 # yalb-gcs Port Plan: flight-path-hud → Refined Architecture
 **Iteration 1 — Initial Port Roadmap**
 
+> **Scope, and what this document is not authoritative for.**
+> This is the canonical reference for **algorithms and file-to-file mapping** —
+> what to port from flight-path-hud and where it lands.
+>
+> It is **not** authoritative for build tooling, codegen configuration, library
+> choice, or sequencing. Those live in `order-of-operations.md` and the tier files,
+> which supersede anything here that conflicts. Statements in this document that
+> have been superseded are marked inline; the "Open Questions" section at the end is
+> closed in full.
+>
+> Order of authority: ADRs → `order-of-operations.md` → tier files → this document.
+
 ---
 
 ## Context
@@ -76,6 +88,14 @@ gcs-frontend     — Vite dev server :3000, proxies Connect to :8080
 Source SITL image from `ardupilot/ardupilot-dev-jammy` or equivalent. Confirm MAVLink output with `mavproxy.py --master=udp:127.0.0.1:14550`.
 
 ### 0b. Connect Codegen (buf + Bazel)
+
+> **Superseded by `tier-3-codegen.md`.** The config below is v1-era and does not
+> work as written: the key is `remote:` not `plugin:`, `out:` paths are relative to
+> the repo root, `buf.build/connectrpc/es` does not belong in the protobuf-es v2
+> line, and `buf generate` needs `--template proto/buf.gen.yaml`. `rules_buf` is
+> deferred (see `order-of-operations.md`); Bazel resolves Go deps from `go.mod` via
+> gazelle's `go_deps` extension instead. Kept for the output-location intent only.
+
 Add `buf.gen.yaml` to `proto/`:
 ```yaml
 version: v2
@@ -115,6 +135,14 @@ Each layer boundary is a typed Go channel. Context cancellation wires through ev
 **Goal:** Raw UDP bytes from SITL → typed `TelemetryEvent` proto message.
 
 ### 1a. Frame Codec (`internal/codec/frame.go`)
+
+> **Superseded by `tier-1-pure-domain-logic.md`.** The gomavlib-vs-hand-roll question
+> is closed in favour of **gomavlib v3**: STX detection, length extraction,
+> CRC_EXTRA validation, v2 signing and dialect struct population are all library
+> concerns. Do not port hand-rolled framing. The list below is retained as a
+> description of what the library must be shown to do, i.e. the framing cases in the
+> Tier 2 capability matrix.
+
 Port from `flight-path-hud/apps/mavlink-bridge-go/` (MAVLink v1/v2 binary parsing):
 - Start-of-frame detection (STX: 0xFE for v1, 0xFD for v2)
 - Payload length extraction + complete-frame accumulation
@@ -127,8 +155,10 @@ Source: flight-path-hud Go bridge CRC/framing logic; cross-reference MAVLink 2.0
 ### 1b. Message Codec (`internal/codec/message.go`)
 Deserialize `Frame.Payload` into typed Go structs (generated from common.xml + ardupilotmega.xml):
 - Priority messages: `HEARTBEAT` (#0), `ATTITUDE` (#30), `GLOBAL_POSITION_INT` (#33), `VFR_HUD` (#74), `GPS_RAW_INT` (#24), `SYS_STATUS` (#1), `RADIO_STATUS` (#109), `STATUSTEXT` (#253), `MISSION_CURRENT` (#42), `COMMAND_ACK` (#77), `PARAM_VALUE` (#22), `HOME_POSITION` (#242), `NAV_CONTROLLER_OUTPUT` (#62), `EKF_STATUS_REPORT` (#193)
-- Use `gomavlib` or hand-coded structs (either acceptable; gomavlib preferred for completeness)
-- Map decoded message → appropriate `TelemetryEvent` proto oneof variant
+- ~~Use `gomavlib` or hand-coded structs (either acceptable)~~ → **gomavlib v3**, closed
+- Map decoded message → `TelemetryEvent` (13 streaming families) **or** `ProtocolEvent`
+  (PARAM_VALUE, MISSION_COUNT, MISSION_ITEM_INT, MISSION_ACK, COMMAND_ACK). Not one
+  envelope — see `tier-0-proto-contracts.md` Chapter 3.
 
 ### 1c. UDP Transport Adapter (`internal/transport/udp.go`)
 - `net.PacketConn` on 0.0.0.0:14550
@@ -218,12 +248,21 @@ src/logic/
   freshness.ts     — isFresh(lastSeenMs, ttlMs) → boolean
 ```
 
-**Key algorithms to preserve exactly** (from flight-path-hud ADRs):
-- **Heading fallback chain** (ADR-0004): `VFR_HUD.heading` → `ATTITUDE.yaw` → `GLOBAL_POSITION_INT.hdg` (reject 65535)
-- **NED sign flip** (ADR-0005): `climbMps = -(vzCms / 100)` — MAVLink vz is positive-down
-- **Turn rate** (ADR-0017): body-rate kinematics `ψ̇ = (sin φ·q + cos φ·r)/cos θ`, falls back to `g·tan(roll)/V`
-- **Stall gate** (ADR-0017): below 14 m/s, forward progress → `max(0, speed - stall)`
-- **ENU projection**: `north_m = Δlat × 111319.49`, `east_m = Δlon × 111319.49 × cos(lat0)`
+**Key algorithms to preserve** — with the corrections that apply in this repo. The
+algorithm shapes port; three of the constants and one of the units do not. See
+`tier-1-pure-domain-logic.md` Chapter 5 for the authoritative statement.
+
+- **Heading fallback chain**: `VFR_HUD.heading` → `ATTITUDE.yaw` → `GLOBAL_POSITION_INT.hdg`.
+  The 65535 reject belongs to `GLOBAL_POSITION_INT.hdg` (uint16 cdeg), **not** VFR_HUD —
+  `VFR_HUD.heading` is `int16_t` and cannot hold it. What the VFR_HUD path needs is
+  normalisation of negative values.
+- **NED sign flip**: `climbMps = -vzMs`. **No `/100`** — this repo's protos already
+  carry m/s, unlike flight-path-hud's raw wire envelope.
+- **Turn rate**: unchanged — `ψ̇ = (sin φ·q + cos φ·r)/cos θ`, falling back to `g·tan(roll)/V`.
+- **Stall gate**: keyed on **flight regime, not vehicle type** — apply the floor only
+  when airspeed is present and below stall. 14 m/s is not a constant; it is
+  `ARSPD_FBW_MIN`, passed in as an argument.
+- **ENU projection**: unchanged.
 
 **Input type translation:** flight-path-hud reads from `TelemetrySample` (flat struct). yalb-gcs resolvers receive a `TelemetryEvent` proto with a `oneof payload`. Write a thin adapter `sampleFromEvent(e: TelemetryEvent): TelemetrySample` that maps proto fields to the same flat shape the resolver logic expects — isolating the translation to one file.
 
@@ -441,14 +480,20 @@ Phase 7 ─ SITL: download mission uploaded by QGC → verify parity
 Phase 8 ─ SITL: list params → modify ARMING_CHECK → read back
 ```
 
-**Regression gate:** `bazel test //...` must pass after each phase before moving to next.
+**Regression gate:** the tier gate for the phase must pass — `make gate-tier-0`
+through `make gate-tier-3`, then `bazel test //...` once BUILD files are generated
+(`make bazel-tidy`).
 
 ---
 
-## Open Questions (for plan iteration)
+## Open Questions — all closed
 
-1. **Go MAVLink library choice:** Use `gomavlib` (complete, maintained) or hand-roll from golden byte vectors? flight-path-hud hand-rolled its Go bridge — we could use that as a base and keep the dependency count low, or adopt gomavlib for completeness (includes ardupilotmega dialects).
-2. **Map tile provider:** MapLibre GL + which tile source? flight-path-hud used MapTiler. Options: self-hosted PMTiles, OpenStreetMap raster, Mapbox. Must work offline (field deployments).
-3. **Phase ordering:** Should Parameter Service (Phase 8) come before Command Surfaces (Phase 6)? Calibration and PID tuning depend on parameters; guided workflow doesn't.
-4. **Storybook vs Vite MSW:** flight-path-hud used Vite dev server for component iteration. Should we add Storybook now, or use MSW (Mock Service Worker) + ConnectAdapter for faster bootstrap?
-5. **rules_buf maturity:** rules_buf in Bzlmod has some rough edges. If it blocks, fall back to `buf generate` as a Bazel `genrule` and import generated files directly.
+Resolved in `order-of-operations.md` under "Resolved Design Decisions". Kept here so
+nobody re-opens them from this document.
+
+1. ~~Go MAVLink library choice~~ → **gomavlib v3** with `ardupilotmega.Dialect`.
+2. ~~Map tile provider~~ → **MapLibre GL + PMTiles**, self-hosted, no API key.
+3. ~~Phase ordering, params vs commands~~ → **params (read) before commands (write)**.
+4. ~~Storybook vs Vite MSW~~ → **vitest** for pure logic; MSW at Tier 6; Storybook deferred.
+5. ~~rules_buf maturity~~ → **commit generated files**, `make proto-gen` as the developer
+   command; rules_buf deferred. Bazel resolves Go deps from `go.mod` via `go_deps`.
