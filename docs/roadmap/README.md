@@ -7,6 +7,7 @@ Build order, tier breakdowns, and porting reference for ligma-gcs.
 | File | Purpose |
 |---|---|
 | [order-of-operations.md](order-of-operations.md) | Canonical build sequence — tier summary, exit gates, resolved decisions, out-of-scope table. Start here. |
+| [tier-0-3-adversarial-review.md](tier-0-3-adversarial-review.md) | Adversarial review of Tiers 0–3 — verified defects, ordering change, Tier 0 additions. Read before starting Tier 0. |
 | [port-plan.md](port-plan.md) | What to port from flight-path-hud, where it lands, and architecture mapping. Canonical reference for existing logic. |
 | [tier-0-proto-contracts.md](tier-0-proto-contracts.md) | Proto audit, force field removal, buf lint gate |
 | [tier-1-pure-domain-logic.md](tier-1-pure-domain-logic.md) | Go codec + TS resolvers, no sockets, no Redis |
