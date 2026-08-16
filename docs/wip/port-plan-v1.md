@@ -1,11 +1,11 @@
-# ligma-gcs Port Plan: flight-path-hud → Refined Architecture
+# yalb-gcs Port Plan: flight-path-hud → Refined Architecture
 **Iteration 1 — Initial Port Roadmap**
 
 ---
 
 ## Context
 
-`ligma-gcs` is a fully designed but entirely unimplemented GCS scaffold. It has:
+`yalb-gcs` is a fully designed but entirely unimplemented GCS scaffold. It has:
 - 14 proto files covering the complete domain (fleet, telemetry, commands, missions, track, mesh, chat, video, auth, security)
 - 8 Connect RPC service definitions
 - 5 ADRs documenting every architectural decision
@@ -21,21 +21,21 @@
 - Dual-gate safety model for writes (bridge-side gate + UI-side eligibility check)
 - Deterministic SITL replay (JSONL, injected clock, no system calls in domain logic)
 
-**This plan's goal:** Port the proven implementations into ligma-gcs's cleaner, refined architecture — upgrading from ad-hoc JSON WebSocket to protobuf + Connect RPC, adding Redis as an integration bus, enabling multi-protocol track layer and full auth/security from day one.
+**This plan's goal:** Port the proven implementations into yalb-gcs's cleaner, refined architecture — upgrading from ad-hoc JSON WebSocket to protobuf + Connect RPC, adding Redis as an integration bus, enabling multi-protocol track layer and full auth/security from day one.
 
 **Canonical references throughout:**
 - MAVLink 2.0 spec (common.xml, ardupilotmega.xml)
 - ArduPilot SITL UDP:14550 (Copter 4.6.x, Plane 4.5.x)
 - QGroundControl source (parameter handling, MAVLink command sequences)
-- ligma-gcs ADRs 0001–0005 (highest-authority architectural guidance)
+- yalb-gcs ADRs 0001–0005 (highest-authority architectural guidance)
 - flight-path-hud as algorithm/pattern source material, not as a style guide
 
 ---
 
 ## Principles for This Port
 
-1. **ligma-gcs ADRs are law.** Where flight-path-hud and the ADRs diverge, ADRs win.
-2. **Refine, don't copy.** flight-path-hud uses ad-hoc JSON; ligma-gcs uses proto types. Translate algorithms, not wire formats.
+1. **yalb-gcs ADRs are law.** Where flight-path-hud and the ADRs diverge, ADRs win.
+2. **Refine, don't copy.** flight-path-hud uses ad-hoc JSON; yalb-gcs uses proto types. Translate algorithms, not wire formats.
 3. **Pure domain logic stays pure.** Resolvers (attitude, heading, trajectory) are framework-free functions; they port directly to TypeScript with no dependencies.
 4. **Dual-gate safety model is non-negotiable.** Every write (arm/disarm, mode change, mission upload, guided reposition) requires a service-side gate and a UI-side eligibility check. No automatic writes.
 5. **SITL before hardware.** Nothing is considered working until it passes a live ArduPilot SITL test.
@@ -45,7 +45,7 @@
 
 ## Architecture Mapping
 
-| flight-path-hud | ligma-gcs equivalent | Refinement |
+| flight-path-hud | yalb-gcs equivalent | Refinement |
 |---|---|---|
 | Node.js WebSocket bridge | Go hexagonal pipeline | Goroutine-per-layer, typed channels |
 | JSON wire envelope (messageName, payload) | `TelemetryEvent` proto oneof | Schema-enforced, backward-compatible |
@@ -225,7 +225,7 @@ src/logic/
 - **Stall gate** (ADR-0017): below 14 m/s, forward progress → `max(0, speed - stall)`
 - **ENU projection**: `north_m = Δlat × 111319.49`, `east_m = Δlon × 111319.49 × cos(lat0)`
 
-**Input type translation:** flight-path-hud reads from `TelemetrySample` (flat struct). ligma-gcs resolvers receive a `TelemetryEvent` proto with a `oneof payload`. Write a thin adapter `sampleFromEvent(e: TelemetryEvent): TelemetrySample` that maps proto fields to the same flat shape the resolver logic expects — isolating the translation to one file.
+**Input type translation:** flight-path-hud reads from `TelemetrySample` (flat struct). yalb-gcs resolvers receive a `TelemetryEvent` proto with a `oneof payload`. Write a thin adapter `sampleFromEvent(e: TelemetryEvent): TelemetrySample` that maps proto fields to the same flat shape the resolver logic expects — isolating the translation to one file.
 
 Strict TS compliance: all resolver return types are `exactOptionalPropertyTypes`-safe (no `| undefined` unless the field genuinely may be absent).
 
@@ -361,7 +361,7 @@ Port from flight-path-hud `MissionPanel`:
 - `SetCurrentItem` highlights active item (MISSION_CURRENT message)
 
 **Verification:**
-- SITL: plan 5-waypoint mission in QGC → load in ligma-gcs → verify identical item list
+- SITL: plan 5-waypoint mission in QGC → load in yalb-gcs → verify identical item list
 - Upload round-trip: upload mission → download → assert identical `MissionItem` list
 
 ---
