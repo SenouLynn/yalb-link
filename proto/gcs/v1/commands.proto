@@ -50,11 +50,11 @@ message CommandResult {
 }
 
 // SetArmedRequest arms or disarms the vehicle via MAV_CMD_COMPONENT_ARM_DISARM.
-// force bypasses pre-arm checks (param2 = 21196 on the wire).
+// Force-arm (param2=21196) is never permitted — the field is intentionally absent.
+// Callers cannot bypass pre-arm checks from the GCS.
 message SetArmedRequest {
   VehicleId target = 1;
   bool arm = 2;
-  bool force = 3;
 }
 
 // SetModeRequest changes the vehicle flight mode via MAV_CMD_DO_SET_MODE.
