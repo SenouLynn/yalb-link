@@ -1,0 +1,14 @@
+# Golden MAVLink byte fixtures, regenerable via scripts/gen_mavlink_fixtures.py.
+#
+# Exposed as a filegroup so the codec test can declare them as runtime data.
+# Bazel sandboxes tests, so a fixture that is not declared here is simply absent
+# at test time — which is how the codec test failed on its first hermetic run
+# while passing under plain `go test`.
+filegroup(
+    name = "fixtures",
+    srcs = glob([
+        "*.bin",
+        "*.json",
+    ]),
+    visibility = ["//:__subpackages__"],
+)

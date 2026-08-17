@@ -1,0 +1,2 @@
+# The capability matrix is read by TestMatrixCoverage, so it is test data.
+exports_files(["codec-capability-matrix.md"])

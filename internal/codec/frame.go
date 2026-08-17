@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/bluenviron/gomavlib/v3"
@@ -63,15 +64,27 @@ var _ FrameSource = (*Node)(nil)
 // frames only — nothing pre-registers a vehicle, and a vehicle that has never
 // been heard from is not addressable.
 type Node struct {
-	// Field order is grouped by mutex ownership, then packed pointers-first to
-	// satisfy govet's fieldalignment.
-	node   *gomavlib.Node
-	events chan gomavlib.Event
+	// Field order is packed pointer-like-first to satisfy govet's
+	// fieldalignment, then grouped by ownership. The mu/links/routes grouping
+	// is the one that matters for readers: mu guards the two maps above it.
+	node    *gomavlib.Node
+	events  chan gomavlib.Event
+	closing chan struct{}
 
-	// mu guards links and routes.
+	// links and routes are guarded by mu.
 	links  map[LinkID]*gomavlib.Channel
 	routes map[byte]LinkID
 	mu     sync.RWMutex
+
+	// parseErrors counts frames gomavlib rejected: bad CRC, truncated, or a
+	// signing failure.
+	//
+	// Dropping an unrecognised message ID silently is correct — we do not
+	// handle every message in the dialect and never will. Dropping a *parse
+	// error* silently is not: it is the signal for a failing radio, an
+	// electrically noisy airframe, or replay tampering, and it is invisible
+	// unless something counts it.
+	parseErrors atomic.Uint64
 
 	wg        sync.WaitGroup
 	closeOnce sync.Once
@@ -109,10 +122,11 @@ func NewNode(endpoints []gomavlib.EndpointConf) (*Node, error) {
 	}
 
 	n := &Node{
-		node:   inner,
-		events: make(chan gomavlib.Event),
-		links:  make(map[LinkID]*gomavlib.Channel),
-		routes: make(map[byte]LinkID),
+		node:    inner,
+		events:  make(chan gomavlib.Event),
+		links:   make(map[LinkID]*gomavlib.Channel),
+		routes:  make(map[byte]LinkID),
+		closing: make(chan struct{}),
 	}
 
 	n.wg.Add(1)
@@ -160,14 +174,25 @@ func (n *Node) LinkFor(sysID byte) (LinkID, bool) {
 	return link, ok
 }
 
+// ParseErrors returns the number of frames gomavlib rejected as unparseable.
+//
+// A rising count on an otherwise healthy link points at the physical layer,
+// not at this codec.
+func (n *Node) ParseErrors() uint64 {
+	return n.parseErrors.Load()
+}
+
 // Close halts the node and waits for its goroutines to return.
 //
 // Node.Initialize starts three goroutines, so the claim under goleak is "none
 // leaked", not "none running".
 func (n *Node) Close() error {
 	n.closeOnce.Do(func() {
-		// gomavlib closes its event channel at the end of its run loop, which
-		// is what terminates the pump.
+		// Order matters. Releasing a pump that is blocked mid-send has to come
+		// first: gomavlib's Close waits for its own goroutines, and one of them
+		// can be blocked writing the event that pump is blocked forwarding.
+		// Closing the node first in that state deadlocks both.
+		close(n.closing)
 		n.node.Close()
 		n.wg.Wait()
 	})
@@ -176,13 +201,30 @@ func (n *Node) Close() error {
 }
 
 // pump forwards node events, maintaining the link and route tables as it goes.
+//
+// The send is guarded by a select on closing rather than being a bare channel
+// send. Events() is unbuffered, so a bare send blocks until a consumer reads —
+// and a consumer that has stopped reading (a cancelled subscription, a test
+// that took the frame it wanted, a slow downstream) would wedge this goroutine
+// forever. Since Close waits on the WaitGroup this goroutine belongs to, that
+// turns a stalled consumer into a node that can never be shut down. Selecting
+// on closing keeps Close total: it always returns, whatever the consumer does.
+//
+// Events still in flight when Close is called are dropped. That is deliberate —
+// a shutdown path that insists on delivering telemetry nobody is reading is the
+// deadlock this exists to prevent.
 func (n *Node) pump() {
 	defer n.wg.Done()
 	defer close(n.events)
 
 	for evt := range n.node.Events() {
 		n.observe(evt)
-		n.events <- evt
+
+		select {
+		case n.events <- evt:
+		case <-n.closing:
+			return
+		}
 	}
 }
 
@@ -196,6 +238,11 @@ func (n *Node) observe(evt gomavlib.Event) {
 
 	case *gomavlib.EventChannelClose:
 		n.forgetLink(linkIDOf(e.Channel))
+
+	case *gomavlib.EventParseError:
+		// No frame surfaces for these, so this counter is the only trace they
+		// leave. Decode never sees them and returns no error for them either.
+		n.parseErrors.Add(1)
 
 	case *gomavlib.EventFrame:
 		// The routing table is built from what we hear, and only from what we

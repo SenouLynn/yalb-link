@@ -1,13 +1,42 @@
-load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "codec",
-    srcs = ["frame.go"],
+    srcs = [
+        "encode.go",
+        "frame.go",
+        "message.go",
+    ],
     importpath = "yalb.gcs/internal/codec",
     visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/gen/gcs/v1:gcs",
+        "@com_github_bluenviron_gomavlib_v3//:gomavlib",
+        "@com_github_bluenviron_gomavlib_v3//pkg/dialects/ardupilotmega",
+        "@com_github_bluenviron_gomavlib_v3//pkg/dialects/common",
+        "@com_github_bluenviron_gomavlib_v3//pkg/message",
+    ],
+)
+
+go_test(
+    name = "codec_test",
+    srcs = [
+        "encode_test.go",
+        "frame_test.go",
+        "matrix_test.go",
+        "message_test.go",
+        "testdata_test.go",
+    ],
+    # keep
+    data = [
+        "//contracts/mavlink:fixtures",
+        "//docs/wip:codec-capability-matrix.md",
+    ],
+    embed = [":codec"],
     deps = [
         "@com_github_bluenviron_gomavlib_v3//:gomavlib",
         "@com_github_bluenviron_gomavlib_v3//pkg/dialects/ardupilotmega",
         "@com_github_bluenviron_gomavlib_v3//pkg/message",
+        "@org_uber_go_goleak//:goleak",
     ],
 )

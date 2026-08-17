@@ -7,6 +7,75 @@ Format: `## [version] - YYYY-MM-DD`. Unreleased changes accumulate at the top.
 
 ## [Unreleased]
 
+### Added — Tier 1 codec + Tier 2 parity apparatus (2026-08-17)
+
+**Go codec (`internal/codec`) — Tier 1 chapters 1–3:**
+- `frame.go` — `FrameSource` port over gomavlib. Non-deprecated struct config +
+  `Initialize()` (SA1019 is on), `HeartbeatPeriod` 1s over gomavlib's own heartbeat
+  rather than a hand-rolled ticker, `StreamRequestEnable` left false with the
+  hardware-bringup caveat recorded. `WriteTo(LinkID, message.Message)` with a routing
+  table built only from inbound frames; an unaddressable target returns
+  `ErrUnknownLink` and is never broadcast
+- `message.go` — dispatch tables, not a type switch. 13 telemetry families →
+  `TelemetryEvent`, 5 transaction families → `ProtocolEvent`. All unit normalisation
+  happens here, exactly once
+- `encode.go` — the 11 priority send encoders. Pure (`message.Message`, never bytes),
+  and none of them chooses a destination
+- 44 tests, `-race`, `goleak` in `TestMain`
+
+**Tier 2 evidentiary layer:**
+- `scripts/gen_mavlink_fixtures.py` + 33 golden fixtures in `contracts/mavlink/`.
+  Committed, deterministic (verified byte-identical across regeneration), generated
+  from this repo rather than sourced from an unpinned sibling checkout. Each `.json`
+  carries wire-unit `fields` plus an `expected_proto` block, so a fixture is evidence
+  for a NORM-* row and not just a decode test
+- `docs/wip/codec-capability-matrix.md` — 13 + 5 receive, 11 send, 6 normalisation,
+  7 framing rows
+- `TestMatrixCoverage` — asserts matrix rows equal
+  `telemetryDecoders ∪ protocolDecoders ∪ SendFamilies`. Canaried both directions: a
+  removed row with a live decoder fails, and a removed decoder with a live row fails
+
+**Three defects found by execution, not by reading:**
+- **`pump` could wedge the node permanently.** Events were forwarded with a bare send
+  on an unbuffered channel, so a consumer that stopped reading blocked the goroutine —
+  and `Close` waits on it, making shutdown impossible. Found via a 600s hang whose
+  goroutine dump showed seven pumps blocked in `chan send`. The send is now guarded by
+  a `select` on a `closing` channel and `TestCloseReturnsWithNoEventConsumer` pins it
+- **The `bad_crc` fixture was not testing a bad CRC.** It corrupted byte 8, which is
+  inside the v2 msgid field (the header is 10 bytes), producing a self-consistent frame
+  with an *unknown message ID* that gomavlib surfaces as `MessageRaw`. Now corrupts
+  index 10, the first payload byte
+- **`FRAME-TRUNCATED` does not emit a parse error**, contrary to the Tier 2 plan.
+  gomavlib's parser is stream-oriented: a frame cut mid-payload leaves it waiting for
+  the remainder. The observable contract is only "no frame surfaces, no panic"
+
+**Two contract corrections against the generated protos:**
+- HEARTBEAT has no `TelemetryEvent` oneof variant — it decodes to `HeartbeatState` and
+  drives the fleet fold. Its dispatch-table entry is nil so the ID is still claimed and
+  still appears in the matrix
+- `hdg_cdeg`, `cog_cdeg` and `vel_cm_s` deliberately keep wire units *and* wire-unit
+  names. The 65535 unknown sentinel is defined in those units and a divide turns it
+  into 655.35, which nothing downstream can recognise
+
+**Frontend logic (`frontend/src/logic`) — Tier 1 chapters 4–5:**
+- `sample.ts` shim + `attitude`, `heading`, `flightPath`, `position`, `trajectory`,
+  `track`, `freshness` resolvers; 60 tests over named fixture tables
+- Stall gate keys on flight regime, not vehicle type — a hovering VTOL keeps its
+  predicted track
+- `finite.ts` `isNum` type predicate removes the `as number` casts that
+  `Number.isFinite` forces
+
+**Build:**
+- `go.mod` gains `gomavlib v3.3.5` and `goleak v1.3.0`
+- `contracts/mavlink/BUILD.bazel` filegroup + `data` on the codec test with `# keep`.
+  Bazel sandboxes tests, so the fixtures were absent on the first hermetic run while
+  plain `go test` passed — a reminder that `bazel test //...` is the signal
+- `bazel test //...` green over 3 targets, both languages
+
+**Gate status:** `gate-tier-1`'s Go half previously passed while reporting
+`[no test files]` — a gate checking nothing, in the ADR-0006 sense. It now runs 44
+tests. `gate-tier-2` is fully wired.
+
 ### Changed — adversarial review of Tiers 0–3 (2026-08-16)
 
 Findings and full reasoning: `docs/roadmap/tier-0-3-adversarial-review.md`.
