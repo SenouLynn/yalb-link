@@ -1,0 +1,13 @@
+load("@rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "codec",
+    srcs = ["frame.go"],
+    importpath = "yalb.gcs/internal/codec",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "@com_github_bluenviron_gomavlib_v3//:gomavlib",
+        "@com_github_bluenviron_gomavlib_v3//pkg/dialects/ardupilotmega",
+        "@com_github_bluenviron_gomavlib_v3//pkg/message",
+    ],
+)
