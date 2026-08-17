@@ -1,0 +1,12 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "target_component": 1,
+    "target_system": 1
+  },
+  "message_id": 45,
+  "message_name": "MISSION_CLEAR_ALL",
+  "note": "protocol wired in Tier 8; deliberately not surfaced in the mission panel until after Tier 10",
+  "seq": 42,
+  "sys_id": 255
+}

@@ -1,0 +1,12 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "target_component": 1,
+    "target_system": 1,
+    "type": 0
+  },
+  "message_id": 47,
+  "message_name": "MISSION_ACK",
+  "seq": 42,
+  "sys_id": 255
+}

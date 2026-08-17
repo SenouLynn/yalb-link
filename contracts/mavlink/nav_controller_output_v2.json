@@ -1,0 +1,17 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "alt_error": 1.5,
+    "aspd_error": 0.25,
+    "nav_bearing": 90,
+    "nav_pitch": -2.25,
+    "nav_roll": 5.5,
+    "target_bearing": 95,
+    "wp_dist": 250,
+    "xtrack_error": 3.75
+  },
+  "message_id": 62,
+  "message_name": "NAV_CONTROLLER_OUTPUT",
+  "seq": 42,
+  "sys_id": 1
+}

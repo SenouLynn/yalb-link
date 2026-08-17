@@ -1,0 +1,17 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "fixed": 1,
+    "noise": 42,
+    "remnoise": 40,
+    "remrssi": 190,
+    "rssi": 195,
+    "rxerrors": 3,
+    "txbuf": 98
+  },
+  "message_id": 109,
+  "message_name": "RADIO_STATUS",
+  "note": "txbuf is the uplink back-pressure signal a duplicated GCS heartbeat would inflate",
+  "seq": 42,
+  "sys_id": 1
+}

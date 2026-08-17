@@ -1,0 +1,13 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "battery_remaining": 87,
+    "current_battery": 1050,
+    "load": 250,
+    "voltage_battery": 12587
+  },
+  "message_id": 1,
+  "message_name": "SYS_STATUS",
+  "seq": 42,
+  "sys_id": 1
+}

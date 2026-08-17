@@ -1,0 +1,15 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "autopilot": 0,
+    "base_mode": 0,
+    "custom_mode": 0,
+    "system_status": 4,
+    "type": 6
+  },
+  "message_id": 0,
+  "message_name": "HEARTBEAT",
+  "note": "gomavlib emits this itself from its own config; the fixture pins the field values",
+  "seq": 42,
+  "sys_id": 255
+}

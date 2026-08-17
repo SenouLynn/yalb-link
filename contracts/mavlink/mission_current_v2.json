@@ -1,0 +1,10 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "seq": 3
+  },
+  "message_id": 42,
+  "message_name": "MISSION_CURRENT",
+  "seq": 42,
+  "sys_id": 1
+}

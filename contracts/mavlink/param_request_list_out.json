@@ -1,0 +1,11 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "target_component": 1,
+    "target_system": 1
+  },
+  "message_id": 21,
+  "message_name": "PARAM_REQUEST_LIST",
+  "seq": 42,
+  "sys_id": 255
+}

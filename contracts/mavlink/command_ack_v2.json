@@ -1,0 +1,12 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "command": 400,
+    "result": 0
+  },
+  "message_id": 77,
+  "message_name": "COMMAND_ACK",
+  "note": "correlates against the in-flight registry keyed by (sysId, compId, commandID)",
+  "seq": 42,
+  "sys_id": 1
+}

@@ -1,0 +1,12 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "param_id": "ARMING_CHECK",
+    "param_type": 6,
+    "param_value": 1.0
+  },
+  "message_id": 23,
+  "message_name": "PARAM_SET",
+  "seq": 42,
+  "sys_id": 255
+}

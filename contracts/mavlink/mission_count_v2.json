@@ -1,0 +1,13 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "count": 5,
+    "target_component": 190,
+    "target_system": 255
+  },
+  "message_id": 44,
+  "message_name": "MISSION_COUNT",
+  "note": "addressed to the GCS (255, 190)",
+  "seq": 42,
+  "sys_id": 1
+}

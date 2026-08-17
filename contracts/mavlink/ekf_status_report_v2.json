@@ -1,0 +1,16 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "compass_variance": 0.09,
+    "flags": 831,
+    "pos_horiz_variance": 0.22,
+    "pos_vert_variance": 0.18,
+    "terrain_alt_variance": 0.0,
+    "velocity_variance": 0.15
+  },
+  "message_id": 193,
+  "message_name": "EKF_STATUS_REPORT",
+  "note": "ardupilotmega dialect, not common \u2014 this is why the node uses ardupilotmega.Dialect",
+  "seq": 42,
+  "sys_id": 1
+}

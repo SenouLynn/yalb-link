@@ -1,0 +1,15 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "autopilot": 3,
+    "base_mode": 209,
+    "custom_mode": 4,
+    "system_status": 4,
+    "type": 2
+  },
+  "message_id": 0,
+  "message_name": "HEARTBEAT",
+  "note": "base_mode bit 7 (128) is MAV_MODE_FLAG_SAFETY_ARMED \u2014 this vehicle is armed",
+  "seq": 42,
+  "sys_id": 1
+}

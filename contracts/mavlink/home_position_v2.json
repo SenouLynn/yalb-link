@@ -1,0 +1,17 @@
+{
+  "comp_id": 1,
+  "expected_proto": {
+    "alt_msl_m": 120.0,
+    "lat_deg": 47.6062,
+    "lon_deg": -122.3321
+  },
+  "fields": {
+    "altitude": 120000,
+    "latitude": 476062000,
+    "longitude": -1223321000
+  },
+  "message_id": 242,
+  "message_name": "HOME_POSITION",
+  "seq": 42,
+  "sys_id": 1
+}

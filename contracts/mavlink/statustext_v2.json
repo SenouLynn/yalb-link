@@ -1,0 +1,11 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "severity": 6,
+    "text": "EKF2 IMU0 is using GPS"
+  },
+  "message_id": 253,
+  "message_name": "STATUSTEXT",
+  "seq": 42,
+  "sys_id": 1
+}

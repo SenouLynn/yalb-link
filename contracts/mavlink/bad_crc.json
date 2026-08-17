@@ -1,0 +1,9 @@
+{
+  "comp_id": 1,
+  "fields": {},
+  "message_id": 0,
+  "message_name": "HEARTBEAT",
+  "note": "Payload byte flipped after framing. Assert: no TelemetryEvent, no panic, parse-error counter incremented. Do NOT assert an error return from Decode \u2014 it returns (nil, nil) for parse errors too.",
+  "seq": 42,
+  "sys_id": 1
+}

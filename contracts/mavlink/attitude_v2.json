@@ -1,0 +1,17 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "pitch": -0.0087266,
+    "pitchspeed": -0.02,
+    "roll": 0.0174533,
+    "rollspeed": 0.01,
+    "time_boot_ms": 12345,
+    "yaw": 1.5708,
+    "yawspeed": 0.15
+  },
+  "message_id": 30,
+  "message_name": "ATTITUDE",
+  "note": "radians on the wire and radians in the proto \u2014 no conversion on this path",
+  "seq": 42,
+  "sys_id": 1
+}

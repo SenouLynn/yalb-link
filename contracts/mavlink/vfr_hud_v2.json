@@ -1,0 +1,16 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "airspeed": 18.5,
+    "alt": 120.5,
+    "climb": 2.5,
+    "groundspeed": 17.25,
+    "heading": 90,
+    "throttle": 55
+  },
+  "message_id": 74,
+  "message_name": "VFR_HUD",
+  "note": "climb is already positive-up; heading is int16 and cannot hold the 65535 sentinel",
+  "seq": 42,
+  "sys_id": 1
+}

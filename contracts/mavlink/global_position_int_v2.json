@@ -1,0 +1,28 @@
+{
+  "comp_id": 1,
+  "expected_proto": {
+    "alt_msl_m": 120.5,
+    "alt_relative_m": 50.25,
+    "hdg_cdeg": 9000,
+    "lat_deg": 47.6062,
+    "lon_deg": -122.3321,
+    "vx_m_s": 12.0,
+    "vy_m_s": -3.0,
+    "vz_m_s": 1.5
+  },
+  "fields": {
+    "alt": 120500,
+    "hdg": 9000,
+    "lat": 476062000,
+    "lon": -1223321000,
+    "relative_alt": 50250,
+    "vx": 1200,
+    "vy": -300,
+    "vz": 150
+  },
+  "message_id": 33,
+  "message_name": "GLOBAL_POSITION_INT",
+  "note": "vz is positive DOWN; climb rate is -vz_m_s and there is no second divide",
+  "seq": 42,
+  "sys_id": 1
+}

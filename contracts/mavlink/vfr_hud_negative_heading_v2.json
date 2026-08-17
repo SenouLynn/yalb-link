@@ -1,0 +1,15 @@
+{
+  "comp_id": 1,
+  "expected_proto": {
+    "heading_deg": -90
+  },
+  "fields": {
+    "climb": -1.5,
+    "heading": -90
+  },
+  "message_id": 74,
+  "message_name": "VFR_HUD",
+  "note": "ArduPilot emits negative headings on this int16 field; normalisation to [0,360) is the resolver's job",
+  "seq": 42,
+  "sys_id": 1
+}

@@ -1,0 +1,27 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "battery_remaining": 87,
+    "current_battery": 1050,
+    "current_consumed": 1200,
+    "id": 0,
+    "temperature": 2500,
+    "voltages": [
+      4200,
+      4195,
+      4198,
+      4201,
+      65535,
+      65535,
+      65535,
+      65535,
+      65535,
+      65535
+    ]
+  },
+  "message_id": 147,
+  "message_name": "BATTERY_STATUS",
+  "note": "65535 in a cell voltage slot means the cell is not present, not 65.535 V",
+  "seq": 42,
+  "sys_id": 1
+}

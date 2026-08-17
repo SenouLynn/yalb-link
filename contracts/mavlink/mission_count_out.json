@@ -1,0 +1,12 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "count": 5,
+    "target_component": 1,
+    "target_system": 1
+  },
+  "message_id": 44,
+  "message_name": "MISSION_COUNT",
+  "seq": 42,
+  "sys_id": 255
+}

@@ -1,0 +1,15 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "command": 16,
+    "frame": 6,
+    "seq": 1,
+    "x": 476062000,
+    "y": -1223321000,
+    "z": 50.0
+  },
+  "message_id": 73,
+  "message_name": "MISSION_ITEM_INT",
+  "seq": 42,
+  "sys_id": 255
+}

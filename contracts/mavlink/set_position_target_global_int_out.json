@@ -1,0 +1,15 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "alt": 50.0,
+    "coordinate_frame": 6,
+    "lat_int": 476062000,
+    "lon_int": -1223321000,
+    "type_mask": 3576
+  },
+  "message_id": 86,
+  "message_name": "SET_POSITION_TARGET_GLOBAL_INT",
+  "note": "type_mask 0xDF8 = 3576 = position-only; the FORCE_SET bit (9) is deliberately clear",
+  "seq": 42,
+  "sys_id": 255
+}

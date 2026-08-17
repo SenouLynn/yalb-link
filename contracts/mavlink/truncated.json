@@ -1,0 +1,9 @@
+{
+  "comp_id": 1,
+  "fields": {},
+  "message_id": 0,
+  "message_name": "HEARTBEAT",
+  "note": "Frame cut mid-payload. Same behaviour as bad_crc: EventParseError, no panic, counter incremented.",
+  "seq": 42,
+  "sys_id": 1
+}

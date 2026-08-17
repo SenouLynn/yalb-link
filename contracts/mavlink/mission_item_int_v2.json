@@ -1,0 +1,22 @@
+{
+  "comp_id": 1,
+  "expected_proto": {
+    "x": 47.6062,
+    "y": -122.3321,
+    "z": 50.0
+  },
+  "fields": {
+    "autocontinue": 1,
+    "command": 16,
+    "frame": 6,
+    "seq": 1,
+    "x": 476062000,
+    "y": -1223321000,
+    "z": 50.0
+  },
+  "message_id": 73,
+  "message_name": "MISSION_ITEM_INT",
+  "note": "x/y are degE7 ints but z is already float metres \u2014 only two of the three convert",
+  "seq": 42,
+  "sys_id": 1
+}

@@ -1,0 +1,12 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "param_id": "ARMING_CHECK",
+    "param_index": -1
+  },
+  "message_id": 20,
+  "message_name": "PARAM_REQUEST_READ",
+  "note": "param_index -1 means look up by name; a valid index ignores param_id",
+  "seq": 42,
+  "sys_id": 255
+}

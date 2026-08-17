@@ -1,0 +1,24 @@
+{
+  "comp_id": 1,
+  "expected_proto": {
+    "alt_msl_m": 120.5,
+    "cog_cdeg": 9000,
+    "lat_deg": 47.6062,
+    "lon_deg": -122.3321,
+    "vel_cm_s": 1500
+  },
+  "fields": {
+    "alt": 120500,
+    "cog": 9000,
+    "fix_type": 3,
+    "lat": 476062000,
+    "lon": -1223321000,
+    "satellites_visible": 14,
+    "vel": 1500
+  },
+  "message_id": 24,
+  "message_name": "GPS_RAW_INT",
+  "note": "GPS_RAW_INT altitude is MSL, never relative \u2014 the datum differs from GLOBAL_POSITION_INT",
+  "seq": 42,
+  "sys_id": 1
+}
