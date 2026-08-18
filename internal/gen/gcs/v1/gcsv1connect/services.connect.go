@@ -100,6 +100,9 @@ const (
 	// ParameterServiceSetParameterProcedure is the fully-qualified name of the ParameterService's
 	// SetParameter RPC.
 	ParameterServiceSetParameterProcedure = "/gcs.v1.ParameterService/SetParameter"
+	// ParameterServiceGetParameterMetadataProcedure is the fully-qualified name of the
+	// ParameterService's GetParameterMetadata RPC.
+	ParameterServiceGetParameterMetadataProcedure = "/gcs.v1.ParameterService/GetParameterMetadata"
 	// MissionServiceUploadMissionProcedure is the fully-qualified name of the MissionService's
 	// UploadMission RPC.
 	MissionServiceUploadMissionProcedure = "/gcs.v1.MissionService/UploadMission"
@@ -736,6 +739,19 @@ type ParameterServiceClient interface {
 	GetParameter(context.Context, *connect.Request[v1.GetParameterRequest]) (*connect.Response[v1.ParameterValue], error)
 	// SetParameter sends PARAM_SET and returns the vehicle's echoed PARAM_VALUE.
 	SetParameter(context.Context, *connect.Request[v1.SetParameterRequest]) (*connect.Response[v1.ParameterValue], error)
+	// GetParameterMetadata returns the vendored metadata set matching the
+	// vehicle's reported firmware — units, ranges, enum and bitmask labels,
+	// read-only and reboot-required flags.
+	//
+	// Sends nothing to the vehicle: the set is selected from
+	// VehicleCapabilities.flight_sw_version, which the backend already holds.
+	// OBSERVER, because reading what a parameter means is not a write and an
+	// observer who cannot read units is reading raw floats.
+	//
+	// The response's is_exact_match is false when the selected set is the nearest
+	// vendored version below the vehicle's actual firmware. Surface that; do not
+	// drop it. See ADR-0007 R4.
+	GetParameterMetadata(context.Context, *connect.Request[v1.GetParameterMetadataRequest]) (*connect.Response[v1.ParameterMetadataSet], error)
 }
 
 // NewParameterServiceClient constructs a client for the gcs.v1.ParameterService service. By
@@ -767,14 +783,21 @@ func NewParameterServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(parameterServiceMethods.ByName("SetParameter")),
 			connect.WithClientOptions(opts...),
 		),
+		getParameterMetadata: connect.NewClient[v1.GetParameterMetadataRequest, v1.ParameterMetadataSet](
+			httpClient,
+			baseURL+ParameterServiceGetParameterMetadataProcedure,
+			connect.WithSchema(parameterServiceMethods.ByName("GetParameterMetadata")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // parameterServiceClient implements ParameterServiceClient.
 type parameterServiceClient struct {
-	listParameters *connect.Client[v1.ListParametersRequest, v1.ParameterValue]
-	getParameter   *connect.Client[v1.GetParameterRequest, v1.ParameterValue]
-	setParameter   *connect.Client[v1.SetParameterRequest, v1.ParameterValue]
+	listParameters       *connect.Client[v1.ListParametersRequest, v1.ParameterValue]
+	getParameter         *connect.Client[v1.GetParameterRequest, v1.ParameterValue]
+	setParameter         *connect.Client[v1.SetParameterRequest, v1.ParameterValue]
+	getParameterMetadata *connect.Client[v1.GetParameterMetadataRequest, v1.ParameterMetadataSet]
 }
 
 // ListParameters calls gcs.v1.ParameterService.ListParameters.
@@ -792,6 +815,11 @@ func (c *parameterServiceClient) SetParameter(ctx context.Context, req *connect.
 	return c.setParameter.CallUnary(ctx, req)
 }
 
+// GetParameterMetadata calls gcs.v1.ParameterService.GetParameterMetadata.
+func (c *parameterServiceClient) GetParameterMetadata(ctx context.Context, req *connect.Request[v1.GetParameterMetadataRequest]) (*connect.Response[v1.ParameterMetadataSet], error) {
+	return c.getParameterMetadata.CallUnary(ctx, req)
+}
+
 // ParameterServiceHandler is an implementation of the gcs.v1.ParameterService service.
 type ParameterServiceHandler interface {
 	// ListParameters triggers PARAM_REQUEST_LIST and streams all PARAM_VALUE
@@ -801,6 +829,19 @@ type ParameterServiceHandler interface {
 	GetParameter(context.Context, *connect.Request[v1.GetParameterRequest]) (*connect.Response[v1.ParameterValue], error)
 	// SetParameter sends PARAM_SET and returns the vehicle's echoed PARAM_VALUE.
 	SetParameter(context.Context, *connect.Request[v1.SetParameterRequest]) (*connect.Response[v1.ParameterValue], error)
+	// GetParameterMetadata returns the vendored metadata set matching the
+	// vehicle's reported firmware — units, ranges, enum and bitmask labels,
+	// read-only and reboot-required flags.
+	//
+	// Sends nothing to the vehicle: the set is selected from
+	// VehicleCapabilities.flight_sw_version, which the backend already holds.
+	// OBSERVER, because reading what a parameter means is not a write and an
+	// observer who cannot read units is reading raw floats.
+	//
+	// The response's is_exact_match is false when the selected set is the nearest
+	// vendored version below the vehicle's actual firmware. Surface that; do not
+	// drop it. See ADR-0007 R4.
+	GetParameterMetadata(context.Context, *connect.Request[v1.GetParameterMetadataRequest]) (*connect.Response[v1.ParameterMetadataSet], error)
 }
 
 // NewParameterServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -828,6 +869,12 @@ func NewParameterServiceHandler(svc ParameterServiceHandler, opts ...connect.Han
 		connect.WithSchema(parameterServiceMethods.ByName("SetParameter")),
 		connect.WithHandlerOptions(opts...),
 	)
+	parameterServiceGetParameterMetadataHandler := connect.NewUnaryHandler(
+		ParameterServiceGetParameterMetadataProcedure,
+		svc.GetParameterMetadata,
+		connect.WithSchema(parameterServiceMethods.ByName("GetParameterMetadata")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/gcs.v1.ParameterService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ParameterServiceListParametersProcedure:
@@ -836,6 +883,8 @@ func NewParameterServiceHandler(svc ParameterServiceHandler, opts ...connect.Han
 			parameterServiceGetParameterHandler.ServeHTTP(w, r)
 		case ParameterServiceSetParameterProcedure:
 			parameterServiceSetParameterHandler.ServeHTTP(w, r)
+		case ParameterServiceGetParameterMetadataProcedure:
+			parameterServiceGetParameterMetadataHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -855,6 +904,10 @@ func (UnimplementedParameterServiceHandler) GetParameter(context.Context, *conne
 
 func (UnimplementedParameterServiceHandler) SetParameter(context.Context, *connect.Request[v1.SetParameterRequest]) (*connect.Response[v1.ParameterValue], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("gcs.v1.ParameterService.SetParameter is not implemented"))
+}
+
+func (UnimplementedParameterServiceHandler) GetParameterMetadata(context.Context, *connect.Request[v1.GetParameterMetadataRequest]) (*connect.Response[v1.ParameterMetadataSet], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("gcs.v1.ParameterService.GetParameterMetadata is not implemented"))
 }
 
 // MissionServiceClient is a client for the gcs.v1.MissionService service.

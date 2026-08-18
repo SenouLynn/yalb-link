@@ -205,11 +205,12 @@ const file_gcs_v1_services_proto_rawDesc = "" +
 	"\x17SetPositionTargetGlobal\x12\x1c.gcs.v1.PositionTargetGlobal\x1a\x19.gcs.v1.PositionTargetAck\"\x04\x88\xb5\x18\x02\x12V\n" +
 	"\x16SetPositionTargetLocal\x12\x1b.gcs.v1.PositionTargetLocal\x1a\x19.gcs.v1.PositionTargetAck\"\x04\x88\xb5\x18\x022f\n" +
 	"\x12CalibrationService\x12P\n" +
-	"\x10StartCalibration\x12\x1a.gcs.v1.CalibrationRequest\x1a\x18.gcs.v1.CalibrationEvent\"\x04\x88\xb5\x18\x020\x012\xf9\x01\n" +
+	"\x10StartCalibration\x12\x1a.gcs.v1.CalibrationRequest\x1a\x18.gcs.v1.CalibrationEvent\"\x04\x88\xb5\x18\x020\x012\xda\x02\n" +
 	"\x10ParameterService\x12O\n" +
 	"\x0eListParameters\x12\x1d.gcs.v1.ListParametersRequest\x1a\x16.gcs.v1.ParameterValue\"\x04\x88\xb5\x18\x010\x01\x12I\n" +
 	"\fGetParameter\x12\x1b.gcs.v1.GetParameterRequest\x1a\x16.gcs.v1.ParameterValue\"\x04\x88\xb5\x18\x01\x12I\n" +
-	"\fSetParameter\x12\x1b.gcs.v1.SetParameterRequest\x1a\x16.gcs.v1.ParameterValue\"\x04\x88\xb5\x18\x022\xbb\x02\n" +
+	"\fSetParameter\x12\x1b.gcs.v1.SetParameterRequest\x1a\x16.gcs.v1.ParameterValue\"\x04\x88\xb5\x18\x02\x12_\n" +
+	"\x14GetParameterMetadata\x12#.gcs.v1.GetParameterMetadataRequest\x1a\x1c.gcs.v1.ParameterMetadataSet\"\x04\x88\xb5\x18\x012\xbb\x02\n" +
 	"\x0eMissionService\x12G\n" +
 	"\rUploadMission\x12\x1c.gcs.v1.UploadMissionRequest\x1a\x12.gcs.v1.MissionAck\"\x04\x88\xb5\x18\x02\x12N\n" +
 	"\x0fDownloadMission\x12\x1e.gcs.v1.DownloadMissionRequest\x1a\x13.gcs.v1.MissionItem\"\x04\x88\xb5\x18\x010\x01\x12E\n" +
@@ -253,74 +254,76 @@ func file_gcs_v1_services_proto_rawDescGZIP() []byte {
 
 var file_gcs_v1_services_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_gcs_v1_services_proto_goTypes = []any{
-	(*StreamTelemetryRequest)(nil),  // 0: gcs.v1.StreamTelemetryRequest
-	(*GetSnapshotRequest)(nil),      // 1: gcs.v1.GetSnapshotRequest
-	(*PositionTargetAck)(nil),       // 2: gcs.v1.PositionTargetAck
-	(*VehicleId)(nil),               // 3: gcs.v1.VehicleId
-	(TelemetryPayloadType)(0),       // 4: gcs.v1.TelemetryPayloadType
-	(*WatchFleetRequest)(nil),       // 5: gcs.v1.WatchFleetRequest
-	(*ListVehiclesRequest)(nil),     // 6: gcs.v1.ListVehiclesRequest
-	(*ConnectLinkRequest)(nil),      // 7: gcs.v1.ConnectLinkRequest
-	(*DisconnectLinkRequest)(nil),   // 8: gcs.v1.DisconnectLinkRequest
-	(*CommandLong)(nil),             // 9: gcs.v1.CommandLong
-	(*SetArmedRequest)(nil),         // 10: gcs.v1.SetArmedRequest
-	(*SetModeRequest)(nil),          // 11: gcs.v1.SetModeRequest
-	(*PositionTargetGlobal)(nil),    // 12: gcs.v1.PositionTargetGlobal
-	(*PositionTargetLocal)(nil),     // 13: gcs.v1.PositionTargetLocal
-	(*CalibrationRequest)(nil),      // 14: gcs.v1.CalibrationRequest
-	(*ListParametersRequest)(nil),   // 15: gcs.v1.ListParametersRequest
-	(*GetParameterRequest)(nil),     // 16: gcs.v1.GetParameterRequest
-	(*SetParameterRequest)(nil),     // 17: gcs.v1.SetParameterRequest
-	(*UploadMissionRequest)(nil),    // 18: gcs.v1.UploadMissionRequest
-	(*DownloadMissionRequest)(nil),  // 19: gcs.v1.DownloadMissionRequest
-	(*ClearMissionRequest)(nil),     // 20: gcs.v1.ClearMissionRequest
-	(*SetCurrentItemRequest)(nil),   // 21: gcs.v1.SetCurrentItemRequest
-	(*WatchTracksRequest)(nil),      // 22: gcs.v1.WatchTracksRequest
-	(*GetTrackRequest)(nil),         // 23: gcs.v1.GetTrackRequest
-	(*WatchMeshNodesRequest)(nil),   // 24: gcs.v1.WatchMeshNodesRequest
-	(*ListMeshNodesRequest)(nil),    // 25: gcs.v1.ListMeshNodesRequest
-	(*SendMeshMessageRequest)(nil),  // 26: gcs.v1.SendMeshMessageRequest
-	(*WatchMeshPacketsRequest)(nil), // 27: gcs.v1.WatchMeshPacketsRequest
-	(*WatchMessagesRequest)(nil),    // 28: gcs.v1.WatchMessagesRequest
-	(*ChatMessageRequest)(nil),      // 29: gcs.v1.ChatMessageRequest
-	(*ListChannelsRequest)(nil),     // 30: gcs.v1.ListChannelsRequest
-	(*WatchStreamsRequest)(nil),     // 31: gcs.v1.WatchStreamsRequest
-	(*SdpOffer)(nil),                // 32: gcs.v1.SdpOffer
-	(*StartRecordingRequest)(nil),   // 33: gcs.v1.StartRecordingRequest
-	(*StopRecordingRequest)(nil),    // 34: gcs.v1.StopRecordingRequest
-	(*ListRecordingsRequest)(nil),   // 35: gcs.v1.ListRecordingsRequest
-	(*ValidateSessionRequest)(nil),  // 36: gcs.v1.ValidateSessionRequest
-	(*GetCurrentUserRequest)(nil),   // 37: gcs.v1.GetCurrentUserRequest
-	(*WatchAuditRequest)(nil),       // 38: gcs.v1.WatchAuditRequest
-	(*FleetEvent)(nil),              // 39: gcs.v1.FleetEvent
-	(*ListVehiclesResponse)(nil),    // 40: gcs.v1.ListVehiclesResponse
-	(*ConnectLinkResponse)(nil),     // 41: gcs.v1.ConnectLinkResponse
-	(*DisconnectLinkResponse)(nil),  // 42: gcs.v1.DisconnectLinkResponse
-	(*LinkStatus)(nil),              // 43: gcs.v1.LinkStatus
-	(*TelemetryEvent)(nil),          // 44: gcs.v1.TelemetryEvent
-	(*VehicleSnapshot)(nil),         // 45: gcs.v1.VehicleSnapshot
-	(*CommandResult)(nil),           // 46: gcs.v1.CommandResult
-	(*CalibrationEvent)(nil),        // 47: gcs.v1.CalibrationEvent
-	(*ParameterValue)(nil),          // 48: gcs.v1.ParameterValue
-	(*MissionAck)(nil),              // 49: gcs.v1.MissionAck
-	(*MissionItem)(nil),             // 50: gcs.v1.MissionItem
-	(*TrackEvent)(nil),              // 51: gcs.v1.TrackEvent
-	(*Track)(nil),                   // 52: gcs.v1.Track
-	(*MeshNodeEvent)(nil),           // 53: gcs.v1.MeshNodeEvent
-	(*ListMeshNodesResponse)(nil),   // 54: gcs.v1.ListMeshNodesResponse
-	(*SendMeshMessageResponse)(nil), // 55: gcs.v1.SendMeshMessageResponse
-	(*MeshPacket)(nil),              // 56: gcs.v1.MeshPacket
-	(*ChatMessage)(nil),             // 57: gcs.v1.ChatMessage
-	(*ChatMessageAck)(nil),          // 58: gcs.v1.ChatMessageAck
-	(*ListChannelsResponse)(nil),    // 59: gcs.v1.ListChannelsResponse
-	(*VideoStreamEvent)(nil),        // 60: gcs.v1.VideoStreamEvent
-	(*SdpAnswer)(nil),               // 61: gcs.v1.SdpAnswer
-	(*StartRecordingResponse)(nil),  // 62: gcs.v1.StartRecordingResponse
-	(*StopRecordingResponse)(nil),   // 63: gcs.v1.StopRecordingResponse
-	(*ListRecordingsResponse)(nil),  // 64: gcs.v1.ListRecordingsResponse
-	(*ValidateSessionResponse)(nil), // 65: gcs.v1.ValidateSessionResponse
-	(*OperatorProfile)(nil),         // 66: gcs.v1.OperatorProfile
-	(*AuditEvent)(nil),              // 67: gcs.v1.AuditEvent
+	(*StreamTelemetryRequest)(nil),      // 0: gcs.v1.StreamTelemetryRequest
+	(*GetSnapshotRequest)(nil),          // 1: gcs.v1.GetSnapshotRequest
+	(*PositionTargetAck)(nil),           // 2: gcs.v1.PositionTargetAck
+	(*VehicleId)(nil),                   // 3: gcs.v1.VehicleId
+	(TelemetryPayloadType)(0),           // 4: gcs.v1.TelemetryPayloadType
+	(*WatchFleetRequest)(nil),           // 5: gcs.v1.WatchFleetRequest
+	(*ListVehiclesRequest)(nil),         // 6: gcs.v1.ListVehiclesRequest
+	(*ConnectLinkRequest)(nil),          // 7: gcs.v1.ConnectLinkRequest
+	(*DisconnectLinkRequest)(nil),       // 8: gcs.v1.DisconnectLinkRequest
+	(*CommandLong)(nil),                 // 9: gcs.v1.CommandLong
+	(*SetArmedRequest)(nil),             // 10: gcs.v1.SetArmedRequest
+	(*SetModeRequest)(nil),              // 11: gcs.v1.SetModeRequest
+	(*PositionTargetGlobal)(nil),        // 12: gcs.v1.PositionTargetGlobal
+	(*PositionTargetLocal)(nil),         // 13: gcs.v1.PositionTargetLocal
+	(*CalibrationRequest)(nil),          // 14: gcs.v1.CalibrationRequest
+	(*ListParametersRequest)(nil),       // 15: gcs.v1.ListParametersRequest
+	(*GetParameterRequest)(nil),         // 16: gcs.v1.GetParameterRequest
+	(*SetParameterRequest)(nil),         // 17: gcs.v1.SetParameterRequest
+	(*GetParameterMetadataRequest)(nil), // 18: gcs.v1.GetParameterMetadataRequest
+	(*UploadMissionRequest)(nil),        // 19: gcs.v1.UploadMissionRequest
+	(*DownloadMissionRequest)(nil),      // 20: gcs.v1.DownloadMissionRequest
+	(*ClearMissionRequest)(nil),         // 21: gcs.v1.ClearMissionRequest
+	(*SetCurrentItemRequest)(nil),       // 22: gcs.v1.SetCurrentItemRequest
+	(*WatchTracksRequest)(nil),          // 23: gcs.v1.WatchTracksRequest
+	(*GetTrackRequest)(nil),             // 24: gcs.v1.GetTrackRequest
+	(*WatchMeshNodesRequest)(nil),       // 25: gcs.v1.WatchMeshNodesRequest
+	(*ListMeshNodesRequest)(nil),        // 26: gcs.v1.ListMeshNodesRequest
+	(*SendMeshMessageRequest)(nil),      // 27: gcs.v1.SendMeshMessageRequest
+	(*WatchMeshPacketsRequest)(nil),     // 28: gcs.v1.WatchMeshPacketsRequest
+	(*WatchMessagesRequest)(nil),        // 29: gcs.v1.WatchMessagesRequest
+	(*ChatMessageRequest)(nil),          // 30: gcs.v1.ChatMessageRequest
+	(*ListChannelsRequest)(nil),         // 31: gcs.v1.ListChannelsRequest
+	(*WatchStreamsRequest)(nil),         // 32: gcs.v1.WatchStreamsRequest
+	(*SdpOffer)(nil),                    // 33: gcs.v1.SdpOffer
+	(*StartRecordingRequest)(nil),       // 34: gcs.v1.StartRecordingRequest
+	(*StopRecordingRequest)(nil),        // 35: gcs.v1.StopRecordingRequest
+	(*ListRecordingsRequest)(nil),       // 36: gcs.v1.ListRecordingsRequest
+	(*ValidateSessionRequest)(nil),      // 37: gcs.v1.ValidateSessionRequest
+	(*GetCurrentUserRequest)(nil),       // 38: gcs.v1.GetCurrentUserRequest
+	(*WatchAuditRequest)(nil),           // 39: gcs.v1.WatchAuditRequest
+	(*FleetEvent)(nil),                  // 40: gcs.v1.FleetEvent
+	(*ListVehiclesResponse)(nil),        // 41: gcs.v1.ListVehiclesResponse
+	(*ConnectLinkResponse)(nil),         // 42: gcs.v1.ConnectLinkResponse
+	(*DisconnectLinkResponse)(nil),      // 43: gcs.v1.DisconnectLinkResponse
+	(*LinkStatus)(nil),                  // 44: gcs.v1.LinkStatus
+	(*TelemetryEvent)(nil),              // 45: gcs.v1.TelemetryEvent
+	(*VehicleSnapshot)(nil),             // 46: gcs.v1.VehicleSnapshot
+	(*CommandResult)(nil),               // 47: gcs.v1.CommandResult
+	(*CalibrationEvent)(nil),            // 48: gcs.v1.CalibrationEvent
+	(*ParameterValue)(nil),              // 49: gcs.v1.ParameterValue
+	(*ParameterMetadataSet)(nil),        // 50: gcs.v1.ParameterMetadataSet
+	(*MissionAck)(nil),                  // 51: gcs.v1.MissionAck
+	(*MissionItem)(nil),                 // 52: gcs.v1.MissionItem
+	(*TrackEvent)(nil),                  // 53: gcs.v1.TrackEvent
+	(*Track)(nil),                       // 54: gcs.v1.Track
+	(*MeshNodeEvent)(nil),               // 55: gcs.v1.MeshNodeEvent
+	(*ListMeshNodesResponse)(nil),       // 56: gcs.v1.ListMeshNodesResponse
+	(*SendMeshMessageResponse)(nil),     // 57: gcs.v1.SendMeshMessageResponse
+	(*MeshPacket)(nil),                  // 58: gcs.v1.MeshPacket
+	(*ChatMessage)(nil),                 // 59: gcs.v1.ChatMessage
+	(*ChatMessageAck)(nil),              // 60: gcs.v1.ChatMessageAck
+	(*ListChannelsResponse)(nil),        // 61: gcs.v1.ListChannelsResponse
+	(*VideoStreamEvent)(nil),            // 62: gcs.v1.VideoStreamEvent
+	(*SdpAnswer)(nil),                   // 63: gcs.v1.SdpAnswer
+	(*StartRecordingResponse)(nil),      // 64: gcs.v1.StartRecordingResponse
+	(*StopRecordingResponse)(nil),       // 65: gcs.v1.StopRecordingResponse
+	(*ListRecordingsResponse)(nil),      // 66: gcs.v1.ListRecordingsResponse
+	(*ValidateSessionResponse)(nil),     // 67: gcs.v1.ValidateSessionResponse
+	(*OperatorProfile)(nil),             // 68: gcs.v1.OperatorProfile
+	(*AuditEvent)(nil),                  // 69: gcs.v1.AuditEvent
 }
 var file_gcs_v1_services_proto_depIdxs = []int32{
 	3,  // 0: gcs.v1.StreamTelemetryRequest.vehicle_id:type_name -> gcs.v1.VehicleId
@@ -342,66 +345,68 @@ var file_gcs_v1_services_proto_depIdxs = []int32{
 	15, // 16: gcs.v1.ParameterService.ListParameters:input_type -> gcs.v1.ListParametersRequest
 	16, // 17: gcs.v1.ParameterService.GetParameter:input_type -> gcs.v1.GetParameterRequest
 	17, // 18: gcs.v1.ParameterService.SetParameter:input_type -> gcs.v1.SetParameterRequest
-	18, // 19: gcs.v1.MissionService.UploadMission:input_type -> gcs.v1.UploadMissionRequest
-	19, // 20: gcs.v1.MissionService.DownloadMission:input_type -> gcs.v1.DownloadMissionRequest
-	20, // 21: gcs.v1.MissionService.ClearMission:input_type -> gcs.v1.ClearMissionRequest
-	21, // 22: gcs.v1.MissionService.SetCurrentItem:input_type -> gcs.v1.SetCurrentItemRequest
-	22, // 23: gcs.v1.TrackService.WatchTracks:input_type -> gcs.v1.WatchTracksRequest
-	23, // 24: gcs.v1.TrackService.GetTrack:input_type -> gcs.v1.GetTrackRequest
-	24, // 25: gcs.v1.MeshService.WatchMeshNodes:input_type -> gcs.v1.WatchMeshNodesRequest
-	25, // 26: gcs.v1.MeshService.ListMeshNodes:input_type -> gcs.v1.ListMeshNodesRequest
-	26, // 27: gcs.v1.MeshService.SendMeshMessage:input_type -> gcs.v1.SendMeshMessageRequest
-	27, // 28: gcs.v1.MeshService.WatchMeshPackets:input_type -> gcs.v1.WatchMeshPacketsRequest
-	28, // 29: gcs.v1.ChatService.WatchMessages:input_type -> gcs.v1.WatchMessagesRequest
-	29, // 30: gcs.v1.ChatService.SendMessage:input_type -> gcs.v1.ChatMessageRequest
-	30, // 31: gcs.v1.ChatService.ListChannels:input_type -> gcs.v1.ListChannelsRequest
-	31, // 32: gcs.v1.VideoService.WatchStreams:input_type -> gcs.v1.WatchStreamsRequest
-	32, // 33: gcs.v1.VideoService.ExchangeSdp:input_type -> gcs.v1.SdpOffer
-	33, // 34: gcs.v1.VideoService.StartRecording:input_type -> gcs.v1.StartRecordingRequest
-	34, // 35: gcs.v1.VideoService.StopRecording:input_type -> gcs.v1.StopRecordingRequest
-	35, // 36: gcs.v1.VideoService.ListRecordings:input_type -> gcs.v1.ListRecordingsRequest
-	36, // 37: gcs.v1.AuthService.ValidateSession:input_type -> gcs.v1.ValidateSessionRequest
-	37, // 38: gcs.v1.AuthService.GetCurrentUser:input_type -> gcs.v1.GetCurrentUserRequest
-	38, // 39: gcs.v1.SecurityService.WatchAuditLog:input_type -> gcs.v1.WatchAuditRequest
-	39, // 40: gcs.v1.FleetService.WatchFleet:output_type -> gcs.v1.FleetEvent
-	40, // 41: gcs.v1.FleetService.ListVehicles:output_type -> gcs.v1.ListVehiclesResponse
-	41, // 42: gcs.v1.FleetService.ConnectLink:output_type -> gcs.v1.ConnectLinkResponse
-	42, // 43: gcs.v1.FleetService.DisconnectLink:output_type -> gcs.v1.DisconnectLinkResponse
-	43, // 44: gcs.v1.FleetService.WatchLinkStatus:output_type -> gcs.v1.LinkStatus
-	44, // 45: gcs.v1.TelemetryService.StreamTelemetry:output_type -> gcs.v1.TelemetryEvent
-	45, // 46: gcs.v1.TelemetryService.GetSnapshot:output_type -> gcs.v1.VehicleSnapshot
-	46, // 47: gcs.v1.CommandService.SendCommand:output_type -> gcs.v1.CommandResult
-	46, // 48: gcs.v1.CommandService.SetArmed:output_type -> gcs.v1.CommandResult
-	46, // 49: gcs.v1.CommandService.SetMode:output_type -> gcs.v1.CommandResult
-	2,  // 50: gcs.v1.CommandService.SetPositionTargetGlobal:output_type -> gcs.v1.PositionTargetAck
-	2,  // 51: gcs.v1.CommandService.SetPositionTargetLocal:output_type -> gcs.v1.PositionTargetAck
-	47, // 52: gcs.v1.CalibrationService.StartCalibration:output_type -> gcs.v1.CalibrationEvent
-	48, // 53: gcs.v1.ParameterService.ListParameters:output_type -> gcs.v1.ParameterValue
-	48, // 54: gcs.v1.ParameterService.GetParameter:output_type -> gcs.v1.ParameterValue
-	48, // 55: gcs.v1.ParameterService.SetParameter:output_type -> gcs.v1.ParameterValue
-	49, // 56: gcs.v1.MissionService.UploadMission:output_type -> gcs.v1.MissionAck
-	50, // 57: gcs.v1.MissionService.DownloadMission:output_type -> gcs.v1.MissionItem
-	49, // 58: gcs.v1.MissionService.ClearMission:output_type -> gcs.v1.MissionAck
-	49, // 59: gcs.v1.MissionService.SetCurrentItem:output_type -> gcs.v1.MissionAck
-	51, // 60: gcs.v1.TrackService.WatchTracks:output_type -> gcs.v1.TrackEvent
-	52, // 61: gcs.v1.TrackService.GetTrack:output_type -> gcs.v1.Track
-	53, // 62: gcs.v1.MeshService.WatchMeshNodes:output_type -> gcs.v1.MeshNodeEvent
-	54, // 63: gcs.v1.MeshService.ListMeshNodes:output_type -> gcs.v1.ListMeshNodesResponse
-	55, // 64: gcs.v1.MeshService.SendMeshMessage:output_type -> gcs.v1.SendMeshMessageResponse
-	56, // 65: gcs.v1.MeshService.WatchMeshPackets:output_type -> gcs.v1.MeshPacket
-	57, // 66: gcs.v1.ChatService.WatchMessages:output_type -> gcs.v1.ChatMessage
-	58, // 67: gcs.v1.ChatService.SendMessage:output_type -> gcs.v1.ChatMessageAck
-	59, // 68: gcs.v1.ChatService.ListChannels:output_type -> gcs.v1.ListChannelsResponse
-	60, // 69: gcs.v1.VideoService.WatchStreams:output_type -> gcs.v1.VideoStreamEvent
-	61, // 70: gcs.v1.VideoService.ExchangeSdp:output_type -> gcs.v1.SdpAnswer
-	62, // 71: gcs.v1.VideoService.StartRecording:output_type -> gcs.v1.StartRecordingResponse
-	63, // 72: gcs.v1.VideoService.StopRecording:output_type -> gcs.v1.StopRecordingResponse
-	64, // 73: gcs.v1.VideoService.ListRecordings:output_type -> gcs.v1.ListRecordingsResponse
-	65, // 74: gcs.v1.AuthService.ValidateSession:output_type -> gcs.v1.ValidateSessionResponse
-	66, // 75: gcs.v1.AuthService.GetCurrentUser:output_type -> gcs.v1.OperatorProfile
-	67, // 76: gcs.v1.SecurityService.WatchAuditLog:output_type -> gcs.v1.AuditEvent
-	40, // [40:77] is the sub-list for method output_type
-	3,  // [3:40] is the sub-list for method input_type
+	18, // 19: gcs.v1.ParameterService.GetParameterMetadata:input_type -> gcs.v1.GetParameterMetadataRequest
+	19, // 20: gcs.v1.MissionService.UploadMission:input_type -> gcs.v1.UploadMissionRequest
+	20, // 21: gcs.v1.MissionService.DownloadMission:input_type -> gcs.v1.DownloadMissionRequest
+	21, // 22: gcs.v1.MissionService.ClearMission:input_type -> gcs.v1.ClearMissionRequest
+	22, // 23: gcs.v1.MissionService.SetCurrentItem:input_type -> gcs.v1.SetCurrentItemRequest
+	23, // 24: gcs.v1.TrackService.WatchTracks:input_type -> gcs.v1.WatchTracksRequest
+	24, // 25: gcs.v1.TrackService.GetTrack:input_type -> gcs.v1.GetTrackRequest
+	25, // 26: gcs.v1.MeshService.WatchMeshNodes:input_type -> gcs.v1.WatchMeshNodesRequest
+	26, // 27: gcs.v1.MeshService.ListMeshNodes:input_type -> gcs.v1.ListMeshNodesRequest
+	27, // 28: gcs.v1.MeshService.SendMeshMessage:input_type -> gcs.v1.SendMeshMessageRequest
+	28, // 29: gcs.v1.MeshService.WatchMeshPackets:input_type -> gcs.v1.WatchMeshPacketsRequest
+	29, // 30: gcs.v1.ChatService.WatchMessages:input_type -> gcs.v1.WatchMessagesRequest
+	30, // 31: gcs.v1.ChatService.SendMessage:input_type -> gcs.v1.ChatMessageRequest
+	31, // 32: gcs.v1.ChatService.ListChannels:input_type -> gcs.v1.ListChannelsRequest
+	32, // 33: gcs.v1.VideoService.WatchStreams:input_type -> gcs.v1.WatchStreamsRequest
+	33, // 34: gcs.v1.VideoService.ExchangeSdp:input_type -> gcs.v1.SdpOffer
+	34, // 35: gcs.v1.VideoService.StartRecording:input_type -> gcs.v1.StartRecordingRequest
+	35, // 36: gcs.v1.VideoService.StopRecording:input_type -> gcs.v1.StopRecordingRequest
+	36, // 37: gcs.v1.VideoService.ListRecordings:input_type -> gcs.v1.ListRecordingsRequest
+	37, // 38: gcs.v1.AuthService.ValidateSession:input_type -> gcs.v1.ValidateSessionRequest
+	38, // 39: gcs.v1.AuthService.GetCurrentUser:input_type -> gcs.v1.GetCurrentUserRequest
+	39, // 40: gcs.v1.SecurityService.WatchAuditLog:input_type -> gcs.v1.WatchAuditRequest
+	40, // 41: gcs.v1.FleetService.WatchFleet:output_type -> gcs.v1.FleetEvent
+	41, // 42: gcs.v1.FleetService.ListVehicles:output_type -> gcs.v1.ListVehiclesResponse
+	42, // 43: gcs.v1.FleetService.ConnectLink:output_type -> gcs.v1.ConnectLinkResponse
+	43, // 44: gcs.v1.FleetService.DisconnectLink:output_type -> gcs.v1.DisconnectLinkResponse
+	44, // 45: gcs.v1.FleetService.WatchLinkStatus:output_type -> gcs.v1.LinkStatus
+	45, // 46: gcs.v1.TelemetryService.StreamTelemetry:output_type -> gcs.v1.TelemetryEvent
+	46, // 47: gcs.v1.TelemetryService.GetSnapshot:output_type -> gcs.v1.VehicleSnapshot
+	47, // 48: gcs.v1.CommandService.SendCommand:output_type -> gcs.v1.CommandResult
+	47, // 49: gcs.v1.CommandService.SetArmed:output_type -> gcs.v1.CommandResult
+	47, // 50: gcs.v1.CommandService.SetMode:output_type -> gcs.v1.CommandResult
+	2,  // 51: gcs.v1.CommandService.SetPositionTargetGlobal:output_type -> gcs.v1.PositionTargetAck
+	2,  // 52: gcs.v1.CommandService.SetPositionTargetLocal:output_type -> gcs.v1.PositionTargetAck
+	48, // 53: gcs.v1.CalibrationService.StartCalibration:output_type -> gcs.v1.CalibrationEvent
+	49, // 54: gcs.v1.ParameterService.ListParameters:output_type -> gcs.v1.ParameterValue
+	49, // 55: gcs.v1.ParameterService.GetParameter:output_type -> gcs.v1.ParameterValue
+	49, // 56: gcs.v1.ParameterService.SetParameter:output_type -> gcs.v1.ParameterValue
+	50, // 57: gcs.v1.ParameterService.GetParameterMetadata:output_type -> gcs.v1.ParameterMetadataSet
+	51, // 58: gcs.v1.MissionService.UploadMission:output_type -> gcs.v1.MissionAck
+	52, // 59: gcs.v1.MissionService.DownloadMission:output_type -> gcs.v1.MissionItem
+	51, // 60: gcs.v1.MissionService.ClearMission:output_type -> gcs.v1.MissionAck
+	51, // 61: gcs.v1.MissionService.SetCurrentItem:output_type -> gcs.v1.MissionAck
+	53, // 62: gcs.v1.TrackService.WatchTracks:output_type -> gcs.v1.TrackEvent
+	54, // 63: gcs.v1.TrackService.GetTrack:output_type -> gcs.v1.Track
+	55, // 64: gcs.v1.MeshService.WatchMeshNodes:output_type -> gcs.v1.MeshNodeEvent
+	56, // 65: gcs.v1.MeshService.ListMeshNodes:output_type -> gcs.v1.ListMeshNodesResponse
+	57, // 66: gcs.v1.MeshService.SendMeshMessage:output_type -> gcs.v1.SendMeshMessageResponse
+	58, // 67: gcs.v1.MeshService.WatchMeshPackets:output_type -> gcs.v1.MeshPacket
+	59, // 68: gcs.v1.ChatService.WatchMessages:output_type -> gcs.v1.ChatMessage
+	60, // 69: gcs.v1.ChatService.SendMessage:output_type -> gcs.v1.ChatMessageAck
+	61, // 70: gcs.v1.ChatService.ListChannels:output_type -> gcs.v1.ListChannelsResponse
+	62, // 71: gcs.v1.VideoService.WatchStreams:output_type -> gcs.v1.VideoStreamEvent
+	63, // 72: gcs.v1.VideoService.ExchangeSdp:output_type -> gcs.v1.SdpAnswer
+	64, // 73: gcs.v1.VideoService.StartRecording:output_type -> gcs.v1.StartRecordingResponse
+	65, // 74: gcs.v1.VideoService.StopRecording:output_type -> gcs.v1.StopRecordingResponse
+	66, // 75: gcs.v1.VideoService.ListRecordings:output_type -> gcs.v1.ListRecordingsResponse
+	67, // 76: gcs.v1.AuthService.ValidateSession:output_type -> gcs.v1.ValidateSessionResponse
+	68, // 77: gcs.v1.AuthService.GetCurrentUser:output_type -> gcs.v1.OperatorProfile
+	69, // 78: gcs.v1.SecurityService.WatchAuditLog:output_type -> gcs.v1.AuditEvent
+	41, // [41:79] is the sub-list for method output_type
+	3,  // [3:41] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name

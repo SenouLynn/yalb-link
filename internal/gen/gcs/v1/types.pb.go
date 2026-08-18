@@ -1445,6 +1445,194 @@ func (MavBatteryChargeState) EnumDescriptor() ([]byte, []int) {
 	return file_gcs_v1_types_proto_rawDescGZIP(), []int{16}
 }
 
+// MavProtocolCapability mirrors MAV_PROTOCOL_CAPABILITY in common.xml.
+// Carried as a 64-bit bitmask in AUTOPILOT_VERSION.capabilities (#148).
+//
+// This is the discriminator for every optional protocol path. ADR-0007 decides
+// that firmware variance is absorbed by *declared capability*, never by firmware
+// identity — there is no FirmwarePlugin-style hierarchy and no behavioural switch
+// on (MavAutopilot, MavType). A vehicle that has not declared a capability has not
+// declared it; that is distinct from having declared it absent, and neither is
+// "present". Where the difference is observable, surface it rather than guessing.
+//
+// Values are powers of two and are the wire values, not indices. They are carried
+// individually here and as a raw uint64 on VehicleCapabilities, because a vehicle
+// may set bits this enum does not yet mirror and dropping them would be silent.
+//
+// PARAM_ENCODE_BYTEWISE (16) and PARAM_ENCODE_C_CAST (131072) are mutually
+// exclusive declarations of how an integer parameter is packed into the float
+// PARAM_VALUE.param_value. Exactly one should be set by any vehicle supporting the
+// parameter protocol. If neither is set the encoding is unknown, and the codec
+// refuses to decode integer parameters rather than assuming the common case —
+// decoding BYTEWISE data under a C_CAST assumption yields finite, plausible,
+// wrong numbers with no error anywhere. See parameters.proto.
+type MavProtocolCapability int32
+
+const (
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_NONE                                MavProtocolCapability = 0 // no capabilities declared
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_MISSION_FLOAT                       MavProtocolCapability = 1 // MISSION_ITEM (deprecated)
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_PARAM_FLOAT                         MavProtocolCapability = 2
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_MISSION_INT                         MavProtocolCapability = 4 // MISSION_ITEM_INT; our only mission encoding
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_COMMAND_INT                         MavProtocolCapability = 8
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE               MavProtocolCapability = 16 // see note above
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_FTP                                 MavProtocolCapability = 32 // MAVFTP; enables the @PARAM/param.pck fast path
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_SET_ATTITUDE_TARGET                 MavProtocolCapability = 64
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_LOCAL_NED       MavProtocolCapability = 128
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_GLOBAL_INT      MavProtocolCapability = 256 // guided reposition (Tier 8f)
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_TERRAIN                             MavProtocolCapability = 512
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_RESERVED3                           MavProtocolCapability = 1024
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_FLIGHT_TERMINATION                  MavProtocolCapability = 2048
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_COMPASS_CALIBRATION                 MavProtocolCapability = 4096  // gates CalibrationService
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_MAVLINK2                            MavProtocolCapability = 8192  // signing, extension fields
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_MISSION_FENCE                       MavProtocolCapability = 16384 // MAV_MISSION_TYPE_FENCE
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_MISSION_RALLY                       MavProtocolCapability = 32768 // MAV_MISSION_TYPE_RALLY
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_RESERVED2                           MavProtocolCapability = 65536
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_C_CAST                 MavProtocolCapability = 131072 // see note above
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_COMPONENT_IMPLEMENTS_GIMBAL_MANAGER MavProtocolCapability = 262144
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_COMPONENT_ACCEPTS_GCS_CONTROL       MavProtocolCapability = 524288
+	MavProtocolCapability_MAV_PROTOCOL_CAPABILITY_GRIPPER                             MavProtocolCapability = 1048576
+)
+
+// Enum value maps for MavProtocolCapability.
+var (
+	MavProtocolCapability_name = map[int32]string{
+		0:       "MAV_PROTOCOL_CAPABILITY_NONE",
+		1:       "MAV_PROTOCOL_CAPABILITY_MISSION_FLOAT",
+		2:       "MAV_PROTOCOL_CAPABILITY_PARAM_FLOAT",
+		4:       "MAV_PROTOCOL_CAPABILITY_MISSION_INT",
+		8:       "MAV_PROTOCOL_CAPABILITY_COMMAND_INT",
+		16:      "MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE",
+		32:      "MAV_PROTOCOL_CAPABILITY_FTP",
+		64:      "MAV_PROTOCOL_CAPABILITY_SET_ATTITUDE_TARGET",
+		128:     "MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_LOCAL_NED",
+		256:     "MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_GLOBAL_INT",
+		512:     "MAV_PROTOCOL_CAPABILITY_TERRAIN",
+		1024:    "MAV_PROTOCOL_CAPABILITY_RESERVED3",
+		2048:    "MAV_PROTOCOL_CAPABILITY_FLIGHT_TERMINATION",
+		4096:    "MAV_PROTOCOL_CAPABILITY_COMPASS_CALIBRATION",
+		8192:    "MAV_PROTOCOL_CAPABILITY_MAVLINK2",
+		16384:   "MAV_PROTOCOL_CAPABILITY_MISSION_FENCE",
+		32768:   "MAV_PROTOCOL_CAPABILITY_MISSION_RALLY",
+		65536:   "MAV_PROTOCOL_CAPABILITY_RESERVED2",
+		131072:  "MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_C_CAST",
+		262144:  "MAV_PROTOCOL_CAPABILITY_COMPONENT_IMPLEMENTS_GIMBAL_MANAGER",
+		524288:  "MAV_PROTOCOL_CAPABILITY_COMPONENT_ACCEPTS_GCS_CONTROL",
+		1048576: "MAV_PROTOCOL_CAPABILITY_GRIPPER",
+	}
+	MavProtocolCapability_value = map[string]int32{
+		"MAV_PROTOCOL_CAPABILITY_NONE":                                0,
+		"MAV_PROTOCOL_CAPABILITY_MISSION_FLOAT":                       1,
+		"MAV_PROTOCOL_CAPABILITY_PARAM_FLOAT":                         2,
+		"MAV_PROTOCOL_CAPABILITY_MISSION_INT":                         4,
+		"MAV_PROTOCOL_CAPABILITY_COMMAND_INT":                         8,
+		"MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE":               16,
+		"MAV_PROTOCOL_CAPABILITY_FTP":                                 32,
+		"MAV_PROTOCOL_CAPABILITY_SET_ATTITUDE_TARGET":                 64,
+		"MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_LOCAL_NED":       128,
+		"MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_GLOBAL_INT":      256,
+		"MAV_PROTOCOL_CAPABILITY_TERRAIN":                             512,
+		"MAV_PROTOCOL_CAPABILITY_RESERVED3":                           1024,
+		"MAV_PROTOCOL_CAPABILITY_FLIGHT_TERMINATION":                  2048,
+		"MAV_PROTOCOL_CAPABILITY_COMPASS_CALIBRATION":                 4096,
+		"MAV_PROTOCOL_CAPABILITY_MAVLINK2":                            8192,
+		"MAV_PROTOCOL_CAPABILITY_MISSION_FENCE":                       16384,
+		"MAV_PROTOCOL_CAPABILITY_MISSION_RALLY":                       32768,
+		"MAV_PROTOCOL_CAPABILITY_RESERVED2":                           65536,
+		"MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_C_CAST":                 131072,
+		"MAV_PROTOCOL_CAPABILITY_COMPONENT_IMPLEMENTS_GIMBAL_MANAGER": 262144,
+		"MAV_PROTOCOL_CAPABILITY_COMPONENT_ACCEPTS_GCS_CONTROL":       524288,
+		"MAV_PROTOCOL_CAPABILITY_GRIPPER":                             1048576,
+	}
+)
+
+func (x MavProtocolCapability) Enum() *MavProtocolCapability {
+	p := new(MavProtocolCapability)
+	*p = x
+	return p
+}
+
+func (x MavProtocolCapability) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MavProtocolCapability) Descriptor() protoreflect.EnumDescriptor {
+	return file_gcs_v1_types_proto_enumTypes[17].Descriptor()
+}
+
+func (MavProtocolCapability) Type() protoreflect.EnumType {
+	return &file_gcs_v1_types_proto_enumTypes[17]
+}
+
+func (x MavProtocolCapability) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MavProtocolCapability.Descriptor instead.
+func (MavProtocolCapability) EnumDescriptor() ([]byte, []int) {
+	return file_gcs_v1_types_proto_rawDescGZIP(), []int{17}
+}
+
+// MavModeProperty mirrors MAV_MODE_PROPERTY in common.xml.
+// Carried as a bitmask in AVAILABLE_MODES.properties (#435).
+//
+// NOT_USER_SELECTABLE is the vehicle telling the GCS to keep a mode out of the
+// mode picker — the mode may still be entered by the flight controller itself,
+// e.g. as part of a failsafe. No hand-maintained table can produce this, because
+// it is a property of the running firmware build and frame configuration rather
+// than of the firmware family. It is the reason ADR-0007 R1 prefers AVAILABLE_MODES
+// over the generated dialect enums even though both yield a name.
+type MavModeProperty int32
+
+const (
+	MavModeProperty_MAV_MODE_PROPERTY_NONE                MavModeProperty = 0 // no properties declared
+	MavModeProperty_MAV_MODE_PROPERTY_ADVANCED            MavModeProperty = 1 // hide behind an "advanced" affordance
+	MavModeProperty_MAV_MODE_PROPERTY_NOT_USER_SELECTABLE MavModeProperty = 2 // omit from the mode picker entirely
+	MavModeProperty_MAV_MODE_PROPERTY_AUTO_MODE           MavModeProperty = 4 // automatically controlled; unset implies manual
+)
+
+// Enum value maps for MavModeProperty.
+var (
+	MavModeProperty_name = map[int32]string{
+		0: "MAV_MODE_PROPERTY_NONE",
+		1: "MAV_MODE_PROPERTY_ADVANCED",
+		2: "MAV_MODE_PROPERTY_NOT_USER_SELECTABLE",
+		4: "MAV_MODE_PROPERTY_AUTO_MODE",
+	}
+	MavModeProperty_value = map[string]int32{
+		"MAV_MODE_PROPERTY_NONE":                0,
+		"MAV_MODE_PROPERTY_ADVANCED":            1,
+		"MAV_MODE_PROPERTY_NOT_USER_SELECTABLE": 2,
+		"MAV_MODE_PROPERTY_AUTO_MODE":           4,
+	}
+)
+
+func (x MavModeProperty) Enum() *MavModeProperty {
+	p := new(MavModeProperty)
+	*p = x
+	return p
+}
+
+func (x MavModeProperty) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MavModeProperty) Descriptor() protoreflect.EnumDescriptor {
+	return file_gcs_v1_types_proto_enumTypes[18].Descriptor()
+}
+
+func (MavModeProperty) Type() protoreflect.EnumType {
+	return &file_gcs_v1_types_proto_enumTypes[18]
+}
+
+func (x MavModeProperty) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MavModeProperty.Descriptor instead.
+func (MavModeProperty) EnumDescriptor() ([]byte, []int) {
+	return file_gcs_v1_types_proto_rawDescGZIP(), []int{18}
+}
+
 var File_gcs_v1_types_proto protoreflect.FileDescriptor
 
 const file_gcs_v1_types_proto_rawDesc = "" +
@@ -1705,7 +1893,35 @@ const file_gcs_v1_types_proto_rawDesc = "" +
 	"\"MAV_BATTERY_CHARGE_STATE_EMERGENCY\x10\x04\x12#\n" +
 	"\x1fMAV_BATTERY_CHARGE_STATE_FAILED\x10\x05\x12&\n" +
 	"\"MAV_BATTERY_CHARGE_STATE_UNHEALTHY\x10\x06\x12%\n" +
-	"!MAV_BATTERY_CHARGE_STATE_CHARGING\x10\aB$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
+	"!MAV_BATTERY_CHARGE_STATE_CHARGING\x10\a*\x92\b\n" +
+	"\x15MavProtocolCapability\x12 \n" +
+	"\x1cMAV_PROTOCOL_CAPABILITY_NONE\x10\x00\x12)\n" +
+	"%MAV_PROTOCOL_CAPABILITY_MISSION_FLOAT\x10\x01\x12'\n" +
+	"#MAV_PROTOCOL_CAPABILITY_PARAM_FLOAT\x10\x02\x12'\n" +
+	"#MAV_PROTOCOL_CAPABILITY_MISSION_INT\x10\x04\x12'\n" +
+	"#MAV_PROTOCOL_CAPABILITY_COMMAND_INT\x10\b\x121\n" +
+	"-MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE\x10\x10\x12\x1f\n" +
+	"\x1bMAV_PROTOCOL_CAPABILITY_FTP\x10 \x12/\n" +
+	"+MAV_PROTOCOL_CAPABILITY_SET_ATTITUDE_TARGET\x10@\x12:\n" +
+	"5MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_LOCAL_NED\x10\x80\x01\x12;\n" +
+	"6MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_GLOBAL_INT\x10\x80\x02\x12$\n" +
+	"\x1fMAV_PROTOCOL_CAPABILITY_TERRAIN\x10\x80\x04\x12&\n" +
+	"!MAV_PROTOCOL_CAPABILITY_RESERVED3\x10\x80\b\x12/\n" +
+	"*MAV_PROTOCOL_CAPABILITY_FLIGHT_TERMINATION\x10\x80\x10\x120\n" +
+	"+MAV_PROTOCOL_CAPABILITY_COMPASS_CALIBRATION\x10\x80 \x12%\n" +
+	" MAV_PROTOCOL_CAPABILITY_MAVLINK2\x10\x80@\x12+\n" +
+	"%MAV_PROTOCOL_CAPABILITY_MISSION_FENCE\x10\x80\x80\x01\x12+\n" +
+	"%MAV_PROTOCOL_CAPABILITY_MISSION_RALLY\x10\x80\x80\x02\x12'\n" +
+	"!MAV_PROTOCOL_CAPABILITY_RESERVED2\x10\x80\x80\x04\x121\n" +
+	"+MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_C_CAST\x10\x80\x80\b\x12A\n" +
+	";MAV_PROTOCOL_CAPABILITY_COMPONENT_IMPLEMENTS_GIMBAL_MANAGER\x10\x80\x80\x10\x12;\n" +
+	"5MAV_PROTOCOL_CAPABILITY_COMPONENT_ACCEPTS_GCS_CONTROL\x10\x80\x80 \x12%\n" +
+	"\x1fMAV_PROTOCOL_CAPABILITY_GRIPPER\x10\x80\x80@*\x99\x01\n" +
+	"\x0fMavModeProperty\x12\x1a\n" +
+	"\x16MAV_MODE_PROPERTY_NONE\x10\x00\x12\x1e\n" +
+	"\x1aMAV_MODE_PROPERTY_ADVANCED\x10\x01\x12)\n" +
+	"%MAV_MODE_PROPERTY_NOT_USER_SELECTABLE\x10\x02\x12\x1f\n" +
+	"\x1bMAV_MODE_PROPERTY_AUTO_MODE\x10\x04B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
 
 var (
 	file_gcs_v1_types_proto_rawDescOnce sync.Once
@@ -1719,7 +1935,7 @@ func file_gcs_v1_types_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_types_proto_rawDescData
 }
 
-var file_gcs_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 17)
+var file_gcs_v1_types_proto_enumTypes = make([]protoimpl.EnumInfo, 19)
 var file_gcs_v1_types_proto_goTypes = []any{
 	(MavType)(0),               // 0: gcs.v1.MavType
 	(MavAutopilot)(0),          // 1: gcs.v1.MavAutopilot
@@ -1738,6 +1954,8 @@ var file_gcs_v1_types_proto_goTypes = []any{
 	(PidTuningAxis)(0),         // 14: gcs.v1.PidTuningAxis
 	(MissionState)(0),          // 15: gcs.v1.MissionState
 	(MavBatteryChargeState)(0), // 16: gcs.v1.MavBatteryChargeState
+	(MavProtocolCapability)(0), // 17: gcs.v1.MavProtocolCapability
+	(MavModeProperty)(0),       // 18: gcs.v1.MavModeProperty
 }
 var file_gcs_v1_types_proto_depIdxs = []int32{
 	0, // [0:0] is the sub-list for method output_type
@@ -1757,7 +1975,7 @@ func file_gcs_v1_types_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_types_proto_rawDesc), len(file_gcs_v1_types_proto_rawDesc)),
-			NumEnums:      17,
+			NumEnums:      19,
 			NumMessages:   0,
 			NumExtensions: 0,
 			NumServices:   0,

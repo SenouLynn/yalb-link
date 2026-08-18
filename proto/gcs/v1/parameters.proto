@@ -11,7 +11,21 @@ option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 // ParameterValue mirrors PARAM_VALUE (#22).
 // param_id is the 16-character null-padded ASCII name from the wire;
 // trailing nulls are stripped before this message is populated.
-// param_value is always float on the wire; cast per param_type for integer params.
+//
+// param_value is always a float on the wire. How an *integer* parameter is
+// packed into that float is not fixed: MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE
+// (16) and MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_C_CAST (131072) are mutually
+// exclusive declarations of it, and exactly one should be set by a vehicle that
+// supports the parameter protocol. The cast is therefore a function of
+// VehicleCapabilities, not a constant.
+//
+// **If neither bit is declared, do not decode integer parameters.** Guessing
+// C_CAST because it is the common case produces finite, plausible, wrong numbers
+// with no error raised anywhere: a bit pattern reinterpreted as a magnitude is
+// still a float, so a "NaN never returned" gate passes. LOG_BITMASK — Tier 8b's
+// first write target — is an integer bitmask straight through this path, and a
+// bitmask is the worst case, because every bit is independently meaningful and
+// nothing about a wrong value looks wrong. ADR-0007 R3.
 message ParameterValue {
   VehicleId vehicle_id = 1;
   string param_id = 2;          // max 16 ASCII chars
@@ -40,4 +54,127 @@ message SetParameterRequest {
   string param_id = 2;
   float param_value = 3;
   MavParamType param_type = 4;
+}
+
+// ParameterMetadata describes one parameter: what it means, what it is allowed
+// to be, and what happens when it changes. Sourced from ArduPilot's published
+// per-tag `apm.pdef.xml`, converted at build time.
+//
+// This exists so a parameter editor is generated from a schema rather than
+// hardcoded. Without it a ParametersPanel can only show name / value / type,
+// which is what Tier 7 would otherwise write its tests against.
+//
+// ## Unset versus zero
+//
+// Every optional numeric field below is proto3 `optional` and carries explicit
+// presence. This is not stylistic: 0 is a legal value for range_low, range_high
+// and increment, so a bare scalar cannot distinguish "the range starts at zero"
+// from "upstream declared no range". A slider built on the second reading of the
+// first case silently clamps a parameter to [0, 0].
+//
+// Only ~half of ArduPilot's parameters declare a Range at all (2388 of 4820 in
+// Copter 4.6.0), so absence is the common case, not the edge case. Read presence
+// before reading value. The booleans are plain proto3 scalars because absent and
+// false mean the same thing for all four.
+//
+// ## The name prefix rule
+//
+// param_id here is **unprefixed** and matches PARAM_VALUE.param_id directly.
+// Upstream is not consistent: vehicle-specific parameters appear as
+// `ArduCopter:SYSID_THISMAV` while library parameters appear bare as
+// `ARMING_CHECK`. The `<Vehicle>:` prefix is stripped by the converter, before
+// this message is populated.
+//
+// Skip that strip and the failure is silent and partial: every vehicle-specific
+// parameter loses its metadata while every library parameter keeps its own, which
+// reads as patchy upstream coverage rather than as a bug on our side.
+message ParameterMetadata {
+  string param_id = 1;      // unprefixed, max 16 ASCII chars; matches PARAM_VALUE.param_id
+  string human_name = 2;    // pdef attr `humanName`
+  string documentation = 3; // pdef attr `documentation`; may be several sentences
+
+  // Units. `units` is the machine token (e.g. "m/s", "deg", "Hz"); `unit_text`
+  // is the display string upstream supplies alongside it. Both may be empty —
+  // 1409 of 4820 parameters declare either. These are the parameter's own units
+  // and are **not** normalised: the "unit normalisation happens once in the
+  // codec" rule applies to telemetry fields with a known wire unit, and a
+  // parameter's unit is data, not schema.
+  string units = 4;
+  string unit_text = 5;
+
+  // Valid range, inclusive. Present together or not at all.
+  optional double range_low = 6;
+  optional double range_high = 7;
+
+  // Step size for a spinner or slider. 973 of 4820 declare one.
+  optional double increment = 8;
+
+  bool reboot_required = 9; // vehicle must be rebooted before this takes effect
+  bool read_only = 10;      // reject writes; do not render an editor
+  bool volatile_value = 11; // changes on its own; do not cache, do not diff
+  bool calibration = 12;    // written by a calibration routine, not by hand
+
+  // pdef attr `user`: "Standard" or "Advanced". Verbatim, not parsed into an
+  // enum — it is upstream's vocabulary and upstream may extend it.
+  string user_level = 13;
+
+  // Enumerated values, from `<values><value code=...>`. Key is the code, value
+  // is the label. Empty when the parameter is not enumerated.
+  map<int64, string> values = 14;
+
+  // Bit labels, from `<bitmask><bit code=...>`. Key is the **bit index**, not
+  // the bit's numeric value: upstream writes `code="0"` for the least
+  // significant bit. Rendering `1 << code` on a value-keyed map produces an
+  // editor whose bits are all one position off. 222 of 4820 declare a bitmask.
+  map<uint32, string> bitmask = 15;
+}
+
+// ParameterMetadataSet is the metadata for one (vehicle, firmware version) pair.
+//
+// ## Why the version is on the set and not implicit
+//
+// Metadata drifts fast enough that a wrong version is a wrong answer, and the
+// drift is concentrated at minor boundaries. Measured on published pdef files:
+// Copter 4.5.6 -> 4.5.7 (a patch release) changes 1 parameter name; 4.5.7 ->
+// 4.6.0 changes 329. So sets are vendored per **minor line** — latest patch of
+// each minor line — and selected at runtime from
+// VehicleCapabilities.flight_sw_version: nearest vendored version <= actual.
+//
+// `is_exact_match` exists because that selection is lossy and the loss must be
+// visible. Cockpit's failure here is instructive: each vehicle class statically
+// imports one hardcoded metadata version (`arducopter.ts` -> Copter-4.3), with no
+// runtime negotiation at all, so a 4.6 vehicle is described by 4.3 metadata and
+// nothing anywhere says so.
+message ParameterMetadataSet {
+  MavType vehicle_type = 1; // which vehicle family this set describes
+
+  // The firmware version this set was generated for, packed exactly as
+  // VehicleCapabilities.flight_sw_version, so the two are directly comparable.
+  uint32 firmware_version = 2;
+
+  // Human-readable form of the above, as published upstream (e.g. "4.6.0").
+  string firmware_version_label = 3;
+
+  // False when this set was chosen as the nearest vendored version <= the
+  // vehicle's actual firmware. The UI must say so; a parameter editor claiming
+  // authority it does not have is the specific mistake this field prevents.
+  bool is_exact_match = 4;
+
+  repeated ParameterMetadata parameters = 5;
+}
+
+// GetParameterMetadataRequest asks for the metadata set matching a vehicle's
+// reported firmware.
+//
+// Read-only and vehicle-independent in effect: it sends nothing to the vehicle
+// and consults VehicleCapabilities the backend already holds. If capabilities
+// are not yet known the backend cannot choose a set, and says so rather than
+// guessing a version.
+message GetParameterMetadataRequest {
+  VehicleId target = 1;
+
+  // Restrict the response to these parameter names (unprefixed). Empty = all.
+  // A full Copter set is ~4800 entries and a panel usually needs the page it is
+  // showing.
+  repeated string param_ids = 2;
 }

@@ -25,7 +25,21 @@ const (
 // ParameterValue mirrors PARAM_VALUE (#22).
 // param_id is the 16-character null-padded ASCII name from the wire;
 // trailing nulls are stripped before this message is populated.
-// param_value is always float on the wire; cast per param_type for integer params.
+//
+// param_value is always a float on the wire. How an *integer* parameter is
+// packed into that float is not fixed: MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE
+// (16) and MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_C_CAST (131072) are mutually
+// exclusive declarations of it, and exactly one should be set by a vehicle that
+// supports the parameter protocol. The cast is therefore a function of
+// VehicleCapabilities, not a constant.
+//
+// **If neither bit is declared, do not decode integer parameters.** Guessing
+// C_CAST because it is the common case produces finite, plausible, wrong numbers
+// with no error raised anywhere: a bit pattern reinterpreted as a magnitude is
+// still a float, so a "NaN never returned" gate passes. LOG_BITMASK — Tier 8b's
+// first write target — is an integer bitmask straight through this path, and a
+// bitmask is the worst case, because every bit is independently meaningful and
+// nothing about a wrong value looks wrong. ADR-0007 R3.
 type ParameterValue struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	VehicleId     *VehicleId             `protobuf:"bytes,1,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"`
@@ -286,6 +300,370 @@ func (x *SetParameterRequest) GetParamType() MavParamType {
 	return MavParamType_MAV_PARAM_TYPE_UNSPECIFIED
 }
 
+// ParameterMetadata describes one parameter: what it means, what it is allowed
+// to be, and what happens when it changes. Sourced from ArduPilot's published
+// per-tag `apm.pdef.xml`, converted at build time.
+//
+// This exists so a parameter editor is generated from a schema rather than
+// hardcoded. Without it a ParametersPanel can only show name / value / type,
+// which is what Tier 7 would otherwise write its tests against.
+//
+// ## Unset versus zero
+//
+// Every optional numeric field below is proto3 `optional` and carries explicit
+// presence. This is not stylistic: 0 is a legal value for range_low, range_high
+// and increment, so a bare scalar cannot distinguish "the range starts at zero"
+// from "upstream declared no range". A slider built on the second reading of the
+// first case silently clamps a parameter to [0, 0].
+//
+// Only ~half of ArduPilot's parameters declare a Range at all (2388 of 4820 in
+// Copter 4.6.0), so absence is the common case, not the edge case. Read presence
+// before reading value. The booleans are plain proto3 scalars because absent and
+// false mean the same thing for all four.
+//
+// ## The name prefix rule
+//
+// param_id here is **unprefixed** and matches PARAM_VALUE.param_id directly.
+// Upstream is not consistent: vehicle-specific parameters appear as
+// `ArduCopter:SYSID_THISMAV` while library parameters appear bare as
+// `ARMING_CHECK`. The `<Vehicle>:` prefix is stripped by the converter, before
+// this message is populated.
+//
+// Skip that strip and the failure is silent and partial: every vehicle-specific
+// parameter loses its metadata while every library parameter keeps its own, which
+// reads as patchy upstream coverage rather than as a bug on our side.
+type ParameterMetadata struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ParamId       string                 `protobuf:"bytes,1,opt,name=param_id,json=paramId,proto3" json:"param_id,omitempty"`       // unprefixed, max 16 ASCII chars; matches PARAM_VALUE.param_id
+	HumanName     string                 `protobuf:"bytes,2,opt,name=human_name,json=humanName,proto3" json:"human_name,omitempty"` // pdef attr `humanName`
+	Documentation string                 `protobuf:"bytes,3,opt,name=documentation,proto3" json:"documentation,omitempty"`          // pdef attr `documentation`; may be several sentences
+	// Units. `units` is the machine token (e.g. "m/s", "deg", "Hz"); `unit_text`
+	// is the display string upstream supplies alongside it. Both may be empty —
+	// 1409 of 4820 parameters declare either. These are the parameter's own units
+	// and are **not** normalised: the "unit normalisation happens once in the
+	// codec" rule applies to telemetry fields with a known wire unit, and a
+	// parameter's unit is data, not schema.
+	Units    string `protobuf:"bytes,4,opt,name=units,proto3" json:"units,omitempty"`
+	UnitText string `protobuf:"bytes,5,opt,name=unit_text,json=unitText,proto3" json:"unit_text,omitempty"`
+	// Valid range, inclusive. Present together or not at all.
+	RangeLow  *float64 `protobuf:"fixed64,6,opt,name=range_low,json=rangeLow,proto3,oneof" json:"range_low,omitempty"`
+	RangeHigh *float64 `protobuf:"fixed64,7,opt,name=range_high,json=rangeHigh,proto3,oneof" json:"range_high,omitempty"`
+	// Step size for a spinner or slider. 973 of 4820 declare one.
+	Increment      *float64 `protobuf:"fixed64,8,opt,name=increment,proto3,oneof" json:"increment,omitempty"`
+	RebootRequired bool     `protobuf:"varint,9,opt,name=reboot_required,json=rebootRequired,proto3" json:"reboot_required,omitempty"` // vehicle must be rebooted before this takes effect
+	ReadOnly       bool     `protobuf:"varint,10,opt,name=read_only,json=readOnly,proto3" json:"read_only,omitempty"`                  // reject writes; do not render an editor
+	VolatileValue  bool     `protobuf:"varint,11,opt,name=volatile_value,json=volatileValue,proto3" json:"volatile_value,omitempty"`   // changes on its own; do not cache, do not diff
+	Calibration    bool     `protobuf:"varint,12,opt,name=calibration,proto3" json:"calibration,omitempty"`                            // written by a calibration routine, not by hand
+	// pdef attr `user`: "Standard" or "Advanced". Verbatim, not parsed into an
+	// enum — it is upstream's vocabulary and upstream may extend it.
+	UserLevel string `protobuf:"bytes,13,opt,name=user_level,json=userLevel,proto3" json:"user_level,omitempty"`
+	// Enumerated values, from `<values><value code=...>`. Key is the code, value
+	// is the label. Empty when the parameter is not enumerated.
+	Values map[int64]string `protobuf:"bytes,14,rep,name=values,proto3" json:"values,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Bit labels, from `<bitmask><bit code=...>`. Key is the **bit index**, not
+	// the bit's numeric value: upstream writes `code="0"` for the least
+	// significant bit. Rendering `1 << code` on a value-keyed map produces an
+	// editor whose bits are all one position off. 222 of 4820 declare a bitmask.
+	Bitmask       map[uint32]string `protobuf:"bytes,15,rep,name=bitmask,proto3" json:"bitmask,omitempty" protobuf_key:"varint,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ParameterMetadata) Reset() {
+	*x = ParameterMetadata{}
+	mi := &file_gcs_v1_parameters_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ParameterMetadata) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ParameterMetadata) ProtoMessage() {}
+
+func (x *ParameterMetadata) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_v1_parameters_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ParameterMetadata.ProtoReflect.Descriptor instead.
+func (*ParameterMetadata) Descriptor() ([]byte, []int) {
+	return file_gcs_v1_parameters_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *ParameterMetadata) GetParamId() string {
+	if x != nil {
+		return x.ParamId
+	}
+	return ""
+}
+
+func (x *ParameterMetadata) GetHumanName() string {
+	if x != nil {
+		return x.HumanName
+	}
+	return ""
+}
+
+func (x *ParameterMetadata) GetDocumentation() string {
+	if x != nil {
+		return x.Documentation
+	}
+	return ""
+}
+
+func (x *ParameterMetadata) GetUnits() string {
+	if x != nil {
+		return x.Units
+	}
+	return ""
+}
+
+func (x *ParameterMetadata) GetUnitText() string {
+	if x != nil {
+		return x.UnitText
+	}
+	return ""
+}
+
+func (x *ParameterMetadata) GetRangeLow() float64 {
+	if x != nil && x.RangeLow != nil {
+		return *x.RangeLow
+	}
+	return 0
+}
+
+func (x *ParameterMetadata) GetRangeHigh() float64 {
+	if x != nil && x.RangeHigh != nil {
+		return *x.RangeHigh
+	}
+	return 0
+}
+
+func (x *ParameterMetadata) GetIncrement() float64 {
+	if x != nil && x.Increment != nil {
+		return *x.Increment
+	}
+	return 0
+}
+
+func (x *ParameterMetadata) GetRebootRequired() bool {
+	if x != nil {
+		return x.RebootRequired
+	}
+	return false
+}
+
+func (x *ParameterMetadata) GetReadOnly() bool {
+	if x != nil {
+		return x.ReadOnly
+	}
+	return false
+}
+
+func (x *ParameterMetadata) GetVolatileValue() bool {
+	if x != nil {
+		return x.VolatileValue
+	}
+	return false
+}
+
+func (x *ParameterMetadata) GetCalibration() bool {
+	if x != nil {
+		return x.Calibration
+	}
+	return false
+}
+
+func (x *ParameterMetadata) GetUserLevel() string {
+	if x != nil {
+		return x.UserLevel
+	}
+	return ""
+}
+
+func (x *ParameterMetadata) GetValues() map[int64]string {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+func (x *ParameterMetadata) GetBitmask() map[uint32]string {
+	if x != nil {
+		return x.Bitmask
+	}
+	return nil
+}
+
+// ParameterMetadataSet is the metadata for one (vehicle, firmware version) pair.
+//
+// ## Why the version is on the set and not implicit
+//
+// Metadata drifts fast enough that a wrong version is a wrong answer, and the
+// drift is concentrated at minor boundaries. Measured on published pdef files:
+// Copter 4.5.6 -> 4.5.7 (a patch release) changes 1 parameter name; 4.5.7 ->
+// 4.6.0 changes 329. So sets are vendored per **minor line** — latest patch of
+// each minor line — and selected at runtime from
+// VehicleCapabilities.flight_sw_version: nearest vendored version <= actual.
+//
+// `is_exact_match` exists because that selection is lossy and the loss must be
+// visible. Cockpit's failure here is instructive: each vehicle class statically
+// imports one hardcoded metadata version (`arducopter.ts` -> Copter-4.3), with no
+// runtime negotiation at all, so a 4.6 vehicle is described by 4.3 metadata and
+// nothing anywhere says so.
+type ParameterMetadataSet struct {
+	state       protoimpl.MessageState `protogen:"open.v1"`
+	VehicleType MavType                `protobuf:"varint,1,opt,name=vehicle_type,json=vehicleType,proto3,enum=gcs.v1.MavType" json:"vehicle_type,omitempty"` // which vehicle family this set describes
+	// The firmware version this set was generated for, packed exactly as
+	// VehicleCapabilities.flight_sw_version, so the two are directly comparable.
+	FirmwareVersion uint32 `protobuf:"varint,2,opt,name=firmware_version,json=firmwareVersion,proto3" json:"firmware_version,omitempty"`
+	// Human-readable form of the above, as published upstream (e.g. "4.6.0").
+	FirmwareVersionLabel string `protobuf:"bytes,3,opt,name=firmware_version_label,json=firmwareVersionLabel,proto3" json:"firmware_version_label,omitempty"`
+	// False when this set was chosen as the nearest vendored version <= the
+	// vehicle's actual firmware. The UI must say so; a parameter editor claiming
+	// authority it does not have is the specific mistake this field prevents.
+	IsExactMatch  bool                 `protobuf:"varint,4,opt,name=is_exact_match,json=isExactMatch,proto3" json:"is_exact_match,omitempty"`
+	Parameters    []*ParameterMetadata `protobuf:"bytes,5,rep,name=parameters,proto3" json:"parameters,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ParameterMetadataSet) Reset() {
+	*x = ParameterMetadataSet{}
+	mi := &file_gcs_v1_parameters_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ParameterMetadataSet) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ParameterMetadataSet) ProtoMessage() {}
+
+func (x *ParameterMetadataSet) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_v1_parameters_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ParameterMetadataSet.ProtoReflect.Descriptor instead.
+func (*ParameterMetadataSet) Descriptor() ([]byte, []int) {
+	return file_gcs_v1_parameters_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *ParameterMetadataSet) GetVehicleType() MavType {
+	if x != nil {
+		return x.VehicleType
+	}
+	return MavType_MAV_TYPE_GENERIC
+}
+
+func (x *ParameterMetadataSet) GetFirmwareVersion() uint32 {
+	if x != nil {
+		return x.FirmwareVersion
+	}
+	return 0
+}
+
+func (x *ParameterMetadataSet) GetFirmwareVersionLabel() string {
+	if x != nil {
+		return x.FirmwareVersionLabel
+	}
+	return ""
+}
+
+func (x *ParameterMetadataSet) GetIsExactMatch() bool {
+	if x != nil {
+		return x.IsExactMatch
+	}
+	return false
+}
+
+func (x *ParameterMetadataSet) GetParameters() []*ParameterMetadata {
+	if x != nil {
+		return x.Parameters
+	}
+	return nil
+}
+
+// GetParameterMetadataRequest asks for the metadata set matching a vehicle's
+// reported firmware.
+//
+// Read-only and vehicle-independent in effect: it sends nothing to the vehicle
+// and consults VehicleCapabilities the backend already holds. If capabilities
+// are not yet known the backend cannot choose a set, and says so rather than
+// guessing a version.
+type GetParameterMetadataRequest struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Target *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
+	// Restrict the response to these parameter names (unprefixed). Empty = all.
+	// A full Copter set is ~4800 entries and a panel usually needs the page it is
+	// showing.
+	ParamIds      []string `protobuf:"bytes,2,rep,name=param_ids,json=paramIds,proto3" json:"param_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetParameterMetadataRequest) Reset() {
+	*x = GetParameterMetadataRequest{}
+	mi := &file_gcs_v1_parameters_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetParameterMetadataRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetParameterMetadataRequest) ProtoMessage() {}
+
+func (x *GetParameterMetadataRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_v1_parameters_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetParameterMetadataRequest.ProtoReflect.Descriptor instead.
+func (*GetParameterMetadataRequest) Descriptor() ([]byte, []int) {
+	return file_gcs_v1_parameters_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *GetParameterMetadataRequest) GetTarget() *VehicleId {
+	if x != nil {
+		return x.Target
+	}
+	return nil
+}
+
+func (x *GetParameterMetadataRequest) GetParamIds() []string {
+	if x != nil {
+		return x.ParamIds
+	}
+	return nil
+}
+
 var File_gcs_v1_parameters_proto protoreflect.FileDescriptor
 
 const file_gcs_v1_parameters_proto_rawDesc = "" +
@@ -316,7 +694,49 @@ const file_gcs_v1_parameters_proto_rawDesc = "" +
 	"\vparam_value\x18\x03 \x01(\x02R\n" +
 	"paramValue\x123\n" +
 	"\n" +
-	"param_type\x18\x04 \x01(\x0e2\x14.gcs.v1.MavParamTypeR\tparamTypeB$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
+	"param_type\x18\x04 \x01(\x0e2\x14.gcs.v1.MavParamTypeR\tparamType\"\xe0\x05\n" +
+	"\x11ParameterMetadata\x12\x19\n" +
+	"\bparam_id\x18\x01 \x01(\tR\aparamId\x12\x1d\n" +
+	"\n" +
+	"human_name\x18\x02 \x01(\tR\thumanName\x12$\n" +
+	"\rdocumentation\x18\x03 \x01(\tR\rdocumentation\x12\x14\n" +
+	"\x05units\x18\x04 \x01(\tR\x05units\x12\x1b\n" +
+	"\tunit_text\x18\x05 \x01(\tR\bunitText\x12 \n" +
+	"\trange_low\x18\x06 \x01(\x01H\x00R\brangeLow\x88\x01\x01\x12\"\n" +
+	"\n" +
+	"range_high\x18\a \x01(\x01H\x01R\trangeHigh\x88\x01\x01\x12!\n" +
+	"\tincrement\x18\b \x01(\x01H\x02R\tincrement\x88\x01\x01\x12'\n" +
+	"\x0freboot_required\x18\t \x01(\bR\x0erebootRequired\x12\x1b\n" +
+	"\tread_only\x18\n" +
+	" \x01(\bR\breadOnly\x12%\n" +
+	"\x0evolatile_value\x18\v \x01(\bR\rvolatileValue\x12 \n" +
+	"\vcalibration\x18\f \x01(\bR\vcalibration\x12\x1d\n" +
+	"\n" +
+	"user_level\x18\r \x01(\tR\tuserLevel\x12=\n" +
+	"\x06values\x18\x0e \x03(\v2%.gcs.v1.ParameterMetadata.ValuesEntryR\x06values\x12@\n" +
+	"\abitmask\x18\x0f \x03(\v2&.gcs.v1.ParameterMetadata.BitmaskEntryR\abitmask\x1a9\n" +
+	"\vValuesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\x03R\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a:\n" +
+	"\fBitmaskEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\rR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\f\n" +
+	"\n" +
+	"_range_lowB\r\n" +
+	"\v_range_highB\f\n" +
+	"\n" +
+	"_increment\"\x8c\x02\n" +
+	"\x14ParameterMetadataSet\x122\n" +
+	"\fvehicle_type\x18\x01 \x01(\x0e2\x0f.gcs.v1.MavTypeR\vvehicleType\x12)\n" +
+	"\x10firmware_version\x18\x02 \x01(\rR\x0ffirmwareVersion\x124\n" +
+	"\x16firmware_version_label\x18\x03 \x01(\tR\x14firmwareVersionLabel\x12$\n" +
+	"\x0eis_exact_match\x18\x04 \x01(\bR\fisExactMatch\x129\n" +
+	"\n" +
+	"parameters\x18\x05 \x03(\v2\x19.gcs.v1.ParameterMetadataR\n" +
+	"parameters\"e\n" +
+	"\x1bGetParameterMetadataRequest\x12)\n" +
+	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x12\x1b\n" +
+	"\tparam_ids\x18\x02 \x03(\tR\bparamIdsB$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
 
 var (
 	file_gcs_v1_parameters_proto_rawDescOnce sync.Once
@@ -330,29 +750,40 @@ func file_gcs_v1_parameters_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_parameters_proto_rawDescData
 }
 
-var file_gcs_v1_parameters_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_gcs_v1_parameters_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_gcs_v1_parameters_proto_goTypes = []any{
-	(*ParameterValue)(nil),        // 0: gcs.v1.ParameterValue
-	(*ListParametersRequest)(nil), // 1: gcs.v1.ListParametersRequest
-	(*GetParameterRequest)(nil),   // 2: gcs.v1.GetParameterRequest
-	(*SetParameterRequest)(nil),   // 3: gcs.v1.SetParameterRequest
-	(*VehicleId)(nil),             // 4: gcs.v1.VehicleId
-	(MavParamType)(0),             // 5: gcs.v1.MavParamType
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*ParameterValue)(nil),              // 0: gcs.v1.ParameterValue
+	(*ListParametersRequest)(nil),       // 1: gcs.v1.ListParametersRequest
+	(*GetParameterRequest)(nil),         // 2: gcs.v1.GetParameterRequest
+	(*SetParameterRequest)(nil),         // 3: gcs.v1.SetParameterRequest
+	(*ParameterMetadata)(nil),           // 4: gcs.v1.ParameterMetadata
+	(*ParameterMetadataSet)(nil),        // 5: gcs.v1.ParameterMetadataSet
+	(*GetParameterMetadataRequest)(nil), // 6: gcs.v1.GetParameterMetadataRequest
+	nil,                                 // 7: gcs.v1.ParameterMetadata.ValuesEntry
+	nil,                                 // 8: gcs.v1.ParameterMetadata.BitmaskEntry
+	(*VehicleId)(nil),                   // 9: gcs.v1.VehicleId
+	(MavParamType)(0),                   // 10: gcs.v1.MavParamType
+	(*timestamppb.Timestamp)(nil),       // 11: google.protobuf.Timestamp
+	(MavType)(0),                        // 12: gcs.v1.MavType
 }
 var file_gcs_v1_parameters_proto_depIdxs = []int32{
-	4, // 0: gcs.v1.ParameterValue.vehicle_id:type_name -> gcs.v1.VehicleId
-	5, // 1: gcs.v1.ParameterValue.param_type:type_name -> gcs.v1.MavParamType
-	6, // 2: gcs.v1.ParameterValue.observed_at:type_name -> google.protobuf.Timestamp
-	4, // 3: gcs.v1.ListParametersRequest.target:type_name -> gcs.v1.VehicleId
-	4, // 4: gcs.v1.GetParameterRequest.target:type_name -> gcs.v1.VehicleId
-	4, // 5: gcs.v1.SetParameterRequest.target:type_name -> gcs.v1.VehicleId
-	5, // 6: gcs.v1.SetParameterRequest.param_type:type_name -> gcs.v1.MavParamType
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	9,  // 0: gcs.v1.ParameterValue.vehicle_id:type_name -> gcs.v1.VehicleId
+	10, // 1: gcs.v1.ParameterValue.param_type:type_name -> gcs.v1.MavParamType
+	11, // 2: gcs.v1.ParameterValue.observed_at:type_name -> google.protobuf.Timestamp
+	9,  // 3: gcs.v1.ListParametersRequest.target:type_name -> gcs.v1.VehicleId
+	9,  // 4: gcs.v1.GetParameterRequest.target:type_name -> gcs.v1.VehicleId
+	9,  // 5: gcs.v1.SetParameterRequest.target:type_name -> gcs.v1.VehicleId
+	10, // 6: gcs.v1.SetParameterRequest.param_type:type_name -> gcs.v1.MavParamType
+	7,  // 7: gcs.v1.ParameterMetadata.values:type_name -> gcs.v1.ParameterMetadata.ValuesEntry
+	8,  // 8: gcs.v1.ParameterMetadata.bitmask:type_name -> gcs.v1.ParameterMetadata.BitmaskEntry
+	12, // 9: gcs.v1.ParameterMetadataSet.vehicle_type:type_name -> gcs.v1.MavType
+	4,  // 10: gcs.v1.ParameterMetadataSet.parameters:type_name -> gcs.v1.ParameterMetadata
+	9,  // 11: gcs.v1.GetParameterMetadataRequest.target:type_name -> gcs.v1.VehicleId
+	12, // [12:12] is the sub-list for method output_type
+	12, // [12:12] is the sub-list for method input_type
+	12, // [12:12] is the sub-list for extension type_name
+	12, // [12:12] is the sub-list for extension extendee
+	0,  // [0:12] is the sub-list for field type_name
 }
 
 func init() { file_gcs_v1_parameters_proto_init() }
@@ -362,13 +793,14 @@ func file_gcs_v1_parameters_proto_init() {
 	}
 	file_gcs_v1_types_proto_init()
 	file_gcs_v1_vehicle_proto_init()
+	file_gcs_v1_parameters_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_parameters_proto_rawDesc), len(file_gcs_v1_parameters_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

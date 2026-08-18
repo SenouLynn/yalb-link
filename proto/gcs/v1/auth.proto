@@ -45,3 +45,82 @@ message ValidateSessionResponse {
 
 // GetCurrentUserRequest returns the profile for the authenticated caller.
 message GetCurrentUserRequest {}
+
+// SettingsOrigin records where a settings value was last written.
+//
+// It exists to make a merge deterministic. Last-write-wins on epoch alone is
+// undefined at a tie, and ties are not rare — two clients writing in the same
+// millisecond, or a value round-tripping through a restore. Cockpit's rule is
+// newer epoch wins and **on a tie the vehicle wins**, which is only expressible
+// if the record says where it came from.
+enum SettingsOrigin {
+  SETTINGS_ORIGIN_UNSPECIFIED = 0; // unknown provenance; loses every tie
+  SETTINGS_ORIGIN_CLIENT = 1;      // written by an operator's browser
+  SETTINGS_ORIGIN_SERVER = 2;      // written by the GCS backend
+  SETTINGS_ORIGIN_VEHICLE = 3;     // read from vehicle-side storage; wins ties
+}
+
+// SettingsScope keys a settings record. Settings are scoped per-operator **and**
+// per-vehicle: two operators flying the same airframe want different layouts,
+// and one operator flying two airframes wants different ones per airframe.
+//
+// vehicle_uid, not VehicleId. (system_id, component_id) is transport identity —
+// sysid is operator-assignable and reused across airframes, so a scope keyed on
+// it follows the slot rather than the vehicle, and an operator's configuration
+// silently transfers to whatever is next assigned sysid 1.
+message SettingsScope {
+  // OperatorProfile.operator_id. Empty = applies to every operator.
+  string operator_id = 1;
+
+  // Hex encoding of VehicleCapabilities.uid2, or of uid when uid2 is empty.
+  // Empty = applies to every vehicle (fleet-wide default).
+  //
+  // A vehicle that has not answered AUTOPILOT_VERSION has no uid, so it has no
+  // per-vehicle scope yet. Fall back to the fleet-wide record; do not invent a
+  // key from sysid, which would bind the settings to the wrong thing
+  // permanently.
+  string vehicle_uid = 2;
+}
+
+// SettingsRecord is one settings value with the provenance needed to reconcile
+// it against another copy of itself.
+//
+// **Contract only.** There is no settings service, no RPC, and no Go interface
+// yet: the durable-record port has no caller, and an interface with neither an
+// implementation nor a caller is speculative API design (the same argument this
+// repo already makes at internal/vehicle/event.go, on why Warning is a Go type
+// and not a proto). What is here is the half where being wrong later is a
+// breaking change.
+//
+// The hard part of a settings layer is not reading or writing values; it is
+// reconciling them across nodes. A bare key/value pair pushes epoch provenance,
+// scoping and the merge tiebreak into every adapter, where each one solves them
+// slightly differently. They belong here.
+//
+// Merge rule this shape is built for: higher epoch_last_changed_ms wins; on a
+// tie, the higher-precedence origin wins (VEHICLE > SERVER > CLIENT >
+// UNSPECIFIED). Both operands of that comparison are on the record, so the merge
+// is a pure function of two records and needs no ambient state.
+message SettingsRecord {
+  SettingsScope scope = 1;
+
+  // Dotted setting key, e.g. "layout.profile" or "map.defaultZoom". Namespaced
+  // by convention; opaque to the store.
+  string key = 2;
+
+  // The value, JSON-encoded. Opaque to the store — a store that parses values
+  // acquires a schema it then has to version independently of the values it
+  // holds. The consumer that wrote it is the one that knows how to read it.
+  string value_json = 3;
+
+  // Epoch milliseconds when this value was last changed **by the writer**, not
+  // when it was stored. Storage time is not comparable across nodes; that is the
+  // whole reason the field exists rather than being derived on write.
+  int64 epoch_last_changed_ms = 4;
+
+  SettingsOrigin origin = 5;
+
+  // Tombstone. A deleted setting must still carry an epoch, or a delete on one
+  // node loses to a stale write from another and the value resurrects.
+  bool deleted = 6;
+}

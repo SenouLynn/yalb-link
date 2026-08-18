@@ -125,6 +125,22 @@ service ParameterService {
   rpc SetParameter(SetParameterRequest) returns (ParameterValue) {
     option (gcs.v1.required_role) = OPERATOR_ROLE_OPERATOR;
   }
+
+  // GetParameterMetadata returns the vendored metadata set matching the
+  // vehicle's reported firmware — units, ranges, enum and bitmask labels,
+  // read-only and reboot-required flags.
+  //
+  // Sends nothing to the vehicle: the set is selected from
+  // VehicleCapabilities.flight_sw_version, which the backend already holds.
+  // OBSERVER, because reading what a parameter means is not a write and an
+  // observer who cannot read units is reading raw floats.
+  //
+  // The response's is_exact_match is false when the selected set is the nearest
+  // vendored version below the vehicle's actual firmware. Surface that; do not
+  // drop it. See ADR-0007 R4.
+  rpc GetParameterMetadata(GetParameterMetadataRequest) returns (ParameterMetadataSet) {
+    option (gcs.v1.required_role) = OPERATOR_ROLE_OBSERVER;
+  }
 }
 
 // MissionService implements the MAVLink mission protocol.

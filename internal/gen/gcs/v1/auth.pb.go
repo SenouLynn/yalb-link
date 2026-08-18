@@ -81,6 +81,65 @@ func (OperatorRole) EnumDescriptor() ([]byte, []int) {
 	return file_gcs_v1_auth_proto_rawDescGZIP(), []int{0}
 }
 
+// SettingsOrigin records where a settings value was last written.
+//
+// It exists to make a merge deterministic. Last-write-wins on epoch alone is
+// undefined at a tie, and ties are not rare — two clients writing in the same
+// millisecond, or a value round-tripping through a restore. Cockpit's rule is
+// newer epoch wins and **on a tie the vehicle wins**, which is only expressible
+// if the record says where it came from.
+type SettingsOrigin int32
+
+const (
+	SettingsOrigin_SETTINGS_ORIGIN_UNSPECIFIED SettingsOrigin = 0 // unknown provenance; loses every tie
+	SettingsOrigin_SETTINGS_ORIGIN_CLIENT      SettingsOrigin = 1 // written by an operator's browser
+	SettingsOrigin_SETTINGS_ORIGIN_SERVER      SettingsOrigin = 2 // written by the GCS backend
+	SettingsOrigin_SETTINGS_ORIGIN_VEHICLE     SettingsOrigin = 3 // read from vehicle-side storage; wins ties
+)
+
+// Enum value maps for SettingsOrigin.
+var (
+	SettingsOrigin_name = map[int32]string{
+		0: "SETTINGS_ORIGIN_UNSPECIFIED",
+		1: "SETTINGS_ORIGIN_CLIENT",
+		2: "SETTINGS_ORIGIN_SERVER",
+		3: "SETTINGS_ORIGIN_VEHICLE",
+	}
+	SettingsOrigin_value = map[string]int32{
+		"SETTINGS_ORIGIN_UNSPECIFIED": 0,
+		"SETTINGS_ORIGIN_CLIENT":      1,
+		"SETTINGS_ORIGIN_SERVER":      2,
+		"SETTINGS_ORIGIN_VEHICLE":     3,
+	}
+)
+
+func (x SettingsOrigin) Enum() *SettingsOrigin {
+	p := new(SettingsOrigin)
+	*p = x
+	return p
+}
+
+func (x SettingsOrigin) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (SettingsOrigin) Descriptor() protoreflect.EnumDescriptor {
+	return file_gcs_v1_auth_proto_enumTypes[1].Descriptor()
+}
+
+func (SettingsOrigin) Type() protoreflect.EnumType {
+	return &file_gcs_v1_auth_proto_enumTypes[1]
+}
+
+func (x SettingsOrigin) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use SettingsOrigin.Descriptor instead.
+func (SettingsOrigin) EnumDescriptor() ([]byte, []int) {
+	return file_gcs_v1_auth_proto_rawDescGZIP(), []int{1}
+}
+
 // OperatorProfile is the GCS-side view of an authenticated user.
 // Derived from JWT claims — the backend never trusts client-supplied identity.
 type OperatorProfile struct {
@@ -297,6 +356,187 @@ func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
 	return file_gcs_v1_auth_proto_rawDescGZIP(), []int{3}
 }
 
+// SettingsScope keys a settings record. Settings are scoped per-operator **and**
+// per-vehicle: two operators flying the same airframe want different layouts,
+// and one operator flying two airframes wants different ones per airframe.
+//
+// vehicle_uid, not VehicleId. (system_id, component_id) is transport identity —
+// sysid is operator-assignable and reused across airframes, so a scope keyed on
+// it follows the slot rather than the vehicle, and an operator's configuration
+// silently transfers to whatever is next assigned sysid 1.
+type SettingsScope struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// OperatorProfile.operator_id. Empty = applies to every operator.
+	OperatorId string `protobuf:"bytes,1,opt,name=operator_id,json=operatorId,proto3" json:"operator_id,omitempty"`
+	// Hex encoding of VehicleCapabilities.uid2, or of uid when uid2 is empty.
+	// Empty = applies to every vehicle (fleet-wide default).
+	//
+	// A vehicle that has not answered AUTOPILOT_VERSION has no uid, so it has no
+	// per-vehicle scope yet. Fall back to the fleet-wide record; do not invent a
+	// key from sysid, which would bind the settings to the wrong thing
+	// permanently.
+	VehicleUid    string `protobuf:"bytes,2,opt,name=vehicle_uid,json=vehicleUid,proto3" json:"vehicle_uid,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SettingsScope) Reset() {
+	*x = SettingsScope{}
+	mi := &file_gcs_v1_auth_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SettingsScope) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SettingsScope) ProtoMessage() {}
+
+func (x *SettingsScope) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_v1_auth_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SettingsScope.ProtoReflect.Descriptor instead.
+func (*SettingsScope) Descriptor() ([]byte, []int) {
+	return file_gcs_v1_auth_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SettingsScope) GetOperatorId() string {
+	if x != nil {
+		return x.OperatorId
+	}
+	return ""
+}
+
+func (x *SettingsScope) GetVehicleUid() string {
+	if x != nil {
+		return x.VehicleUid
+	}
+	return ""
+}
+
+// SettingsRecord is one settings value with the provenance needed to reconcile
+// it against another copy of itself.
+//
+// **Contract only.** There is no settings service, no RPC, and no Go interface
+// yet: the durable-record port has no caller, and an interface with neither an
+// implementation nor a caller is speculative API design (the same argument this
+// repo already makes at internal/vehicle/event.go, on why Warning is a Go type
+// and not a proto). What is here is the half where being wrong later is a
+// breaking change.
+//
+// The hard part of a settings layer is not reading or writing values; it is
+// reconciling them across nodes. A bare key/value pair pushes epoch provenance,
+// scoping and the merge tiebreak into every adapter, where each one solves them
+// slightly differently. They belong here.
+//
+// Merge rule this shape is built for: higher epoch_last_changed_ms wins; on a
+// tie, the higher-precedence origin wins (VEHICLE > SERVER > CLIENT >
+// UNSPECIFIED). Both operands of that comparison are on the record, so the merge
+// is a pure function of two records and needs no ambient state.
+type SettingsRecord struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Scope *SettingsScope         `protobuf:"bytes,1,opt,name=scope,proto3" json:"scope,omitempty"`
+	// Dotted setting key, e.g. "layout.profile" or "map.defaultZoom". Namespaced
+	// by convention; opaque to the store.
+	Key string `protobuf:"bytes,2,opt,name=key,proto3" json:"key,omitempty"`
+	// The value, JSON-encoded. Opaque to the store — a store that parses values
+	// acquires a schema it then has to version independently of the values it
+	// holds. The consumer that wrote it is the one that knows how to read it.
+	ValueJson string `protobuf:"bytes,3,opt,name=value_json,json=valueJson,proto3" json:"value_json,omitempty"`
+	// Epoch milliseconds when this value was last changed **by the writer**, not
+	// when it was stored. Storage time is not comparable across nodes; that is the
+	// whole reason the field exists rather than being derived on write.
+	EpochLastChangedMs int64          `protobuf:"varint,4,opt,name=epoch_last_changed_ms,json=epochLastChangedMs,proto3" json:"epoch_last_changed_ms,omitempty"`
+	Origin             SettingsOrigin `protobuf:"varint,5,opt,name=origin,proto3,enum=gcs.v1.SettingsOrigin" json:"origin,omitempty"`
+	// Tombstone. A deleted setting must still carry an epoch, or a delete on one
+	// node loses to a stale write from another and the value resurrects.
+	Deleted       bool `protobuf:"varint,6,opt,name=deleted,proto3" json:"deleted,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SettingsRecord) Reset() {
+	*x = SettingsRecord{}
+	mi := &file_gcs_v1_auth_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SettingsRecord) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SettingsRecord) ProtoMessage() {}
+
+func (x *SettingsRecord) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_v1_auth_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SettingsRecord.ProtoReflect.Descriptor instead.
+func (*SettingsRecord) Descriptor() ([]byte, []int) {
+	return file_gcs_v1_auth_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *SettingsRecord) GetScope() *SettingsScope {
+	if x != nil {
+		return x.Scope
+	}
+	return nil
+}
+
+func (x *SettingsRecord) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *SettingsRecord) GetValueJson() string {
+	if x != nil {
+		return x.ValueJson
+	}
+	return ""
+}
+
+func (x *SettingsRecord) GetEpochLastChangedMs() int64 {
+	if x != nil {
+		return x.EpochLastChangedMs
+	}
+	return 0
+}
+
+func (x *SettingsRecord) GetOrigin() SettingsOrigin {
+	if x != nil {
+		return x.Origin
+	}
+	return SettingsOrigin_SETTINGS_ORIGIN_UNSPECIFIED
+}
+
+func (x *SettingsRecord) GetDeleted() bool {
+	if x != nil {
+		return x.Deleted
+	}
+	return false
+}
+
 var File_gcs_v1_auth_proto protoreflect.FileDescriptor
 
 const file_gcs_v1_auth_proto_rawDesc = "" +
@@ -314,12 +554,30 @@ const file_gcs_v1_auth_proto_rawDesc = "" +
 	"\x05valid\x18\x01 \x01(\bR\x05valid\x121\n" +
 	"\aprofile\x18\x02 \x01(\v2\x17.gcs.v1.OperatorProfileR\aprofile\x12\x14\n" +
 	"\x05error\x18\x03 \x01(\tR\x05error\"\x17\n" +
-	"\x15GetCurrentUserRequest*~\n" +
+	"\x15GetCurrentUserRequest\"Q\n" +
+	"\rSettingsScope\x12\x1f\n" +
+	"\voperator_id\x18\x01 \x01(\tR\n" +
+	"operatorId\x12\x1f\n" +
+	"\vvehicle_uid\x18\x02 \x01(\tR\n" +
+	"vehicleUid\"\xeb\x01\n" +
+	"\x0eSettingsRecord\x12+\n" +
+	"\x05scope\x18\x01 \x01(\v2\x15.gcs.v1.SettingsScopeR\x05scope\x12\x10\n" +
+	"\x03key\x18\x02 \x01(\tR\x03key\x12\x1d\n" +
+	"\n" +
+	"value_json\x18\x03 \x01(\tR\tvalueJson\x121\n" +
+	"\x15epoch_last_changed_ms\x18\x04 \x01(\x03R\x12epochLastChangedMs\x12.\n" +
+	"\x06origin\x18\x05 \x01(\x0e2\x16.gcs.v1.SettingsOriginR\x06origin\x12\x18\n" +
+	"\adeleted\x18\x06 \x01(\bR\adeleted*~\n" +
 	"\fOperatorRole\x12\x1d\n" +
 	"\x19OPERATOR_ROLE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16OPERATOR_ROLE_OBSERVER\x10\x01\x12\x1a\n" +
 	"\x16OPERATOR_ROLE_OPERATOR\x10\x02\x12\x17\n" +
-	"\x13OPERATOR_ROLE_ADMIN\x10\x03B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
+	"\x13OPERATOR_ROLE_ADMIN\x10\x03*\x86\x01\n" +
+	"\x0eSettingsOrigin\x12\x1f\n" +
+	"\x1bSETTINGS_ORIGIN_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16SETTINGS_ORIGIN_CLIENT\x10\x01\x12\x1a\n" +
+	"\x16SETTINGS_ORIGIN_SERVER\x10\x02\x12\x1b\n" +
+	"\x17SETTINGS_ORIGIN_VEHICLE\x10\x03B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
 
 var (
 	file_gcs_v1_auth_proto_rawDescOnce sync.Once
@@ -333,25 +591,30 @@ func file_gcs_v1_auth_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_auth_proto_rawDescData
 }
 
-var file_gcs_v1_auth_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_gcs_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_gcs_v1_auth_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_gcs_v1_auth_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_gcs_v1_auth_proto_goTypes = []any{
 	(OperatorRole)(0),               // 0: gcs.v1.OperatorRole
-	(*OperatorProfile)(nil),         // 1: gcs.v1.OperatorProfile
-	(*ValidateSessionRequest)(nil),  // 2: gcs.v1.ValidateSessionRequest
-	(*ValidateSessionResponse)(nil), // 3: gcs.v1.ValidateSessionResponse
-	(*GetCurrentUserRequest)(nil),   // 4: gcs.v1.GetCurrentUserRequest
-	(*timestamppb.Timestamp)(nil),   // 5: google.protobuf.Timestamp
+	(SettingsOrigin)(0),             // 1: gcs.v1.SettingsOrigin
+	(*OperatorProfile)(nil),         // 2: gcs.v1.OperatorProfile
+	(*ValidateSessionRequest)(nil),  // 3: gcs.v1.ValidateSessionRequest
+	(*ValidateSessionResponse)(nil), // 4: gcs.v1.ValidateSessionResponse
+	(*GetCurrentUserRequest)(nil),   // 5: gcs.v1.GetCurrentUserRequest
+	(*SettingsScope)(nil),           // 6: gcs.v1.SettingsScope
+	(*SettingsRecord)(nil),          // 7: gcs.v1.SettingsRecord
+	(*timestamppb.Timestamp)(nil),   // 8: google.protobuf.Timestamp
 }
 var file_gcs_v1_auth_proto_depIdxs = []int32{
 	0, // 0: gcs.v1.OperatorProfile.roles:type_name -> gcs.v1.OperatorRole
-	5, // 1: gcs.v1.OperatorProfile.token_expires_at:type_name -> google.protobuf.Timestamp
-	1, // 2: gcs.v1.ValidateSessionResponse.profile:type_name -> gcs.v1.OperatorProfile
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	8, // 1: gcs.v1.OperatorProfile.token_expires_at:type_name -> google.protobuf.Timestamp
+	2, // 2: gcs.v1.ValidateSessionResponse.profile:type_name -> gcs.v1.OperatorProfile
+	6, // 3: gcs.v1.SettingsRecord.scope:type_name -> gcs.v1.SettingsScope
+	1, // 4: gcs.v1.SettingsRecord.origin:type_name -> gcs.v1.SettingsOrigin
+	5, // [5:5] is the sub-list for method output_type
+	5, // [5:5] is the sub-list for method input_type
+	5, // [5:5] is the sub-list for extension type_name
+	5, // [5:5] is the sub-list for extension extendee
+	0, // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_gcs_v1_auth_proto_init() }
@@ -364,8 +627,8 @@ func file_gcs_v1_auth_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_auth_proto_rawDesc), len(file_gcs_v1_auth_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   4,
+			NumEnums:      2,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -71,11 +71,21 @@ asserted against the `expected_proto` block of its fixture's `.json` companion.
 | NORM-GPS-ALT | GPS_RAW_INT.alt | int32 mm MSL | float metres MSL | complete |
 | NORM-MISSION-XY | MISSION_ITEM_INT.x/y | int32 degE7 | double degrees | complete |
 | NORM-RETAINED | GLOBAL_POSITION_INT.hdg, GPS_RAW_INT.cog/vel | centidegrees, cm/s | **unchanged** | complete |
+| NORM-PARAM-BYTEWISE | PARAM_VALUE.param_value, integer types | float bit pattern | int64 via byte reinterpretation | blocked |
+| NORM-PARAM-C-CAST | PARAM_VALUE.param_value, integer types | float magnitude | int64 via numeric cast | blocked |
 
 `NORM-RETAINED` is the deliberate non-conversion. The 65535 unknown sentinel is
 defined in wire units; dividing by 100 turns it into 655.35, which no consumer
 can recognise. These three fields keep both their units and their wire-unit
 names all the way to the resolver that rejects the sentinel.
+
+**The two parameter-encoding rows are one case, not two.** `NORM-PARAM-BYTEWISE` and
+`NORM-PARAM-C-CAST` are mutually exclusive readings of the same four bytes, selected by
+`VehicleCapabilities.capability_flags` (bits 16 and 131072). The test that matters feeds
+the **same** wire value through both and asserts the results *differ* — a codec that
+ignores the capability and casts unconditionally passes each row in isolation. A third
+case asserts that neither bit set returns an error rather than a number. See ADR-0007 R3;
+both are `blocked` on Tier 1 Chapter 6b, which owns the decoder.
 
 ## Send (Encode)
 

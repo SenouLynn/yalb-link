@@ -362,6 +362,123 @@ is stale. Documented in the file so `FreshnessRing` does not invent its own boun
 
 ---
 
+### Chapter 6: Go — Firmware Variance Resolution
+
+**Added after ADR-0007.** A Go chapter appended after the TypeScript ones because it
+was scheduled later, not because it belongs to that track. Both functions below are
+pure functions over generated constants with no I/O — this tier's charter exactly.
+
+**File:** `internal/codec/firmware.go`
+
+#### 6a — Mode name resolution, three ordered layers
+
+**This supersedes the adversarial review's suggestion** at
+`tier-0-3-adversarial-review.md:607-611` — *"schedule a minimal ArduCopter mode table in
+Tier 1 (it is a map literal)"* — and the identical note at
+`qgc-missionplanner-analysis.md:25-31`. The diagnosis was right and the remedy is not
+needed:
+
+| Layer | Source | Available when |
+|---|---|---|
+| (a) | `AVAILABLE_MODES.mode_name` (#435) | vehicle supplies it — ArduPilot ≥ 4.7.0 |
+| (b) | Generated dialect enum `String()`, selected by `(MavAutopilot, MavType)` | always, for known vehicle families |
+| (c) | empty string | neither |
+
+Layer (b) needs no table written. `gomavlib v3.3.5` already generates `COPTER_MODE`,
+`PLANE_MODE`, `ROVER_MODE`, `SUB_MODE` and `TRACKER_MODE` in `pkg/dialects/ardupilotmega`,
+each with a `String()` method (`enum_copter_mode.go:151`, `enum_plane_mode.go:147`,
+`enum_rover_mode.go:99`, `enum_sub_mode.go:87`, `enum_tracker_mode.go:71`).
+
+```go
+// AvailableMode is one decoded AVAILABLE_MODES (#435) entry.
+//
+// A Go type, not a proto — deliberately, and for the reason this repo already
+// wrote down at internal/vehicle/event.go:26-33 about Warning: nothing streams
+// it to a client. It feeds flight_mode_name, which is already on the wire.
+// Adding a proto message commits the wire contract to buf breaking forever for a
+// shape no client has had to render. Promote it if a mode picker ever needs the
+// Properties bits client-side.
+type AvailableMode struct {
+    CustomMode uint32
+    ModeName   string
+    Properties uint32 // MavModeProperty bitmask; NOT_USER_SELECTABLE, ADVANCED
+}
+
+// ResolveFlightModeName returns the human-readable mode name, or "" when it
+// cannot be resolved. It never fabricates a name.
+func ResolveFlightModeName(
+    autopilot gcsv1.MavAutopilot,
+    vehicleType gcsv1.MavType,
+    customMode uint32,
+    available []AvailableMode, // layer (a); nil when the vehicle sent none
+) string
+```
+
+`MavModeProperty` *is* mirrored in `types.proto`, because the bits gate UI behaviour and
+will cross the wire once a mode picker exists. The container around them does not need to
+yet.
+
+**Why a map literal is the wrong shape**, stated so it does not get re-proposed: this repo
+already closed the identical question for vehicle classification —
+`order-of-operations.md`, *"Derived from the generated `MavType` constants … never from a
+retyped integer list"* — after a hand-copied pre-2019 table mapped `ROCKET(9)` and
+`GROUND_ROVER(10)` onto `KITE` and `FLAPPING_WING`. A typed mode table is the same artefact
+one enum over. Importing the generated constants makes a dialect bump a compile error
+rather than a silent mis-mapping.
+
+**Layer (c) returns empty and that is a designed outcome**, not a failure path. Cockpit's
+`PX4.mode()` returns `MANUAL` unconditionally because the subclass never overrode it — a
+plausible wrong answer the type system cannot catch. An empty string is checkable; a
+fabricated name is not.
+
+**Required fixtures:**
+
+| Case | Expectation |
+|---|---|
+| `AVAILABLE_MODES` present, `custom_mode` matches an entry | that entry's `mode_name` |
+| `AVAILABLE_MODES` present, `custom_mode` matches nothing | fall through to (b), **not** empty |
+| No `AVAILABLE_MODES`, ARDUPILOTMEGA + QUADROTOR, `custom_mode` 4 | `"GUIDED"` via `COPTER_MODE.String()` |
+| No `AVAILABLE_MODES`, ARDUPILOTMEGA + FIXED_WING, `custom_mode` 15 | `"GUIDED"` via `PLANE_MODE.String()` |
+| No `AVAILABLE_MODES`, `MAV_AUTOPILOT_PX4` | `""` — we have no PX4 mode enum and must not guess |
+| No `AVAILABLE_MODES`, unknown `custom_mode` for a known family | `""`, never the integer rendered as text |
+| `NOT_USER_SELECTABLE` set on a mode | name still resolves; the flag is a UI gate, not a name gate |
+
+The PX4 row is the regression guard for the failure in §8 of
+`cockpit-blueos-analysis-ii.md`. Assert empty, and assert it deliberately.
+
+#### 6b — Capability-derived parameter cast
+
+`PARAM_VALUE.param_value` is a float on the wire. How an integer parameter is packed into
+it is declared, not fixed: `MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE` (16) and
+`PARAM_ENCODE_C_CAST` (131072) are mutually exclusive, and exactly one should be set.
+
+```go
+// DecodeParamValue reinterprets the wire float per the declared encoding.
+// Returns ErrUnknownParamEncoding when neither capability bit is set.
+func DecodeParamValue(
+    raw float32,
+    paramType gcsv1.MavParamType,
+    caps uint64, // VehicleCapabilities.capability_flags
+) (float64, error)
+```
+
+**Unknown is an error, not a default.** Decoding BYTEWISE data under a C_CAST assumption
+yields a finite, plausible, wrong number — a bit pattern reinterpreted as a magnitude — so
+nothing downstream can detect it and this tier's own "NaN never returned" gate passes.
+`LOG_BITMASK`, Tier 8b's first write target
+(`tier-8-write-transactions.md:81-98`), goes straight through this path.
+
+**Required fixtures:** BYTEWISE with an `INT32` value; C_CAST with the same value, asserting
+a *different* result; `REAL32` under both, asserting an *identical* result (floats are
+unaffected by the encoding, and a test that does not pin this will not notice a codec that
+casts everything); neither bit set → `ErrUnknownParamEncoding`; both bits set → error, not
+a preference (a vehicle declaring both is malformed and picking one hides it).
+
+**Exit-gate additions:** both functions table-tested; the PX4-empty case and the
+neither-bit-set error case asserted explicitly rather than falling out of a happy path.
+
+---
+
 ## Tier Exit Gate
 
 ```

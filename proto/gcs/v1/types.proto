@@ -334,3 +334,65 @@ enum MavBatteryChargeState {
   MAV_BATTERY_CHARGE_STATE_UNHEALTHY = 6;
   MAV_BATTERY_CHARGE_STATE_CHARGING = 7;
 }
+
+// MavProtocolCapability mirrors MAV_PROTOCOL_CAPABILITY in common.xml.
+// Carried as a 64-bit bitmask in AUTOPILOT_VERSION.capabilities (#148).
+//
+// This is the discriminator for every optional protocol path. ADR-0007 decides
+// that firmware variance is absorbed by *declared capability*, never by firmware
+// identity — there is no FirmwarePlugin-style hierarchy and no behavioural switch
+// on (MavAutopilot, MavType). A vehicle that has not declared a capability has not
+// declared it; that is distinct from having declared it absent, and neither is
+// "present". Where the difference is observable, surface it rather than guessing.
+//
+// Values are powers of two and are the wire values, not indices. They are carried
+// individually here and as a raw uint64 on VehicleCapabilities, because a vehicle
+// may set bits this enum does not yet mirror and dropping them would be silent.
+//
+// PARAM_ENCODE_BYTEWISE (16) and PARAM_ENCODE_C_CAST (131072) are mutually
+// exclusive declarations of how an integer parameter is packed into the float
+// PARAM_VALUE.param_value. Exactly one should be set by any vehicle supporting the
+// parameter protocol. If neither is set the encoding is unknown, and the codec
+// refuses to decode integer parameters rather than assuming the common case —
+// decoding BYTEWISE data under a C_CAST assumption yields finite, plausible,
+// wrong numbers with no error anywhere. See parameters.proto.
+enum MavProtocolCapability {
+  MAV_PROTOCOL_CAPABILITY_NONE = 0;                          // no capabilities declared
+  MAV_PROTOCOL_CAPABILITY_MISSION_FLOAT = 1;                 // MISSION_ITEM (deprecated)
+  MAV_PROTOCOL_CAPABILITY_PARAM_FLOAT = 2;
+  MAV_PROTOCOL_CAPABILITY_MISSION_INT = 4;                   // MISSION_ITEM_INT; our only mission encoding
+  MAV_PROTOCOL_CAPABILITY_COMMAND_INT = 8;
+  MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE = 16;        // see note above
+  MAV_PROTOCOL_CAPABILITY_FTP = 32;                          // MAVFTP; enables the @PARAM/param.pck fast path
+  MAV_PROTOCOL_CAPABILITY_SET_ATTITUDE_TARGET = 64;
+  MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_LOCAL_NED = 128;
+  MAV_PROTOCOL_CAPABILITY_SET_POSITION_TARGET_GLOBAL_INT = 256; // guided reposition (Tier 8f)
+  MAV_PROTOCOL_CAPABILITY_TERRAIN = 512;
+  MAV_PROTOCOL_CAPABILITY_RESERVED3 = 1024;
+  MAV_PROTOCOL_CAPABILITY_FLIGHT_TERMINATION = 2048;
+  MAV_PROTOCOL_CAPABILITY_COMPASS_CALIBRATION = 4096;        // gates CalibrationService
+  MAV_PROTOCOL_CAPABILITY_MAVLINK2 = 8192;                   // signing, extension fields
+  MAV_PROTOCOL_CAPABILITY_MISSION_FENCE = 16384;             // MAV_MISSION_TYPE_FENCE
+  MAV_PROTOCOL_CAPABILITY_MISSION_RALLY = 32768;             // MAV_MISSION_TYPE_RALLY
+  MAV_PROTOCOL_CAPABILITY_RESERVED2 = 65536;
+  MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_C_CAST = 131072;      // see note above
+  MAV_PROTOCOL_CAPABILITY_COMPONENT_IMPLEMENTS_GIMBAL_MANAGER = 262144;
+  MAV_PROTOCOL_CAPABILITY_COMPONENT_ACCEPTS_GCS_CONTROL = 524288;
+  MAV_PROTOCOL_CAPABILITY_GRIPPER = 1048576;
+}
+
+// MavModeProperty mirrors MAV_MODE_PROPERTY in common.xml.
+// Carried as a bitmask in AVAILABLE_MODES.properties (#435).
+//
+// NOT_USER_SELECTABLE is the vehicle telling the GCS to keep a mode out of the
+// mode picker — the mode may still be entered by the flight controller itself,
+// e.g. as part of a failsafe. No hand-maintained table can produce this, because
+// it is a property of the running firmware build and frame configuration rather
+// than of the firmware family. It is the reason ADR-0007 R1 prefers AVAILABLE_MODES
+// over the generated dialect enums even though both yield a name.
+enum MavModeProperty {
+  MAV_MODE_PROPERTY_NONE = 0;                 // no properties declared
+  MAV_MODE_PROPERTY_ADVANCED = 1;             // hide behind an "advanced" affordance
+  MAV_MODE_PROPERTY_NOT_USER_SELECTABLE = 2;  // omit from the mode picker entirely
+  MAV_MODE_PROPERTY_AUTO_MODE = 4;            // automatically controlled; unset implies manual
+}
