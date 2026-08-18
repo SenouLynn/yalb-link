@@ -140,6 +140,46 @@ byte.
 
 ---
 
+## Planned — Capability Negotiation (ADR-0007)
+
+Families this codec will handle once ADR-0007's resolution path is built. **None has a
+decoder yet**, which is exactly why this section exists separately.
+
+> **Do not move these rows into the tables above, and do not give the ID column a bare
+> number.** `TestMatrixCoverage` binds a row to a dispatch-table key by matching
+> `| RECV-… | anything | <digits> |`, and it asserts the two sets are *equal* — a row with
+> a numeric ID and no decoder fails the build just as a decoder with no row does. The
+> status column is not consulted, so marking a premature row `pending` does not help.
+> The ID column here is written `#148` / `cmd 512` deliberately: it does not match, so
+> these rows document intent without asserting code that does not exist. Give a row its
+> bare number in the table above on the commit that adds its decoder, not before.
+
+| Case ID | MAVLink Message | ID | Behavior | Blocked on | Status |
+|---|---|---|---|---|---|
+| RECV-AUTOPILOT-VERSION | AUTOPILOT_VERSION | #148 | Decode → `VehicleCapabilities`; 21-flag bitmask carried raw plus decomposed | Tier 5 — requested at discovery, folded into `vehicle.State` | blocked |
+| RECV-AVAILABLE-MODES | AVAILABLE_MODES | #435 | Decode → `[]codec.AvailableMode` (a Go type; see Tier 1 ch.6a for why it is not a proto) | Tier 1 ch.6a | blocked |
+| RECV-CURRENT-MODE | CURRENT_MODE | #436 | Decode → current `custom_mode` + `intended_custom_mode`; the two differ when a failsafe overrode the operator | Tier 1 ch.6a | blocked |
+| SEND-REQUEST-MESSAGE | COMMAND_LONG payload | cmd 512 | `MAV_CMD_REQUEST_MESSAGE` requesting #148 and #435 | Tier 5 | blocked |
+
+**`SEND-REQUEST-MESSAGE` is not a new send family**, and the distinction is load-bearing
+rather than pedantic. `MAV_CMD_REQUEST_MESSAGE = 512` is a *command ID* carried inside
+`COMMAND_LONG` (#76), not a message ID. `SendFamilies` is keyed by message ID, and
+`SEND-CMD-LONG` (76) is already `complete`, so the encoder already exists — what is missing
+is a caller. A row asserting message family 512 would invent a family that must not exist
+and would break `TestMatrixFamilyCounts`, which pins `len(SendFamilies) == 11`.
+
+`AVAILABLE_MODES_MONITOR` (#437) is deliberately absent. It only matters when a vehicle's
+mode set changes *after* boot; nothing we support does that yet, and a row for it would be
+blocked on a condition rather than on work.
+
+**Fixtures.** All four are generable by `scripts/gen_mavlink_fixtures.py` — every message
+is in `common`, so no SITL capture is needed. `AUTOPILOT_VERSION` needs two fixtures, not
+one: `uid2` is a MAVLink 2 extension field, so a frame from older firmware carries `uid`
+only, and a decoder that reads `uid2` unconditionally gets 18 zero bytes and treats an
+identifiable vehicle as anonymous.
+
+---
+
 ## Goroutine Discipline
 
 `Node.Initialize` starts three goroutines, so the claim under `goleak` is "none
