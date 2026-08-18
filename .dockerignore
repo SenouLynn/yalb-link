@@ -1,0 +1,14 @@
+# Build context hygiene. Every entry here is either large, host-specific, or
+# regenerated inside the image — sending it to the daemon slows every build and
+# busts the layer cache on files the image never uses.
+.git
+.github
+bazel-*
+docs
+frontend/node_modules
+frontend/dist
+frontend/*.tsbuildinfo
+
+# The locally built backend binary (see .gitignore). Copying a host-built
+# darwin/arm64 executable into a linux image is a confusing way to fail.
+/gcs

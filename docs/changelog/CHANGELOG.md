@@ -7,6 +7,89 @@ Format: `## [version] - YYYY-MM-DD`. Unreleased changes accumulate at the top.
 
 ## [Unreleased]
 
+### Added — Tier 4 bridge core (2026-08-17)
+
+**Vehicle fold (`internal/vehicle`):**
+- `state.go` — `State` accumulates one vehicle: proto snapshot, per-family freshness
+  map, liveness timestamps, EKF flags, source address. Copied by value; the two
+  reference fields are cloned by the fold, so a `State` handed in is never modified
+- `fold.go` — `Fold(state, Inbound, nowMs) (State, []Event)`. Discovery, loss,
+  recovery, heartbeat-change suppression, source-conflict detection, snapshot
+  aggregation, telemetry pass-through. No goroutines, no Redis, no sockets
+- `event.go` — `Event` carries exactly one of a `FleetEvent`, a `TelemetryEvent` or a
+  `Warning`; `occurred_at` is stamped from the injected clock
+- `registry.go` — `FleetRegistry` (SADD/SREM on `fleet:active`, implemented in Tier 5)
+  plus a `NopFleetRegistry` whose zero value is usable
+- 18 tests, `-race`, `goleak`. `TestNoWallClock` parses the package's own AST and
+  fails on `time.Now` or `time.Since` — a grep would have failed on the prose
+  explaining the rule
+
+**Route table (`internal/routes`, 11 tests):** `Upsert` / `Lookup` / `Resolve` / `Evict` /
+`ForgetLink`, `sync.RWMutex`, no background goroutine, lazy eviction on the key being
+looked at. `Resolve` returns `ErrNoRoute` rather than a zero value, because the
+alternative gomavlib offers is `WriteMessageAll`.
+
+**Containers:** `docker-compose.yml` (SITL ×3 behind a `multi-sitl` profile, Redis
+with AOF, backend, Vite dev server, nginx), multi-stage `Dockerfile` for the backend
+and `docker/sitl/Dockerfile` for ArduPilot SITL pinned to `ArduCopter-4.6.0`,
+`docker/nginx/nginx.conf` with streaming-safe proxy settings.
+
+**Gates:** `make gate-tier-4` (fold + routes under `-race`, `scripts/check-tier-4.sh`,
+`docker compose config`, backend image build, Redis actually answering `PING`), plus
+`gate-tier-4-sitl` as the slow gate. CI gains a `containers` job and a `sitl-image`
+job restricted to pushes and manual dispatch.
+
+**Nine places the plan did not survive contact:**
+- **`codec.DecodedMessage` does not exist and should not.** The codec decodes bytes
+  and knows nothing about source addresses. `vehicle.Inbound` carries `codec.Decoded`
+  plus the transport facts (`SrcAddr`, `MsgID`) and the separately-decoded
+  `HeartbeatState`, at the layer that has all three
+- **The fold could never declare a silent vehicle lost.** `Fold` only runs when a
+  message arrives, so a vehicle that stops transmitting stops being evaluated. Added
+  `Expire(state, nowMs)` for a sweeper, emitting `VEHICLE_LOST` at most once per
+  outage. `Fold` also emits `VEHICLE_RECOVERED`, which the proto has and the plan's
+  event table omitted
+- **The two liveness timeouts were an exact tie.** gomavlib's `IdleTimeout` defaults
+  to 60s and the plan's fold TTL is 60s, so "vehicle lost" and "channel closed"
+  race. `codec.HeartbeatTTL` is now authoritative and `codec.LinkIdleTimeout` is
+  derived as 3× it, set explicitly on the node
+- **`VehicleState.BaseMode` has no source.** The codec expands `base_mode` into
+  discrete bools by design; storing the raw byte would mean re-deriving it and
+  keeping a second answer to "is it armed"
+- **The route table stores a `codec.LinkID`, not a `*gomavlib.Channel`.** The codec
+  already owns the channel and exposes `WriteTo(LinkID, msg)`. The distinction the
+  plan cared about survives — the address is the link, never the IP — with one owner
+  of the socket. Component ID is part of the key: a gimbal and an autopilot can be
+  reachable on different links
+- **`WarningEvent` is a Go type, not a proto.** Nothing streams it to a client yet,
+  and adding a message commits the wire contract to `buf breaking` forever for a
+  shape Tier 5 has not had to use
+- **`--out=udp:gcs-backend:14550` is `sim_vehicle.py` syntax, not a flag the SITL
+  binary has.** The image runs the autopilot directly, so the equivalent is
+  `--serial0=udpclient:...`; waf emits `arducopter` lowercase; `SYSID_THISMAV` is set
+  through a parameter overlay, which works on every release
+- **The compose table published UDP 14550 on a SITL container.** SITL dials out and
+  binds nothing there; the backend is the listener, so that is where the publish
+  belongs. nginx moved behind a `tls` profile — it cannot start without certificates,
+  and a service that fails on a fresh clone teaches everyone to ignore failures
+- **The backend image restates the Go version**, which ADR-0006 says is how versions
+  disagree. `scripts/check-tier-4.sh` fails if `Dockerfile`, `go.mod` and
+  `MODULE.bazel` do not agree, and if the compose file and the SITL image disagree
+  about the ArduPilot tag
+
+**Transport threat model, now executable:** `codec.PostureWarning` names the bind
+address and the missing signing key, and `cmd/gcs` prints it at startup. Verified in
+the running container. `codec.ResolveBind` keeps unset (default `0.0.0.0:14550`)
+distinct from explicitly empty (socket disabled) — `os.Getenv` alone collapses the
+two and silently disables the bridge for everyone who never set the variable.
+
+**Not verified locally:** the SITL image has not been built on this machine (10-20
+minute cold clone and compile); it is wired as a CI job and remains unproven until
+that job runs. Everything else in the gate was executed: the backend image builds,
+Redis answers `PING`, and the backend container reports healthy on `/healthz` with
+the posture warning in its log.
+
+
 ### Added — Tier 1 codec + Tier 2 parity apparatus (2026-08-17)
 
 **Go codec (`internal/codec`) — Tier 1 chapters 1–3:**

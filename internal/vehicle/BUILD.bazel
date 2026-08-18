@@ -1,0 +1,41 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "vehicle",
+    srcs = [
+        "event.go",
+        "fold.go",
+        "registry.go",
+        "state.go",
+    ],
+    importpath = "yalb.gcs/internal/vehicle",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/codec",
+        "//internal/gen/gcs/v1:gcs",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//types/known/timestamppb",
+    ],
+)
+
+go_test(
+    name = "vehicle_test",
+    srcs = [
+        "fold_test.go",
+        "state_test.go",
+    ],
+    # keep
+    # TestNoWallClock parses this package's own source. Bazel sandboxes tests,
+    # so a source file that is not declared as data is simply absent at test
+    # time — and the test would report that it found nothing to check.
+    data = glob(
+        ["*.go"],
+        exclude = ["*_test.go"],
+    ),
+    embed = [":vehicle"],
+    deps = [
+        "//internal/codec",
+        "//internal/gen/gcs/v1:gcs",
+        "@org_uber_go_goleak//:goleak",
+    ],
+)

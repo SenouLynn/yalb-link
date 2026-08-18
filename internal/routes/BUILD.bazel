@@ -1,0 +1,19 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "routes",
+    srcs = ["table.go"],
+    importpath = "yalb.gcs/internal/routes",
+    visibility = ["//:__subpackages__"],
+    deps = ["//internal/codec"],
+)
+
+go_test(
+    name = "routes_test",
+    srcs = ["table_test.go"],
+    embed = [":routes"],
+    deps = [
+        "//internal/codec",
+        "@org_uber_go_goleak//:goleak",
+    ],
+)

@@ -1,0 +1,146 @@
+# Development and CI topology: SITL vehicles, Redis, backend, frontend.
+#
+# There is no `version:` key — Compose v2 ignores it and warns. Optional
+# services sit behind profiles so the default `docker compose up` is the
+# smallest thing that can produce a discovered vehicle: one SITL, Redis, and
+# the backend.
+#
+#   docker compose up                       one vehicle
+#   docker compose --profile multi-sitl up   three vehicles, one socket
+#   docker compose --profile ui up           adds the frontend dev server
+#   docker compose --profile tls up          adds nginx (needs docker/nginx/certs)
+
+name: yalb-gcs
+
+x-sitl-common: &sitl-common
+  build:
+    context: ./docker/sitl
+    args:
+      # Pinned release tag, never a branch. See docker/sitl/Dockerfile.
+      ARDUPILOT_TAG: ArduCopter-4.6.0
+  environment: &sitl-env
+    # The autopilot dials the GCS; the GCS never dials the autopilot. One
+    # listening socket on the backend receives every instance and tells them
+    # apart by system ID, which is the whole point of the fleet-first design.
+    GCS_OUT: udpclient:gcs-backend:14550
+    HOME_LOCATION: 37.7749,-122.4194,10,0
+    SPEEDUP: "1"
+    VEHICLE_MODEL: "+"
+  depends_on:
+    gcs-backend:
+      condition: service_started
+  restart: unless-stopped
+
+services:
+  ardupilot-sitl-1:
+    <<: *sitl-common
+    container_name: yalb-sitl-1
+    environment:
+      <<: *sitl-env
+      SYSID: "1"
+    ports:
+      # SITL's own MAVLink TCP port, for mavproxy or Mission Planner attaching
+      # from the host. The UDP feed to the backend stays inside the network.
+      - "5760:5760"
+
+  ardupilot-sitl-2:
+    <<: *sitl-common
+    container_name: yalb-sitl-2
+    profiles: [multi-sitl]
+    environment:
+      <<: *sitl-env
+      SYSID: "2"
+    ports:
+      - "5761:5760"
+
+  ardupilot-sitl-3:
+    <<: *sitl-common
+    container_name: yalb-sitl-3
+    profiles: [multi-sitl]
+    environment:
+      <<: *sitl-env
+      SYSID: "3"
+    ports:
+      - "5762:5760"
+
+  redis:
+    image: redis:7-alpine
+    container_name: yalb-redis
+    # AOF on: fleet membership and the telemetry log should survive a restart
+    # of a container nobody meant to restart. No auth in dev — the port is not
+    # published outside the compose network by default.
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  gcs-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: yalb-backend
+    environment:
+      GCS_MAVLINK_UDP_BIND: 0.0.0.0:14550
+      # Empty means unsigned frames are accepted from anything that can reach
+      # the port. That is acceptable on this private bridge network and stops
+      # being acceptable on a field box — the backend says so at startup. See
+      # the transport threat model in docs/roadmap/tier-4-bridge-core.md.
+      GCS_MAVLINK_SIGNING_KEY: ""
+      GCS_REDIS_ADDR: redis:6379
+    ports:
+      - "8080:8080"
+      # The backend is the process that listens on 14550, so this is where the
+      # UDP publish belongs: it lets mavproxy on the host feed the same socket
+      # the SITL containers do. Publishing it on a SITL container would map a
+      # port nothing in that container binds.
+      - "14550:14550/udp"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    restart: unless-stopped
+
+  gcs-frontend:
+    build:
+      context: ./frontend
+    container_name: yalb-frontend
+    profiles: [ui]
+    environment:
+      # Vite proxies /api to this target inside the compose network; outside
+      # compose it falls back to localhost. See frontend/vite.config.ts.
+      VITE_API_TARGET: http://gcs-backend:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - gcs-backend
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: yalb-nginx
+    # Behind a profile because it cannot start without certificates, and a
+    # service that fails on a fresh clone teaches everyone to ignore failures.
+    # docs/runbooks/dev-setup.md has the openssl one-liner.
+    profiles: [tls]
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/certs:/etc/nginx/certs:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - gcs-backend
+    restart: unless-stopped
+
+volumes:
+  redis-data:

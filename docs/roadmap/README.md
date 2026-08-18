@@ -6,7 +6,7 @@ Build order, tier breakdowns, and porting reference for yalb-gcs.
 identifiers, not queue positions — codegen runs right after contracts so Tier 1 has
 real generated types. Each tier file states its own gate.
 
-Every exit gate is a `make` target (`make gate-tier-0` … `gate-tier-3`).
+Every exit gate is a `make` target (`make gate-tier-0` … `gate-tier-4`).
 
 ## Index
 
@@ -19,7 +19,7 @@ Every exit gate is a `make` target (`make gate-tier-0` … `gate-tier-3`).
 | [tier-1-pure-domain-logic.md](tier-1-pure-domain-logic.md) | **[3rd ∥]** Go codec dispatch table + TS resolvers, no sockets, no Redis |
 | [tier-2-parity-apparatus.md](tier-2-parity-apparatus.md) | **[3rd ∥]** Capability matrix derived from the dispatch table, golden byte fixtures, test harness |
 | [tier-3-codegen.md](tier-3-codegen.md) | **[2nd]** buf.gen.yaml, generated Go + TS stubs, CI gates |
-| [tier-4-bridge-core.md](tier-4-bridge-core.md) | Vehicle fold, route table, Docker Compose, SITL image |
+| [tier-4-bridge-core.md](tier-4-bridge-core.md) | Vehicle fold, route table, Docker Compose, SITL image. **Built** — see its As Built section |
 | [tier-5-transport-live.md](tier-5-transport-live.md) | UDP transport, Redis client, GCS heartbeat, first SITL connection |
 | [tier-6-connect-services.md](tier-6-connect-services.md) | FleetService, TelemetryService, track layer, TelemetryLog |
 | [tier-7-read-transactions.md](tier-7-read-transactions.md) | Parameter read/list, mission download, ParametersPanel |

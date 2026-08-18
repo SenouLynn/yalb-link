@@ -262,3 +262,26 @@ RUN git clone --depth=1 --branch=${ARDUPILOT_TAG} https://github.com/ArduPilot/a
 - `docker-compose config` validates without error
 - `docker-compose up redis` starts Redis cleanly
 - SITL Dockerfile builds successfully (slow gate — CI only; local developer can skip with `SKIP_SITL_BUILD=1`)
+
+---
+
+## As Built (2026-08-17)
+
+Implemented. The gate is `make gate-tier-4`; `docs/changelog/CHANGELOG.md` records
+what was built and the nine places this plan did not survive contact with the code.
+The corrections that change how a reader should use the chapters above:
+
+| Chapter | The plan said | As built |
+|---|---|---|
+| 1 | `VehicleState` | `vehicle.State` — the package qualifier already says "vehicle". `BaseMode` is gone: the codec expands `base_mode` into bools and the raw byte has no second source |
+| 2 | `Fold(state, *codec.DecodedMessage, nowMs)` | `Fold(state, vehicle.Inbound, nowMs)`. `codec.DecodedMessage` does not exist; `Inbound` carries `codec.Decoded` plus `SrcAddr`, `MsgID` and the separately-decoded heartbeat |
+| 2 | TTL expiry checked "on every fold call" | Also `Expire(state, nowMs)` for a sweeper — a vehicle that goes silent never folds again, so the plan's check could never fire for the case it was written for. `VEHICLE_RECOVERED` is emitted too |
+| 2 | `WarningEvent{Type: SOURCE_CONFLICT}` | `vehicle.Warning`, a Go type. No proto: nothing streams it to a client yet, and a message commits the wire contract permanently |
+| 3 | `RouteEntry` holding a `*gomavlib.Channel` | `routes.Entry` holding a `codec.LinkID`. The codec owns the channel; the rule the plan cared about — address the link, never the IP — is unchanged. `Lookup` takes `nowMs`, since eviction is the behaviour worth testing |
+| 3b | "record both values in one place" | `codec.HeartbeatTTL` and `codec.LinkIdleTimeout` (3×), with `IdleTimeout` now set explicitly on the node. gomavlib's default was exactly the fold TTL — a tie, not a margin |
+| 3c | "log the posture at startup" | `codec.PostureWarning`, printed by `cmd/gcs`. `codec.ResolveBind` keeps unset (default bind) distinct from explicitly empty (disabled) |
+| 5 | SITL publishes `14550:14550/udp` | The backend publishes it — SITL dials out and binds nothing on that port. nginx is behind a `tls` profile because it cannot start without certificates |
+| 6 | `ArduCopter -S --out=udp:...` | `--out=` is `sim_vehicle.py` syntax; the binary takes `--serial0=udpclient:...`. waf emits lowercase `arducopter`, and `SYSID_THISMAV` comes from a parameter overlay written by `docker/sitl/entrypoint.sh` |
+
+The SITL image build is unproven: it is wired as a CI job (`sitl-image`, pushes and
+manual dispatch only) and has not been run.
