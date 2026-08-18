@@ -35,6 +35,23 @@ const (
 // double-emits and scales with fleet size on the scarce uplink direction.
 const HeartbeatPeriod = time.Second
 
+// HeartbeatTTL is how long a vehicle may go without traffic before the vehicle
+// fold declares it lost.
+//
+// Two independent timeouts answer the liveness question and will disagree
+// unless one is derived from the other. This one is authoritative: it is
+// per-vehicle rather than per-link, and it is driven by an injected clock, so
+// a test can advance it. LinkIdleTimeout is derived from it.
+const HeartbeatTTL = 60 * time.Second
+
+// LinkIdleTimeout is how long gomavlib keeps a silent channel open.
+//
+// Deliberately longer than HeartbeatTTL. If the channel were torn down first,
+// the fold would lose its input before it could emit VEHICLE_LOST, and the
+// operator would see a link event where a vehicle event belongs. Channel
+// closure is a statement about the link; vehicle liveness is the fold's.
+const LinkIdleTimeout = 3 * HeartbeatTTL
+
 // LinkID identifies one open channel — one radio, one UDP peer, one SITL
 // instance. Writes are addressed to a link, never broadcast.
 type LinkID string
@@ -109,6 +126,11 @@ func NewNode(endpoints []gomavlib.EndpointConf) (*Node, error) {
 
 		HeartbeatDisable: false,
 		HeartbeatPeriod:  HeartbeatPeriod,
+
+		// Explicit, not gomavlib's 60s default, which collides exactly with
+		// the fold's heartbeat TTL and makes "lost vehicle" and "closed
+		// channel" a race.
+		IdleTimeout: LinkIdleTimeout,
 
 		// StreamRequestEnable stays false deliberately. SITL over UDP streams
 		// telemetry unprompted, so leaving this on would make Tiers 5-6 look
