@@ -7,6 +7,131 @@ Format: `## [version] - YYYY-MM-DD`. Unreleased changes accumulate at the top.
 
 ## [Unreleased]
 
+### Added — Mixed-vehicle SITL, doc lifecycle, parameter paradigms (2026-08-19)
+
+Five threads, all traceable to one root cause: questions that had no owner and no gate got
+reopened at every review, which made settled decisions read as churn.
+
+**ADR-0008 — Documentation Lifecycle and Amendments (Accepted).** There was no convention
+for changing an Accepted ADR; one was improvised on 2026-08-18. Now: seven document
+classes each with one lifecycle, split on **frozen versus living** — research is frozen at
+write time (editing it destroys the ability to ask what we knew when we decided), tier
+files are living with the changelog as their history. An Accepted ADR's Context and
+Decision are immutable; new facts go in a dated amendment stating *what was wrong, what
+did not change, and the consequence* — the middle one is mandatory, because an amendment
+that omits it reads as a reversal. **Amendment budget is three**; a fourth means supersede
+instead. §3 resolves doc-versus-code conflicts: the authority order governs *intent*, but
+where a document and a test-enforced artifact disagree about what the system **does**, the
+artifact wins and the document is a defect.
+
+**The HEARTBEAT divergence, which was the worked example.** `order-of-operations.md` listed
+HEARTBEAT among "13 streaming families → `TelemetryEvent`". `TelemetryEvent` has no
+heartbeat variant, the capability matrix says so explicitly, and the codec's dispatch entry
+is nil. The implementation found the truth in Tier 1 and the canonical document was never
+corrected, so a reader consulting both found a contradiction with no stated reason and
+concluded the decision was still moving. It was settled once and written down once. Now
+corrected to the real three-way split — **12 → `TelemetryEvent`, 5 → `ProtocolEvent`, 1
+(HEARTBEAT) → `HeartbeatState`** — with the divergence reasoned inline: `flight-path-hud`
+was read-only MAVLink, where HEARTBEAT is one more message to render; here it carries fleet
+identity and drives the vehicle fold, a different consumer with a different lifetime.
+`order-of-operations.md` now also states its own provenance, so inherited defaults are
+distinguishable from decisions.
+
+**ADR-0009 — Parameter Acquisition Paradigms (Accepted).** The parameter *model* never
+moved — `parameters.proto` is unchanged since `306a429`. What reopened every review was
+where the bytes come from, for two structural reasons. Parameter metadata is the only
+material in the repo that cannot obey our own acquisition doctrine (`gen_mavlink_fixtures.py`:
+*"a fixture regenerable from a script in this repo is the only kind that satisfies
+ADR-0001's hermeticity argument"*) — it is authored upstream and unproducible by us at any
+effort, and a permanent exception to a strict rule attracts re-litigation. And nothing
+owned it: Tier 7 consumes metadata, no tier produced it.
+
+The ADR separates three questions that were being conflated — metadata (build-time
+vendored, **never** on a live path), values (context-dependent), writes (bench only) — and
+splits acquisition by connection context. Bench/cold connect may block: full
+`PARAM_REQUEST_LIST`, resolve metadata, populate cache. Field reconnect must not: serve
+cached values, no network, no re-pull of ~1400 parameters. **The discriminator is a
+predicate, not a mode** — *do we hold a complete set for this vehicle UID at this
+`flight_sw_version`?* Both facts are already in the contract, and a firmware change
+invalidates the cache for free. `MAV_PROTOCOL_CAPABILITY_FTP` (32) is recorded as the
+reconnect fast path and deliberately left unbuilt — it has no caller. The converter lands
+in Tier 7, and **until Tier 7 begins the source question is closed, not open**; reopening
+requires new evidence, not a new preference.
+
+**Two SITL vehicles, two firmware lines.** The topology ran three containers that were all
+the same copter, differing only by SYSID — multi-*instance*, never multi-*type*, so nothing
+exercised the firmware-variance machinery ADR-0007 had just built. There was no plane
+anywhere. Now `Copter-4.7.0` (sysid 1) and `Plane-4.6.3` (sysid 2), with a second Copter at
+sysid 3 retained because it proves a different property: same type and firmware, distinct
+system ID over one socket, i.e. that routing dispatches on sysid rather than source
+address.
+
+The two firmware lines are coverage, not untidiness: Copter 4.7 is the first line
+implementing `AVAILABLE_MODES` (#435) and exercises ADR-0007 mode layer (a); Plane 4.6 has
+no such message and exercises layer (b). One line for both leaves a layer permanently
+unexercised and makes metadata version selection a trivially exact hit, so `is_exact_match`
+never gets tested against anything but a perfect match. It also bounds the vendoring scope:
+**two metadata sets, ~4 MB**, against ADR-0007's original ~23 pairs and ~46 MB — the sizing
+predated the vehicle-set decision, and answering the scope question made the source
+question cheap enough to defer honestly.
+
+**Three per-vehicle facts, not one interpolated variable.** The image build takes
+`ARDUPILOT_TAG`, `WAF_TARGET` and `DEFAULT_PARAMS_PATH` separately, because Plane's stock
+parameters live at `Tools/autotest/models/plane.parm` while Copter's are at
+`Tools/autotest/default_params/copter.parm` — and `default_params/plane.parm` does not
+exist at any tag. Only the binary name is uniform (`ardu<target>`). Artefacts are
+normalised to fixed names inside the image, so `entrypoint.sh` has no vehicle branching at
+all: which vehicle an image holds is a build-time fact, never a runtime one.
+
+**A gate that could not fail, now canaried.** `scripts/check-tier-4.sh` asserted that the
+compose pin and the Dockerfile pin *agreed*. They did — both said `ArduCopter-4.6.0`, which
+does not exist upstream, so the gate passed while every image build failed. Agreement
+between two copies of the same wrong value is not evidence. The check is now against the
+upstream naming rule (`Copter-*`/`Plane-*`; the `Ardu` prefix is the *binary* name), plus a
+supported-set assertion, plus an opt-in `git ls-remote` resolution that CI enables.
+Canaried both directions: reintroducing the old tag exits 1.
+
+**CI: two config bugs fixed, the slow job made explicitly advisory.** CI had never passed —
+every run since inception failed identically, three jobs, three unrelated causes, none a
+code defect.
+- **golangci-lint** — `golangci-lint-action@v6` installs linter v1.x, which cannot parse
+  our `version: "2"` config *and* is built with go1.24, which refuses a module targeting
+  `go 1.25.0`. Now `@v9` with `v2.12.2` pinned. `version: latest` was the other half: an
+  unpinned input in a repo whose entire toolchain posture is pinning, which is why both
+  breaks arrived together and neither was attributable.
+- **pnpm** — `defaults.run.working-directory` applies to `run:` steps only, so
+  `pnpm/action-setup@v4` resolved from the repo root and looked for a `package.json` that
+  is not there. Now points at `frontend/package.json`. The frontend job had never reached
+  typecheck or tests.
+- **sitl-image** — `continue-on-error: true` with the promotion trigger named in a comment:
+  it becomes required when Tier 5 has a caller. A permanently red job with no stated reason
+  is how a CI suite stops being read. It now builds both vehicle images.
+
+**The capability matrix moved to `docs/reference/`.** ADR-0008 §1 marks `docs/wip/` as the
+one class with an expiry — temporary, must graduate or be deleted — while §3 makes the
+capability matrix authoritative over prose about what the codec does. It was sitting in
+`docs/wip/`. The repo's most enforced statement of fact lived in the directory reserved for
+things not yet decided: the location said "provisional" while the test said "binding."
+
+Repointed in four places — `scripts/check-matrix.sh`, `internal/codec/matrix_test.go`,
+`internal/codec/BUILD.bazel`'s `data` dep, and the `exports_files` package, which moved
+with it. Verified under Bazel rather than `go test` alone, because the failure this could
+cause is a sandboxed runfiles miss that plain `go test` cannot see — the same trap recorded
+when the MAVLink fixtures were added. `bazel test //...` is 5/5 and `bazel run //:gazelle`
+leaves no diff.
+
+Two references were deliberately **not** updated. The changelog entry for 2026-08-17 names
+the old path and stays as written — ADR-0008 §5 makes shipped entries append-only, and
+rewriting one to match today's layout would falsify the record. Likewise
+`tier-0-3-adversarial-review.md` quotes the old Makefile line while describing a defect it
+found; editing the quote would make the finding incoherent.
+
+**ADR-0006 amended — two coupling links it was missing:** `golangci-lint` binary ↔ Go SDK
+version, and `golangci-lint-action` major ↔ `.golangci.yml` schema version. Its thesis
+stands; this is its own predicted failure class arriving at links it had not enumerated.
+The uncomfortable part is that the workflow pinned `version: latest` — the ADR contradicted
+in the repository that adopted it.
+
 ### Changed — Cockpit survey reconciliation (2026-08-18)
 
 Cockpit was surveyed twice, independently. The second survey

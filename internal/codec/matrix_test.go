@@ -10,7 +10,7 @@ import (
 )
 
 // matrixPath is the capability matrix this package is checked against.
-const matrixPath = "../../docs/wip/codec-capability-matrix.md"
+const matrixPath = "../../docs/reference/codec-capability-matrix.md"
 
 // Matrix rows look like:
 //

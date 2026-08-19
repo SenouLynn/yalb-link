@@ -1,6 +1,7 @@
 # 0006 — Toolchain Version Coupling and Dependency Risk
 
-**Status:** Accepted
+**Status:** Accepted. Amended 2026-08-19 — two coupling links added
+(`golangci-lint` ↔ Go SDK, action major ↔ config schema). Thesis unchanged.
 
 ## Context
 
@@ -44,6 +45,8 @@ attempting the previous one:
 | `tsconfig` paths ↔ Bazel-owned `node_modules` | ts_project validation failure | `bazel build //frontend:typecheck` |
 | `protobuf-es` major ↔ buf plugin set | v2 emits service descriptors itself; a `connectrpc/es` plugin entry is a v1-era config that produces dead files | `buf generate` output shape |
 | `buf` remote plugins ↔ BSR availability | Codegen unavailable offline | `make proto-gen` |
+| `golangci-lint` binary ↔ Go SDK version | `can't load config: the Go language version (goX) used to build golangci-lint is lower than the targeted Go version` — the linter refuses the module outright | `golangci-lint run` |
+| `golangci-lint-action` major ↔ `.golangci.yml` schema version | Action v6 installs linter v1, which cannot parse a `version: "2"` config; v9 installs v2. The action major silently selects the config dialect | `golangci-lint run` |
 
 Two further items are dependency risk of a different shape but belong on the same
 list, because they are also things a version bump can silently introduce:
@@ -150,3 +153,25 @@ the root `BUILD.bazel`.
 **Monitoring:** this ADR's coupling table is the living artifact. When a version
 bump forces another, add the row. When a gate is found to be vacuous, add it to
 §4's examples. The value is entirely in it being current.
+
+---
+
+## Amendment (2026-08-19) — two links the table was missing
+
+**What was missing.** The coupling table shipped with eight links and did not include
+either of the two that kept CI's `go` job red from its first run. `golangci-lint`'s binary
+is coupled to the **Go SDK version** — a linter built with go1.24 refuses a module
+declaring `go 1.25.0` rather than degrading — and `golangci-lint-action`'s **major version
+selects the linter major**, which in turn selects the config schema: `@v6` installs v1.x
+and cannot parse the `version: "2"` file this repo has had since the v2 migration. Both
+rows are now in the table.
+
+**What did not change.** The ADR's thesis, its pinning discipline, and every existing row
+stand. This is the ADR's own predicted failure class arriving at two links it had not
+enumerated — evidence for the argument, not against it.
+
+**The consequence is one the ADR should have caught.** The workflow pinned
+`version: latest` for the linter. An unpinned input in a document arguing that versions
+must move as one batch is the ADR being contradicted in the same repository that adopted
+it, and it is why the two breaks arrived together and neither was attributable. The pin is
+now explicit (`v2.12.2`). Where a version is chosen, it is written down.

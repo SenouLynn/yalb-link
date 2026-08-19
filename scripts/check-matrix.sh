@@ -9,7 +9,7 @@
 # unstarted. Match table cells, and let the exit status be the result.
 set -euo pipefail
 
-MATRIX="${1:-docs/wip/codec-capability-matrix.md}"
+MATRIX="${1:-docs/reference/codec-capability-matrix.md}"
 
 if [[ ! -f "$MATRIX" ]]; then
   echo "FAIL: capability matrix not found at $MATRIX"

@@ -32,7 +32,7 @@ go_test(
     # keep
     data = [
         "//contracts/mavlink:fixtures",
-        "//docs/wip:codec-capability-matrix.md",
+        "//docs/reference:codec-capability-matrix.md",
     ],
     embed = [":codec"],
     deps = [

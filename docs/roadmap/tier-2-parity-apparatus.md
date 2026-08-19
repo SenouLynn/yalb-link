@@ -79,7 +79,7 @@ note saying so.
 
 **Goal:** A structured document tracking decode + encode coverage. Every cell must have an evidence artifact before it can be marked `complete`.
 
-**File:** `docs/wip/codec-capability-matrix.md`
+**File:** `docs/reference/codec-capability-matrix.md`
 
 **Structure:**
 

@@ -21,14 +21,19 @@ printf 'SYSID_THISMAV %s\n' "${SYSID}" > /tmp/sysid.parm
 
 echo "starting SITL sysid=${SYSID} model=${VEHICLE_MODEL} out=${GCS_OUT}"
 
+# The binary and the stock parameter file are installed under fixed names by
+# the Dockerfile regardless of vehicle type, so this script is identical for
+# Copter and Plane. Which vehicle an image contains is a build-time fact
+# (ARDUPILOT_TAG / WAF_TARGET), never a runtime branch.
+#
 # serial0 is the GCS link: a UDP client starts streaming immediately, where a
 # TCP listener would sit waiting for someone to connect. serial1 keeps the
 # conventional TCP port free for mavproxy or Mission Planner.
-exec arducopter \
+exec ardupilot-sitl \
   --model "${VEHICLE_MODEL}" \
   --speedup "${SPEEDUP}" \
   --home "${HOME_LOCATION}" \
-  --defaults "/sitl/copter.parm,/tmp/sysid.parm" \
+  --defaults "/sitl/defaults.parm,/tmp/sysid.parm" \
   --serial0 "${GCS_OUT}" \
   --serial1 "tcp:0" \
   "$@"

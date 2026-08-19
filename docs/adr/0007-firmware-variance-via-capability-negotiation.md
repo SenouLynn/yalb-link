@@ -2,6 +2,8 @@
 
 **Status:** Accepted. Amended 2026-08-18 — see the Amendment at the end (§5's metadata
 source; the decision is unchanged, one stated reason was wrong).
+**Extended by ADR-0009**, which narrows §5's vendoring scope to the supported vehicle
+set and adds the connection-context split. §5's mechanism is unchanged.
 
 **Supersedes:** the `FirmwarePlugin` endorsement in
 `docs/research/qgc-missionplanner-analysis.md:33` and its scheduling note at lines 25-31;

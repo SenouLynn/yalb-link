@@ -63,9 +63,21 @@ jobs:
       - run: go build ./...
       - run: go vet ./...
       - run: go test -race ./...
-      - uses: golangci/golangci-lint-action@v6
+      # Two couplings live in these three lines; both bit us (ADR-0006).
+      #
+      # The action major selects the linter major: v6 installs golangci-lint
+      # v1.x, which cannot read our `version: "2"` .golangci.yml at all. And
+      # the v1 binaries are built with go1.24, which refuses a module targeting
+      # go 1.25.0 outright ("the Go language version used to build
+      # golangci-lint is lower than the targeted Go version").
+      #
+      # `version: latest` was the other half: an unpinned input in a repo whose
+      # whole toolchain posture is pinning. It resolved to the newest v1, so
+      # the config-schema break and the Go break arrived together and neither
+      # was attributable.
+      - uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.12.2
 
   bazel:
     # ADR-0001's hermetic checkpoint, covering both languages. Nothing here
@@ -104,6 +116,11 @@ jobs:
         run: docker compose config > /dev/null
 
       - name: tier 4 gate
+        # Network is available here, so the ArduPilot pins are checked against
+        # upstream rather than only for shape. This is the check that would
+        # have caught `ArduCopter-4.6.0` on the day it landed.
+        env:
+          CHECK_TIER_4_ONLINE: "1"
         run: ./scripts/check-tier-4.sh
 
       - name: backend image builds
@@ -123,10 +140,20 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     timeout-minutes: 60
+    # Advisory, not blocking, until Tier 5 has a caller for it. Tier 5's exit
+    # gate is the first live SITL connection; on that day this job becomes
+    # required and this line comes out. Stated rather than implied, because a
+    # job that is permanently red for unexplained reasons is how a whole CI
+    # suite stops being read (ADR-0006).
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-      - name: SITL image builds at the pinned tag
-        run: docker compose build ardupilot-sitl-1
+      # Both vehicle types, because they are different firmware lines and a
+      # green Copter build says nothing about Plane (ADR-0009 §4).
+      - name: Copter SITL image builds at the pinned tag
+        run: docker compose build ardupilot-sitl-copter-1
+      - name: Plane SITL image builds at the pinned tag
+        run: docker compose build ardupilot-sitl-plane-2
 
   frontend:
     runs-on: ubuntu-latest
@@ -135,7 +162,13 @@ jobs:
         working-directory: frontend
     steps:
       - uses: actions/checkout@v4
+      # `defaults.run.working-directory` above applies to `run:` steps only, so
+      # this action resolves paths from the repo root and looked for a
+      # package.json that does not exist there. The `packageManager` pin lives
+      # in frontend/package.json; point at it explicitly.
       - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: frontend/package.json
       - uses: actions/setup-node@v4
         with:
           node-version: 22

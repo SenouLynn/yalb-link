@@ -3,6 +3,12 @@
 Decode and encode coverage for `internal/codec`. Every cell names an evidence
 artifact before it can be marked `complete`.
 
+**This document is authoritative about what the codec does.** Under ADR-0008 §3 it is an
+executable artifact, not prose: where it and a roadmap document disagree, this wins and the
+other is a defect. It lived in `docs/wip/` until 2026-08-19, which was wrong in a way worth
+recording — the repo's most enforced statement of fact sat in the one directory ADR-0008
+marks as temporary.
+
 **Status values:** `unstarted` | `pending` (fixture exists, test not written) |
 `complete` (test passes with fixture) | `blocked` (dependency missing)
 

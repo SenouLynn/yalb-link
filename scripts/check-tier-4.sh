@@ -24,19 +24,56 @@ docker_go=$(sed -n 's/^ARG GO_VERSION=\(.*\)$/\1/p' Dockerfile)
 [[ -n "$gomod_go" && "$gomod_go" == "$bazel_go" && "$gomod_go" == "$docker_go" ]] && r=0 || r=1
 check "Go version agrees: go.mod=$gomod_go MODULE.bazel=$bazel_go Dockerfile=$docker_go" "$r"
 
-# 2. ArduPilot is pinned to a release tag in both places, and to the same one.
-compose_tag=$(sed -n 's/^ *ARDUPILOT_TAG: *\(.*\)$/\1/p' docker-compose.yml | tr -d '"')
+# 2. Every ArduPilot pin is a well-formed upstream release tag.
+#
+# This check used to compare the compose pin against the Dockerfile default and
+# assert they were equal. They were — both said `ArduCopter-4.6.0`, a tag that
+# does not exist upstream, so the gate passed for three months while every
+# image build failed. Agreement between two copies of the same wrong value is
+# not evidence. The check is now against the upstream naming rule instead.
+#
+# ArduPilot tags the vehicle line, not the binary: `Copter-4.7.0`, not
+# `ArduCopter-4.7.0`. The `Ardu` prefix belongs to the built artefact
+# (`arducopter`) and to nothing else.
+tags=$(sed -n 's/^ *ARDUPILOT_TAG: *\(.*\)$/\1/p' docker-compose.yml | tr -d '"' | sort -u)
 image_tag=$(sed -n 's/^ARG ARDUPILOT_TAG=\(.*\)$/\1/p' docker/sitl/Dockerfile)
 
-[[ -n "$image_tag" && "$compose_tag" == "$image_tag" ]] && r=0 || r=1
-check "ArduPilot tag agrees: compose=$compose_tag image=$image_tag" "$r"
+[[ -n "$tags" ]] && r=0 || r=1
+check "docker-compose.yml pins at least one ARDUPILOT_TAG" "$r"
 
-# A branch name here would make "it worked yesterday" unfalsifiable: the
-# firmware under test could change with no commit in this repo.
-case "$image_tag" in
-  master|main|latest|stable*|*-dev) r=1 ;;
-  *) r=0 ;;
-esac
-check "ArduPilot pin is a release tag, not a moving ref ($image_tag)" "$r"
+for t in $tags $image_tag; do
+  if [[ "$t" =~ ^(Copter|Plane|Rover|Sub|Tracker|Blimp)-[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    r=0
+  else
+    r=1
+  fi
+  check "ArduPilot pin is a well-formed release tag ($t)" "$r"
+done
+
+# We support Copter and Plane (ADR-0009 §4). A pin for a vehicle we do not
+# vendor parameter metadata for would run, but its parameters would render
+# unannotated with no set to select.
+for t in $tags; do
+  case "$t" in
+    Copter-*|Plane-*) r=0 ;;
+    *) r=1 ;;
+  esac
+  check "pinned vehicle is in the supported set, Copter or Plane ($t)" "$r"
+done
+
+# Opt-in because it needs the network; CI sets it. Offline runs still get the
+# shape and supported-set checks above, which is what catches the class of bug
+# that got through before.
+if [[ "${CHECK_TIER_4_ONLINE:-0}" == "1" ]]; then
+  for t in $tags $image_tag; do
+    if git ls-remote --tags --exit-code \
+         https://github.com/ArduPilot/ardupilot.git "refs/tags/$t" >/dev/null 2>&1; then
+      r=0
+    else
+      r=1
+    fi
+    check "ArduPilot tag resolves upstream ($t)" "$r"
+  done
+fi
 
 exit "$fail"

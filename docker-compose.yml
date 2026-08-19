@@ -5,61 +5,97 @@
 # smallest thing that can produce a discovered vehicle: one SITL, Redis, and
 # the backend.
 #
-#   docker compose up                       one vehicle
-#   docker compose --profile multi-sitl up   three vehicles, one socket
+#   docker compose up                        one vehicle (Copter)
+#   docker compose --profile multi-sitl up   mixed fleet: Copter + Plane + a
+#                                            second Copter, all on one socket
 #   docker compose --profile ui up           adds the frontend dev server
 #   docker compose --profile tls up          adds nginx (needs docker/nginx/certs)
 
 name: yalb-gcs
 
+# Shared by every SITL service regardless of vehicle type. The build args are
+# NOT here: they differ per vehicle and pinning them once would silently give
+# every service the same firmware, which is the thing this topology exists to
+# avoid.
+x-sitl-env: &sitl-env
+  # The autopilot dials the GCS; the GCS never dials the autopilot. One
+  # listening socket on the backend receives every instance and tells them
+  # apart by system ID, which is the whole point of the fleet-first design.
+  GCS_OUT: udpclient:gcs-backend:14550
+  HOME_LOCATION: 37.7749,-122.4194,10,0
+  SPEEDUP: "1"
+
 x-sitl-common: &sitl-common
-  build:
-    context: ./docker/sitl
-    args:
-      # Pinned release tag, never a branch. See docker/sitl/Dockerfile.
-      ARDUPILOT_TAG: ArduCopter-4.6.0
-  environment: &sitl-env
-    # The autopilot dials the GCS; the GCS never dials the autopilot. One
-    # listening socket on the backend receives every instance and tells them
-    # apart by system ID, which is the whole point of the fleet-first design.
-    GCS_OUT: udpclient:gcs-backend:14550
-    HOME_LOCATION: 37.7749,-122.4194,10,0
-    SPEEDUP: "1"
-    VEHICLE_MODEL: "+"
   depends_on:
     gcs-backend:
       condition: service_started
   restart: unless-stopped
 
+# Two vehicle types, two firmware lines. See ADR-0009 §4 — the split is
+# coverage, not untidiness: Copter 4.7 is the first line to implement
+# AVAILABLE_MODES (#435) and exercises ADR-0007's mode layer (a), while Plane
+# 4.6 has no such message and exercises layer (b), the generated dialect enum
+# fallback. Pinning both to one line leaves one layer permanently unexercised.
+#
+# `--count`-style swarms are same-type only, which is why these are separate
+# services rather than replicas.
 services:
-  ardupilot-sitl-1:
+  ardupilot-sitl-copter-1:
     <<: *sitl-common
-    container_name: yalb-sitl-1
+    container_name: yalb-sitl-copter-1
+    build:
+      context: ./docker/sitl
+      args:
+        ARDUPILOT_TAG: Copter-4.7.0
+        WAF_TARGET: copter
+        DEFAULT_PARAMS_PATH: Tools/autotest/default_params/copter.parm
     environment:
       <<: *sitl-env
       SYSID: "1"
+      VEHICLE_MODEL: "+"
     ports:
       # SITL's own MAVLink TCP port, for mavproxy or Mission Planner attaching
       # from the host. The UDP feed to the backend stays inside the network.
       - "5760:5760"
 
-  ardupilot-sitl-2:
+  ardupilot-sitl-plane-2:
     <<: *sitl-common
-    container_name: yalb-sitl-2
+    container_name: yalb-sitl-plane-2
     profiles: [multi-sitl]
+    build:
+      context: ./docker/sitl
+      args:
+        ARDUPILOT_TAG: Plane-4.6.3
+        WAF_TARGET: plane
+        # Plane's stock parameters are under models/, not default_params/.
+        # There is no default_params/plane.parm at any tag.
+        DEFAULT_PARAMS_PATH: Tools/autotest/models/plane.parm
     environment:
       <<: *sitl-env
       SYSID: "2"
+      VEHICLE_MODEL: plane
     ports:
       - "5761:5760"
 
-  ardupilot-sitl-3:
+  # A second Copter on the same image as sysid 1. This proves a different
+  # property from the Plane: same type, same firmware, distinct system ID over
+  # one shared socket — i.e. that routing dispatches on sysid and not on
+  # source address. Reuses the cached image, so it costs a container, not a
+  # build.
+  ardupilot-sitl-copter-3:
     <<: *sitl-common
-    container_name: yalb-sitl-3
+    container_name: yalb-sitl-copter-3
     profiles: [multi-sitl]
+    build:
+      context: ./docker/sitl
+      args:
+        ARDUPILOT_TAG: Copter-4.7.0
+        WAF_TARGET: copter
+        DEFAULT_PARAMS_PATH: Tools/autotest/default_params/copter.parm
     environment:
       <<: *sitl-env
       SYSID: "3"
+      VEHICLE_MODEL: "+"
     ports:
       - "5762:5760"
 
