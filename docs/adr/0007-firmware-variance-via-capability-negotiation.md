@@ -1,6 +1,7 @@
 # 0007 — Firmware Variance via Capability Negotiation
 
-**Status:** Accepted
+**Status:** Accepted. Amended 2026-08-18 — see the Amendment at the end (§5's metadata
+source; the decision is unchanged, one stated reason was wrong).
 
 **Supersedes:** the `FirmwarePlugin` endorsement in
 `docs/research/qgc-missionplanner-analysis.md:33` and its scheduling note at lines 25-31;
@@ -309,3 +310,66 @@ second one appears, the capability model is failing to carry something and that 
 signal to widen `VehicleCapabilities`, not to add a branch.
 
 ---
+
+## Amendment (2026-08-18) — §5's metadata source
+
+**The decision stands. One of its stated reasons is wrong.**
+
+§5 vendors parameter metadata per minor line, selected at runtime from
+`flight_sw_version` with the mismatch surfaced. None of that changes. What changes is the
+accepted cost recorded above:
+
+> Metadata vendoring adds ~46 MB of Bazel-cached external fetch and a build-time XML
+> reader. The versioned ArduPilot directories publish XML only — `apm.pdef.json` exists
+> solely in the unversioned "latest" directories — so there is no JSON passthrough to lean
+> on.
+
+That is true of `autotest.ardupilot.org/Parameters/versioned/`, which is the source §5 was
+written against. It is **not** true of
+[`ArduPilot/ParameterRepository`](https://github.com/ArduPilot/ParameterRepository).
+Checked against the GitHub API on 2026-08-18:
+
+- 60 top-level directories named per **minor line** — `Copter-3.5` … `Copter-4.8`,
+  `Plane-*`, `Rover-*`, `Sub-*`, `Tracker-*`, `Blimp-*`, `AP_Periph-*`. That is exactly the
+  granularity §5 chose, and it is chosen for us rather than derived by picking the latest
+  patch of each line.
+- `Copter-4.7/` holds **both** `apm.pdef.json` (2,163,839 B) **and** `apm.pdef.xml`
+  (2,710,473 B), plus `MAVLinkMessages.rst` (125,026 B), `Parameters.md`, `Parameters.rst`,
+  `Parameters.html`.
+- Actively maintained — commits 2026-08-06, 08-11, 08-16, all "Update metadata".
+
+### What this does and does not change
+
+**Not a reason to switch on its own.** A Go build-time converter reads XML or JSON from the
+standard library, so "a build-time XML reader" was never a real cost. The honest difference
+is the fetch shape:
+
+| | `autotest.ardupilot.org` (§5 as written) | `ArduPilot/ParameterRepository` |
+|---|---|---|
+| Granularity | `stable-X.Y.Z`; we pick the latest patch per minor line | Per minor line, already |
+| Immutability | Per-tag URLs, immutable, known sha256 | Branch-tracking directories; pinned by **commit SHA** instead |
+| Fetch shape | ~23 individually pinned `http_file` entries | One pin yields all 60 sets |
+| Size | ~46 MB, only what is needed | Larger — the whole repository, including `Parameters.html`/`.rst` we do not want |
+| Formats | XML | XML **and** JSON |
+
+Both give hermeticity; they differ in mechanism, not in guarantee. Immutable-URL-plus-sha256
+is the stronger primitive and fetches less. One pin for all 60 sets is simpler and removes
+the "which patch is latest?" step. **The choice belongs with whoever writes the converter**,
+against a real Bazel target rather than against this table — and ADR-0006 §3's
+`bazel_compatibility` check (deferred with the implementation) may come out differently for
+the two, since the ParameterRepository route may need no new ruleset at all.
+
+### The part neither research pass noticed
+
+`MAVLinkMessages.rst` is a **per-firmware-version list of the MAVLink messages that
+firmware actually handles**. That is a second, orthogonal capability source alongside
+`AUTOPILOT_VERSION`'s bitmap: the capability bits declare *protocol features*, this declares
+*which messages are handled*. It is directly in the spirit of §1 — absorb variance by asking
+what the vehicle supports rather than by branching on what it is — and nothing in this ADR
+uses it. Recorded as open, not scheduled.
+
+### Provenance
+
+Found while reconciling a second, independent Cockpit survey against this one. Full
+comparison, including what each pass missed, in
+`../research/cockpit-reference-reconciliation.md`.

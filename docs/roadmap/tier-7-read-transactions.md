@@ -90,6 +90,24 @@ GCS sends:  MISSION_ACK (MAV_MISSION_ACCEPTED)
 **`GetCachedParameters(vehicleId)`:**
 - `HGETALL params:<sysId>` → return all cached params
 - Used for initial panel load without triggering a new vehicle request
+- **Not declared in `services.proto`.** `ParameterService` has `ListParameters`,
+  `GetParameter`, `SetParameter` and `GetParameterMetadata` — there is no
+  `GetCachedParameters` RPC, so this cannot be called from the frontend as written.
+  Resolve one of two ways before Chapter 5: add the RPC (a Tier 0-class contract change,
+  now post-codegen and therefore a `buf breaking` event), or serve the cached read as a
+  mode of `ListParameters` and delete this entry. The second is preferred — the cache is
+  an implementation detail of the same question, and the panel does not need to know which
+  path answered it.
+
+**`GetParameterMetadata(vehicleId, paramIds)`:**
+- Select the `ParameterMetadataSet` matching the vehicle's reported
+  `VehicleCapabilities.flight_sw_version`: nearest vendored version ≤ actual
+- If capabilities are not yet known, **fail rather than guess a version** — the metadata
+  set is wrong for the vehicle and a parameter editor built on it claims authority it does
+  not have (ADR-0007 §5)
+- Set `is_exact_match = false` whenever the vendored version is not the vehicle's own
+- `param_ids` empty = the whole set; a full Copter set is ~4800 entries, so a panel should
+  request the page it is showing
 
 ---
 
@@ -112,13 +130,50 @@ GCS sends:  MISSION_ACK (MAV_MISSION_ACCEPTED)
 
 **File:** `frontend/src/components/ParametersPanel.tsx`
 
+The panel is **generated from metadata, not hardcoded**. `parameters.proto` says why the
+metadata entered the contract early: *"Without it a ParametersPanel can only show name /
+value / type, which is what Tier 7 would otherwise write its tests against."* This chapter
+is that test surface, so it consumes `GetParameterMetadata` from day one.
+
+**Data sources:** `ParameterValue` for the live value, `ParameterMetadata` for everything
+about what the value *means*, joined client-side on `param_id`. Metadata may be absent for
+any given parameter — every field below degrades to the raw display.
+
 **Features:**
-- Search by `param_id` (case-insensitive prefix match)
-- Type-aware value display: `MavParamType` from `PARAM_VALUE` determines int vs float rendering
+- Search by `param_id` (case-insensitive prefix match); also match `human_name`
+- Columns: `param_id | human_name | value + units | index / count`
+- Type-aware value display: `MavParamType` from `PARAM_VALUE` determines int vs float
+  rendering
   - `MAV_PARAM_TYPE_INT8`, `INT16`, `INT32` → display as integer
   - `MAV_PARAM_TYPE_REAL32` → display with 4 significant figures
-- Column: `param_id | value | type | index / count`
-- Load from `GetCachedParameters` on mount if cache available; offer "Refresh" button to re-download
+  - **Integer parameters require the declared encoding.** The float→int reinterpretation
+    is a function of `PARAM_ENCODE_BYTEWISE` (16) vs `PARAM_ENCODE_C_CAST` (131072). If
+    neither bit is set, render "encoding not declared" — never a number (ADR-0007 §4)
+- Units from `units` / `unit_text`; these are the parameter's own units and are **not**
+  normalised — the normalise-once rule covers telemetry fields with a known wire unit, and
+  a parameter's unit is data, not schema
+- `documentation` and `human_name` in a detail view
+- **Presence before value on every `optional` numeric.** `range_low`, `range_high` and
+  `increment` are proto3 `optional` because 0 is a legal value for all three. Only ~half of
+  ArduPilot's parameters declare a range at all, so absent is the common case — a slider
+  that reads an unset range as `[0, 0]` clamps the parameter to zero
+- `values` map → enum dropdown (label from the map, raw code shown alongside)
+- `bitmask` map → bit editor. **Keys are bit indices, not bit values** — render
+  `1 << key`. Treating the key as a mask puts every bit one position off
+- `user_level` (`"Standard"` / `"Advanced"`) gates an advanced-parameters toggle. Verbatim
+  string, not parsed into an enum — it is upstream's vocabulary and upstream may extend it
+- Badges, read-only in this tier but the editor in Tier 8b depends on them:
+  `reboot_required` (value takes effect only after reboot), `read_only` (no editor at all),
+  `volatile_value` (changes on its own — do not cache, do not diff), `calibration`
+  (written by a routine, not by hand)
+- **Staleness banner when `ParameterMetadataSet.is_exact_match == false`**, naming
+  `firmware_version_label` and the vehicle's actual version. This is the field's entire
+  reason for existing: Cockpit describes a 4.6 vehicle with 4.3 metadata and nothing
+  anywhere says so
+- No metadata set at all (capabilities unknown) → fall back to `param_id | value | type |
+  index / count` and say the panel is unannotated. Degrade visibly, never silently
+- Initial load without triggering a new vehicle request — see the cached-read note in
+  Chapter 3; offer a "Refresh" button to re-download
 
 ---
 
@@ -142,13 +197,30 @@ GCS sends:  MISSION_ACK (MAV_MISSION_ACCEPTED)
 - Capability matrix rows all `complete`: PARAM-LIST-COMPLETE, PARAM-LIST-IDLE, PARAM-READ-NAME, PARAM-READ-INDEX, PARAM-ROUTE-LOSS, PARAM-REPLAY, PARAM-INVALID-TARGET
 - Live SITL: `ARMING_CHECK` readable; value present in `redis-cli HGET params:1 ARMING_CHECK`
 - Replay of recorded parameter session produces zero outbound bytes
+- `GetParameterMetadata` returns a set whose `firmware_version` is the nearest vendored
+  version ≤ the vehicle's `flight_sw_version`, with `is_exact_match` set correctly for both
+  the hit and the miss case
+- Capabilities unknown → `GetParameterMetadata` fails rather than returning a guessed set
 
 **Mission:**
 - Live SITL: 5-waypoint QGC mission → yalb-gcs download → identical item list in order
-- Round-trip: download → JSON → field-by-field comparison with QGC `.plan` format passes
+- Round-trip: download → JSON → field-by-field comparison with QGC `.plan` format passes,
+  against the mapping in `../reference/mission-interchange-formats.md` §1.4. **Scope: the
+  `mission` section, `SimpleItem`s only.** A `ComplexItem` round-trip is lossy by design
+  (§1.6) — a plan containing one either fails the gate or asserts the loss explicitly; it
+  must not pass silently
+- The two traps in §1.5 are asserted, not assumed: `null` in `params[0..3]` round-trips as
+  NaN and never as 0; `.plan` degrees are **not** put through the wire `degE7` conversion
+- The `doJumpId` ↔ `seq` offset (§4.1) is pinned by a real `.plan` file committed as a
+  fixture, not by reading QGC's source
 - Per-item retry test: simulate missing item 2 → verify re-request sent after 2s quiescence
 
 **UI:**
 - ParametersPanel loads with cached params and shows correct value types
+- ParametersPanel renders from metadata: an enumerated parameter shows a labelled dropdown,
+  a bitmask parameter shows bit labels at the correct positions (`1 << key`), and a
+  parameter with no declared range shows no slider
+- `is_exact_match == false` surfaces a staleness banner naming both versions
+- Metadata absent entirely → panel degrades to the raw four-column view and says so
 - "Refresh" triggers new download and updates panel
 - MissionPanel shows waypoints in sequence with decoded command names

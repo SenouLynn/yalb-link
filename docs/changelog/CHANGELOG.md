@@ -7,6 +7,167 @@ Format: `## [version] - YYYY-MM-DD`. Unreleased changes accumulate at the top.
 
 ## [Unreleased]
 
+### Changed — Cockpit survey reconciliation (2026-08-18)
+
+Cockpit was surveyed twice, independently. The second survey
+(`docs/wip/cockpit-reference-analysis.md`, written on an unmerged branch against `27a9ab5`)
+is reconciled against the first and closed out. Full comparison:
+`docs/research/cockpit-reference-reconciliation.md`; the WIP file is deleted.
+
+**Outcome:** the committed pass went further on everything the two shared and shipped
+proto for it. It also found the parameter-encoding bug the other missed entirely. The other
+pass covered four areas the committed one never touched, and those are what this change
+acts on.
+
+**ADR-0007 amended — the decision stands, one stated reason was wrong.** §5's accepted cost
+says "the versioned ArduPilot directories publish XML only … there is no JSON passthrough to
+lean on." True of `autotest.ardupilot.org`, false of `ArduPilot/ParameterRepository`, whose
+60 directories are named per **minor line** — exactly the granularity §5 chose — and each
+carry `apm.pdef.json` *and* `apm.pdef.xml` *and* `MAVLinkMessages.rst`. Verified against the
+GitHub API, not recalled. The source choice is left with whoever writes the converter, with
+the trade-off tabled: immutable per-tag URLs with sha256 fetch less, one commit pin fetches
+all 60 sets and removes the "which patch is latest?" step. `MAVLinkMessages.rst` — a
+per-firmware-version list of the messages that firmware handles — is a second capability
+source neither pass noticed.
+
+**Tier 7 had three defects, all now fixed:**
+- **Its `.plan` exit gate could not be met.** It required a "field-by-field comparison with
+  QGC `.plan` format" and nothing in the repo defined that mapping — zero hits for
+  `fileType`, `SimpleItem`, `QGC WPL`. Now written as
+  `docs/reference/mission-interchange-formats.md`, every constant read from QGC `master`
+  source rather than recalled: `fileType:"Plan"` v1, `mission`/`geoFence`/`rallyPoints` all
+  v2, `SimpleItem` with a **7-element** `params` array (5/6/7 are lat/lon/alt), `doJumpId`
+  carrying the sequence number. It is a *written* gate, not a `make` target, so nothing was
+  red in CI — it was simply unmeetable.
+- **`ParametersPanel` was still spec'd as `param_id | value | type | index / count`** —
+  the exact narrow shape ADR-0007 §5 says `ParameterMetadata` entered the contract early to
+  prevent. The contract moved at `306a429`; the tier plan had not followed. Now consumes
+  `GetParameterMetadata`, with the traps written into the spec: read presence before value
+  on the `optional` numerics (0 is legal for all three, and only ~half of ArduPilot's
+  parameters declare a range), render bitmask keys as `1 << key` because they are bit
+  indices not masks, and surface a staleness banner on `is_exact_match == false`.
+- **It called `GetCachedParameters`, an RPC that does not exist.** `ParameterService` has
+  `ListParameters`, `GetParameter`, `SetParameter`, `GetParameterMetadata`. Flagged in place
+  with the two ways out; serving the cached read as a mode of `ListParameters` is preferred,
+  since adding the RPC is now a `buf breaking` event rather than a free Tier 0 edit.
+
+**Manual control recorded as deferred rather than absent.** A repo-wide grep for
+`manual_control|joystick|gamepad|rc_channel|rc_override` returned one incidental hit, and
+the out-of-scope table did not mention it — so it read as oversight. It is now a row there,
+carrying the constraints so the eventual ADR inherits them: a third write class,
+unacknowledged and continuous, incompatible with the command registry and per-action audit
+Tier 8 is built on; needs rate limiting, a deadman, take-control handoff, and bandwidth
+arithmetic against `RADIO_STATUS.txbuf`. Gate it on
+`MAV_PROTOCOL_CAPABILITY_COMPONENT_ACCEPTS_GCS_CONTROL` (524288), which landed in
+`types.proto` with no consumer. Open tension recorded, not papered over: the browser Gamepad
+API only reads while the tab is focused, which is the strongest Electron reopen-trigger on
+file.
+
+**The unit-normalisation rule now documents its own exception.** `order-of-operations.md`
+read as an unqualified "protos carry SI units" while `telemetry.proto` deliberately keeps
+`hdg_cdeg`, `cog_cdeg`, `vel_cm_s` and the battery integers in wire units. The exception was
+recorded in the capability matrix, in per-field proto comments and in this changelog — but
+not in the canonical decision row, which is the line a contributor would cite. A future
+reader would either "fix" those fields and destroy the sentinels, or cite them as precedent
+to skip normalisation elsewhere. The reason is now stated: the sentinel
+(`65535` / `INT16_MAX` / `-1`) is defined in wire units and a divide turns it into an
+unrecognisable magnitude. A field with no sentinel gets normalised like everything else.
+
+**Left open, deliberately, and listed in one place** so they are findable rather than
+rediscovered: `Waypoint { position, repeated Command }` (now a proto break, no longer the
+free Tier 0 edit it would have been before `25afbf6`); multi-instance telemetry addressing,
+where `BatteryStatus.id` exists but the Tier 1 fold flattens to scalars and two batteries
+silently last-writer-wins; the WebRTC trickle-ICE disagreement between the two passes, plus
+the missing `VIDEO_STREAM_TYPE_ANALOG` and the unset-vs-zero convention for
+`packet_loss_pct`/`latency_ms`; `ComplexItem` survey definitions, which have no proto
+equivalent and make a survey round-trip lossy by design; tlog; `.ass` telemetry subtitles;
+replay-as-a-link at the transport port; and `protoreflect` as a runtime schema, still
+unscheduled by either pass.
+
+### Added — Firmware capability negotiation + parameter metadata (2026-08-17)
+
+Three commits that had no changelog entry: `5617567` (cockpit research), `306a429`
+(parameters pivot), `c536f16` (capability matrix).
+
+**ADR-0007 — Firmware Variance via Capability Negotiation (Accepted).** Two protos declared
+a firmware adapter layer that nothing built, so `flight_mode_name` and
+`MavlinkDetail.flight_mode` were empty through Tier 8. Both proposed remedies discriminated
+on firmware *identity* — QGC's `FirmwarePlugin`, and a hand-typed ArduCopter mode table —
+and both were rejected. Variance is absorbed by **declared capability** instead: every
+optional protocol path is gated on a bit in `VehicleCapabilities`, populated from
+`AUTOPILOT_VERSION` (#148) at discovery. Identity is a proxy that is wrong in both
+directions: an ArduPilot 4.5 and an ArduPilot 4.7 vehicle differ on `AVAILABLE_MODES`, on
+the parameter-encoding declaration and on ~330 parameter names, while an ArduPilot and a
+PX4 vehicle may not differ at all on any one feature.
+
+**The bug this closed, which is the reason it was worth doing.**
+`MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE` (16) and `PARAM_ENCODE_C_CAST` (131072) are
+mutually exclusive declarations of how an integer parameter is packed into the float
+`PARAM_VALUE.param_value`. `parameters.proto` had silently committed to C_CAST. Decode a
+BYTEWISE vehicle under that assumption and integer parameters read as garbage **with no
+error**, because a bit pattern reinterpreted as a magnitude is still a finite float — so
+even the "NaN never returned" gate passes. Tier 8b's first parameter write target is
+`LOG_BITMASK`, an integer bitmask straight through that path, chosen because it was thought
+low-consequence. Unknown encoding is now an error, not a default.
+
+**Mode names resolve in three ordered layers** (`tier-1-pure-domain-logic.md` ch.6a,
+`internal/codec/firmware.go`): `AVAILABLE_MODES.mode_name` (#435, ArduPilot ≥ 4.7.0) →
+generated gomavlib dialect enum `String()` selected by `(MavAutopilot, MavType)` → empty.
+No table is written: `COPTER_MODE`, `PLANE_MODE`, `ROVER_MODE`, `SUB_MODE` and
+`TRACKER_MODE` already ship in `gomavlib v3.3.5` with `String()` methods. Layer (c)
+returning empty is a designed outcome — Cockpit's `PX4.mode()` returns `MANUAL`
+unconditionally because the subclass never overrode it, which is a plausible wrong answer
+the type system cannot catch. An empty string is checkable; a fabricated name is not.
+
+**Contracts (`306a429`, +379 lines of proto, ~1,800 regenerated):**
+- `vehicle.proto` — `VehicleCapabilities` on `VehicleSnapshot`: raw `capability_flags`
+  uint64 **and** a decomposed `repeated MavProtocolCapability`, so unknown bits are never
+  silently dropped. Carries `flight_sw_version` (the join key into metadata) and
+  `uid`/`uid2`, the durable per-airframe identity
+- `types.proto` — `MavProtocolCapability` (22 values) and `MavModeProperty` mirrored
+  value-for-value
+- `parameters.proto` — `ParameterMetadata`, `ParameterMetadataSet`,
+  `GetParameterMetadataRequest`. Metadata does **not** ride on `ParameterValue`; it is a
+  separate set joined client-side. Sets are vendored per **minor line** and selected at
+  runtime as nearest vendored ≤ actual, with `is_exact_match` forcing the UI to admit the
+  gap. Granularity set by measurement, not taste: Copter 4.5.6→4.5.7 changes 1 parameter
+  name, 4.5.7→4.6.0 changes 329
+- `services.proto` — `GetParameterMetadata` at `OPERATOR_ROLE_OBSERVER`; an observer who
+  cannot read units is reading raw floats
+- `auth.proto` — `SettingsRecord`/`SettingsScope`/`SettingsOrigin`. Last-write-wins on an
+  explicit `epoch_last_changed_ms` set by the *writer*, with an origin tiebreak
+  (`VEHICLE > SERVER > CLIENT`). Scoped on **vehicle UID, not `VehicleId`**: sysid is
+  operator-assignable and reused across airframes, so settings keyed on it follow the slot
+  rather than the vehicle. **Contract only** — no service, no RPC, no Go interface
+
+**Persistence boundary defined, adapters deferred (ADR-0007 §8).** Three ports rather than
+one, because a single storage port yields a lowest-common-denominator interface no backend
+implements well: state cache (lossy, rebuildable), event history (append-only, ordered),
+durable record (transactional, survives restart). The discriminator is one question — is it
+rebuildable from live MAVLink? This supersedes nothing: ADR-0002 and ADR-0003 said Redis is
+not the system of record, and neither named what is. Each port lands in the tier that first
+has a caller; nothing calls a durable record today, and an interface with no implementations
+**and** no callers is speculative API design.
+
+**Standing prohibitions recorded** so adding one is a decision argued against a written
+position rather than a gap someone fills: no `eval` path for user-authored content (Cockpit
+runs `new Function(code)()` and `eval(...)` unsandboxed, and its iframe bridge never
+validates `event.origin`); and no environment sniffing — the backend declares capability and
+the frontend reads the declaration, rather than Cockpit's `isElectron()` user-agent check
+across 130 call sites.
+
+**Capability matrix (`c536f16`)** gains a *Planned — Capability Negotiation* section:
+`AUTOPILOT_VERSION` #148, `AVAILABLE_MODES` #435, `CURRENT_MODE` #436,
+`MAV_CMD_REQUEST_MESSAGE` 512, all `blocked`. Those rows deliberately write the ID column as
+`#148` / `cmd 512` so `TestMatrixCoverage`'s regex does not match them — they document
+intent without claiming a decoder exists.
+
+**Accepted costs, recorded rather than glossed:** discovery gains a round trip, so there is
+a window after first HEARTBEAT where capabilities are unknown — a state the UI must render,
+not one it can skip. A vehicle that never answers #148 stays unknown forever and integer
+parameter decode stays refused for it. That is a real functional regression against "assume
+C_CAST", and it is accepted: a refusal is debuggable and a silent misread is not.
+
 ### Added — Tier 4 bridge core (2026-08-17)
 
 **Vehicle fold (`internal/vehicle`):**
