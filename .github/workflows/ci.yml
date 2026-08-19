@@ -63,6 +63,11 @@ jobs:
       - run: go build ./...
       - run: go vet ./...
       - run: go test -race ./...
+      # The capability matrix is an executable artifact, not prose:
+      # TestMatrixCoverage above asserts its numeric-ID rows equal the codec's
+      # dispatch-table keys. This checks the other half — that no row is left
+      # unstarted.
+      - run: ./scripts/check-matrix.sh
       # Two couplings live in these three lines; both bit us (ADR-0006).
       #
       # The action major selects the linter major: v6 installs golangci-lint
