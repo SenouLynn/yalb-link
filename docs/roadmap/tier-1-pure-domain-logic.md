@@ -81,10 +81,20 @@ hand-rolled per-vehicle ticker: it double-emits, and heartbeat is a per-link
 broadcast rather than a per-peer message (see the heartbeat cardinality decision in
 `order-of-operations.md`).
 
-**`StreamRequestEnable`** defaults to false. SITL over UDP streams telemetry
-anyway, so Tiers 5–6 will look healthy; a real ArduPilot link may deliver almost
-nothing until SET_MESSAGE_INTERVAL is sent, which is Tier 8a. Leave it false and
-carry the note forward — the first hardware bring-up should not be a surprise.
+**`StreamRequestEnable`** defaults to false. **Leave it false** — but not for the reason
+this paragraph gave until 2026-08-19.
+
+The original claim was that SITL over UDP streams telemetry anyway, so Tiers 5–6 would look
+healthy while only a real link stayed quiet. **That is false.** A six-minute run against the
+pinned `Copter-4.7.0` SITL produced heartbeats and zero telemetry events. Nothing streams
+until asked, in SITL or in the field — which is the good case, because it means SITL is a
+faithful test of the thing that was in doubt.
+
+The flag stays false because gomavlib's built-in path sends the deprecated
+`REQUEST_DATA_STREAM` (#66) for seven coarse stream groups: a distinct message family that
+would move the `len(SendFamilies) == 11` pin permanently, with no per-message control.
+Asking for telemetry is instead an explicit `MAV_CMD_SET_MESSAGE_INTERVAL` at **Tier 5
+Chapter 7**, not Tier 8a — see ADR-0010, which classifies a request for data as read-side.
 
 **Test endpoint.** Use `EndpointCustomClient` with `net.Pipe()`. (`EndpointCustom`
 exists but is deprecated in favour of it; `EndpointCustomConn` does not exist.)
@@ -259,7 +269,15 @@ interface TelemetrySample {
 
 **Accumulation.** `TelemetryEvent` is a oneof: one family per event. `TelemetrySample`
 spans families. The shim returns a *partial* sample per event and holds no state.
-The Tier 4 per-vehicle fold merges partials:
+Something downstream must merge partials:
+
+> **Open — this accumulator has no owner.** The snippet below is TypeScript, and the text
+> assigned it to "the Tier 4 per-vehicle fold". Tier 4 is Go-only; it contains no
+> TypeScript. Tier 6's `useVehicleTelemetry` only buffers the last N events, and a
+> single-event partial passed straight to a resolver yields null — so Tier 6's exit
+> criterion "browser shows live TelemetryLog" depends on code no tier schedules. Raised
+> 2026-08-19; the likely home is Tier 6 ch.6 alongside the adapter, but that is a decision,
+> not a default.
 
 ```typescript
 accumulated = { ...accumulated, ...sampleFromEvent(event) };

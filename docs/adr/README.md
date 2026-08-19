@@ -22,6 +22,7 @@ rather than amend again.
 | [0004](0004-multiprotocol-track-layer.md) | Multi-protocol track layer | Accepted |
 | [0005](0005-security-and-auth-model.md) | Security and auth model | Accepted |
 | [0006](0006-toolchain-version-coupling.md) | Toolchain version coupling and dependency risk | Accepted, amended ×1 |
-| [0007](0007-firmware-variance-via-capability-negotiation.md) | Firmware variance via capability negotiation | Accepted, amended ×1, extended by 0009 |
+| [0007](0007-firmware-variance-via-capability-negotiation.md) | Firmware variance via capability negotiation | Accepted, amended ×1, extended by 0009, 0010 |
 | [0008](0008-documentation-lifecycle-and-amendments.md) | Documentation lifecycle and amendments | Accepted |
 | [0009](0009-parameter-acquisition-paradigms.md) | Parameter acquisition paradigms | Accepted |
+| [0010](0010-requests-for-data-are-not-writes.md) | Requests for data are not writes | Accepted |

@@ -162,17 +162,30 @@ decoder yet**, which is exactly why this section exists separately.
 
 | Case ID | MAVLink Message | ID | Behavior | Blocked on | Status |
 |---|---|---|---|---|---|
-| RECV-AUTOPILOT-VERSION | AUTOPILOT_VERSION | #148 | Decode → `VehicleCapabilities`; 21-flag bitmask carried raw plus decomposed | Tier 5 — requested at discovery, folded into `vehicle.State` | blocked |
+| RECV-AUTOPILOT-VERSION | AUTOPILOT_VERSION | #148 | Decode → `VehicleCapabilities`; 21-flag bitmask carried raw plus decomposed | **Tier 5 ch.7** — requested at discovery, folded into `vehicle.State` | blocked |
 | RECV-AVAILABLE-MODES | AVAILABLE_MODES | #435 | Decode → `[]codec.AvailableMode` (a Go type; see Tier 1 ch.6a for why it is not a proto) | Tier 1 ch.6a | blocked |
 | RECV-CURRENT-MODE | CURRENT_MODE | #436 | Decode → current `custom_mode` + `intended_custom_mode`; the two differ when a failsafe overrode the operator | Tier 1 ch.6a | blocked |
-| SEND-REQUEST-MESSAGE | COMMAND_LONG payload | cmd 512 | `MAV_CMD_REQUEST_MESSAGE` requesting #148 and #435 | Tier 5 | blocked |
+| SEND-REQUEST-MESSAGE | COMMAND_LONG payload | cmd 512 | `MAV_CMD_REQUEST_MESSAGE` requesting #148 and #435 | **Tier 5 ch.7** | blocked |
+| SEND-SET-MESSAGE-INTERVAL | COMMAND_LONG payload | cmd 511 | `MAV_CMD_SET_MESSAGE_INTERVAL` for the nine **periodic** telemetry families | **Tier 5 ch.7** | blocked |
 
-**`SEND-REQUEST-MESSAGE` is not a new send family**, and the distinction is load-bearing
-rather than pedantic. `MAV_CMD_REQUEST_MESSAGE = 512` is a *command ID* carried inside
-`COMMAND_LONG` (#76), not a message ID. `SendFamilies` is keyed by message ID, and
-`SEND-CMD-LONG` (76) is already `complete`, so the encoder already exists — what is missing
-is a caller. A row asserting message family 512 would invent a family that must not exist
-and would break `TestMatrixFamilyCounts`, which pins `len(SendFamilies) == 11`.
+**Neither `SEND-REQUEST-MESSAGE` nor `SEND-SET-MESSAGE-INTERVAL` is a new send family**, and
+the distinction is load-bearing rather than pedantic. `MAV_CMD_REQUEST_MESSAGE = 512` and
+`MAV_CMD_SET_MESSAGE_INTERVAL = 511` are *command IDs* carried inside `COMMAND_LONG` (#76),
+not message IDs. `SendFamilies` is keyed by message ID, and `SEND-CMD-LONG` (76) is already
+`complete`, so the encoder already exists — what is missing is a caller. A row asserting
+message family 511 or 512 would invent a family that must not exist and would break
+`TestMatrixFamilyCounts`, which pins `len(SendFamilies) == 11`.
+
+This is also why `REQUEST_DATA_STREAM` (#66) is absent and stays absent. Unlike 511/512 it
+*is* a distinct message family, so gomavlib's `StreamRequestEnable` path could not be
+adopted without moving that pin to admit a deprecated message permanently. ADR-0010 §5.
+
+**Provenance.** The Tier 5 assignment on all five rows above is ADR-0007 §1 (#148 "requested
+at discovery") and ADR-0010 §2 (cmd 511 alongside it). The nine periodic families, and the
+three excluded — `RADIO_STATUS`(109), `STATUSTEXT`(253), `HOME_POSITION`(242) — are
+enumerated in ADR-0010 §2 and `../roadmap/tier-5-transport-live.md` ch.7. Verified against
+the tree 2026-08-19; no encoder or decoder for any of these exists yet, which is what
+`blocked` records.
 
 `AVAILABLE_MODES_MONITOR` (#437) is deliberately absent. It only matters when a vehicle's
 mode set changes *after* boot; nothing we support does that yet, and a row for it would be

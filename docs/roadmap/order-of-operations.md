@@ -58,9 +58,9 @@ These are closed. Do not re-open without an ADR.
 | Vehicle-type classification | Derived from the generated `MavType` constants in `types.proto`, never from a retyped integer list. Upstream renumbered the VTOL types (MAV_TYPE_VTOL_DUOROTOR became MAV_TYPE_VTOL_TAILSITTER_DUOROTOR); a hand-copied pre-2019 table maps ROCKET(9) and GROUND_ROVER(10) onto KITE and FLAPPING_WING. `types.proto` now carries the full MAV_TYPE list (0–49). |
 | buf breaking gate | `buf breaking proto --against '.git#branch=origin/main,subdir=proto'`, run **from the repo root**, with `fetch-depth: 0` in CI checkout. All three parts are load-bearing and were verified by execution: the `.git` input resolves relative to the working directory (running from `proto/` looks for `proto/.git` and fails), `subdir=proto` is required or imports do not resolve in the ref, and a shallow clone leaves the ref unresolvable. Encoded once in `make proto-breaking`; do not retype it. |
 | Track layer placement | MAVLink track path in Tier 6 alongside first Connect services. ADS-B and Meshtastic adapters in Tier 9. |
-| SetArmedRequest.force field | Removed from proto in Tier 0 — a field that exists can be set. **The removal is not the control.** `CommandService.SendCommand` accepts any `MavCmd` plus a `raw_command` passthrough, so force-arm (cmd 400, param2=21196) is reachable one RPC over. The control is server-side validation in SendCommand: reject 400/21196, deny any command not on an explicit allowlist including via `raw_command`, and check the per-command role first. Stated on `CommandLong` in the proto; enforced by the Tier 8 command registry. No write path is exposed before then. |
+| SetArmedRequest.force field | Removed from proto in Tier 0 — a field that exists can be set. **The removal is not the control.** `CommandService.SendCommand` accepts any `MavCmd` plus a `raw_command` passthrough, so force-arm (cmd 400, param2=21196) is reachable one RPC over. The control is server-side validation in SendCommand: reject 400/21196, deny any command not on an explicit allowlist including via `raw_command`, and check the per-command role first. Stated on `CommandLong` in the proto; enforced by the Tier 8 command registry. No **command** write path is exposed before then — the Tier 5 discovery requests (ADR-0010 §2) ride `COMMAND_LONG` but change no vehicle state, so they carry no registry entry, no role check and no audit event. |
 | SITL multi-instance routing | All instances send to `gcs-backend:14550`. Host-published ports 14560/14570 are for external tooling only. Discriminated by sysId in MAVLink header. |
-| Priority receive set | 18 families, split **three** ways by destination — they are not one envelope. **Streaming telemetry (12) → `TelemetryEvent`:** SYS_STATUS(1), GPS_RAW_INT(24), ATTITUDE(30), GLOBAL_POSITION_INT(33), MISSION_CURRENT(42), NAV_CONTROLLER_OUTPUT(62), VFR_HUD(74), RADIO_STATUS(109), BATTERY_STATUS(147), HOME_POSITION(242), STATUSTEXT(253), EKF_STATUS_REPORT(193/ardupilotmega). **Transaction responses (5) → `ProtocolEvent`:** PARAM_VALUE(22), MISSION_COUNT(44), MISSION_ACK(47), MISSION_ITEM_INT(73), COMMAND_ACK(77). **Fleet identity (1) → `HeartbeatState`:** HEARTBEAT(0) — **not** `TelemetryEvent`. Verify against `RECV-HEARTBEAT` in the capability matrix and the nil dispatch entry in `internal/codec/message.go`, which are the enforced statements. |
+| Priority receive set | 18 families, split **three** ways by destination — they are not one envelope. **Streaming telemetry (12) → `TelemetryEvent`:** SYS_STATUS(1), GPS_RAW_INT(24), ATTITUDE(30), GLOBAL_POSITION_INT(33), MISSION_CURRENT(42), NAV_CONTROLLER_OUTPUT(62), VFR_HUD(74), RADIO_STATUS(109), BATTERY_STATUS(147), HOME_POSITION(242), STATUSTEXT(253), EKF_STATUS_REPORT(193/ardupilotmega). **Transaction responses (5) → `ProtocolEvent`:** PARAM_VALUE(22), MISSION_COUNT(44), MISSION_ACK(47), MISSION_ITEM_INT(73), COMMAND_ACK(77). **Fleet identity (1) → `HeartbeatState`:** HEARTBEAT(0) — **not** `TelemetryEvent`. Verify against `RECV-HEARTBEAT` in the capability matrix and the nil dispatch entry in `internal/codec/message.go`, which are the enforced statements. **Three further families are scheduled but deliberately not counted here:** `AUTOPILOT_VERSION`(148), `AVAILABLE_MODES`(435) and `CURRENT_MODE`(436). They sit in the capability matrix's *Planned* section with non-numeric IDs (`#148`, `#435`) because `TestMatrixCoverage` asserts that the matrix's numeric-ID rows **equal** the dispatch-table keys — a row with a bare number and no decoder fails the build exactly as a decoder with no row does. They join this count on the commit that adds their decoders (Tier 5 ch.7, Tier 1 ch.6a). This is a mechanical constraint, not a disagreement between the two documents. |
 | Codec output type | The codec emits exactly one of `TelemetryEvent` or `ProtocolEvent` per decoded frame, with `(sysId, compId, seq)` from the frame header. Telemetry folds into per-vehicle state and fans out; a transaction response correlates against an in-flight request registry and completes a pending RPC. A single conflated type leaves the mission and parameter protocols nowhere to land — discovered at Tier 7, after three tiers of tests are written against the wrong signature. |
 | Outbound targeting | **Address every write to a link; never broadcast.** gomavlib has no `WriteMessage(msg)` — the API is `WriteMessageTo(*Channel, msg)` / `WriteMessageAll` / `WriteMessageExcept`. A port shaped `WriteMessage(msg)` can only be satisfied by `WriteMessageAll`, which transmits to every channel: N× uplink bandwidth, a command for sysid 2 physically sent over vehicle 1's radio, and two vehicles sharing a sysid across links both acting. The transport port is `WriteTo(link LinkID, msg message.Message)`; sysid→channel is populated from inbound frames; an unaddressable target is **rejected, not broadcast**. |
 | Unit normalisation | **Exactly once, in the Go codec, at the proto boundary.** Protos carry SI units and degrees (`lat_deg` double, `alt_msl_m` float, `vz_m_s` float) — not raw wire units. No consumer downstream divides by 1e7, 1000 or 100. A `TelemetrySample` shaped in wire units (`latDegE7`, `altMslMm`, `vxCms`) is a flight-path-hud artifact and double-converts against this repo's protos. **One stated exception, and it is not a licence to skip normalisation elsewhere:** fields whose MAVLink *unknown* sentinel is defined in wire units keep wire units **and** wire-unit names — `hdg_cdeg`, `cog_cdeg`, `vel_cm_s`, and the battery integers `voltage_battery_mv`, `current_battery_ca`, `current_consumed_mah`, `temperature_cdeg`. Dividing turns the `65535`/`INT16_MAX`/`-1` sentinel into `655.35` or a plausible magnitude, which no consumer can recognise as *unknown*. The sentinel is the reason; a field with no sentinel gets normalised like everything else. Evidence: the `NORM-RETAINED` row in `../reference/codec-capability-matrix.md`. |
@@ -74,6 +74,12 @@ These are closed. Do not re-open without an ADR.
 | SITL firmware pins | **`Copter-4.7.0` and `Plane-4.6.3`** — deliberately different minor lines. Copter 4.7 is the first line implementing `AVAILABLE_MODES` (#435) and exercises ADR-0007 mode layer (a); Plane 4.6 has no such message and exercises layer (b), the generated dialect enum fallback. One line for both leaves a layer permanently unexercised, and makes metadata version selection a trivially exact hit so `is_exact_match` is never really tested. Tags are `Copter-*`/`Plane-*` — the `Ardu` prefix is the *binary* name, not the tag, and pinning `ArduCopter-4.6.0` broke every image build for three months while the gate compared it only against itself. |
 | Parameter acquisition | **ADR-0009.** Three separable questions — metadata (build-time vendored, never on a live path), values (context-dependent), writes (bench only). Two connection contexts discriminated by a checkable predicate, not a mode: *do we hold a complete set for this vehicle UID at this `flight_sw_version`?* No → full download. Yes → serve cache, no network. The metadata **source** choice is closed until Tier 7 has a caller. |
 | Priority send set | 11 families: COMMAND_LONG(76), SET_POSITION_TARGET_GLOBAL_INT(86), PARAM_SET(23), PARAM_REQUEST_LIST(21), PARAM_REQUEST_READ(20), MISSION_COUNT(44), MISSION_ITEM_INT(73), MISSION_REQUEST_INT(51), MISSION_ACK(47), HEARTBEAT(0), MISSION_CLEAR_ALL(45). |
+| Transport package placement | **There is no `internal/transport`.** Tier 5 Chapter 1 specified one over a raw `net.PacketConn`; gomavlib owns its socket through an `EndpointConf` and accepts an endpoint, not a byte stream, so there is no seam to put it in. `cmd/gcs` constructs `gomavlib.EndpointUDPServer` from `codec.ResolveBind` and passes it to `codec.NewNode`; **`codec.FrameSource` is the transport port.** `EndpointCustom` is not a workaround — it is a single stream and cannot represent N UDP peers on one bound port, so it would collapse every SITL instance onto one channel and destroy per-link routing. |
+| Router concurrency shape | **One router loop, not one goroutine per vehicle.** `internal/bridge` holds `map[routes.Key]vehicle.State` and calls `Fold` sequentially. The per-vehicle-goroutine plan in Tier 5 Chapter 2 predates `VEHICLE_RECOVERED`: its `sync.Once` guard, keyed on system ID, would deny a returning vehicle its goroutine forever. Concurrent folds also discard the deterministic ordering the pure fold was built for, and the fold is cheap enough that there is nothing to buy. `states` is single-owner and unguarded; `routes.Table` keeps its mutex for the Tier 8 send path. |
+| Fold output destination | **A `bridge.Sink` interface, not a Redis publisher directly.** The pipeline had to be runnable and testable before Redis existed, or every failure is ambiguous between the fold and the publisher. `LogSink` was first light; the Redis sink is Tier 5 Chapter 4. A sink error stops the bridge rather than being logged and continued — a bridge that folds while nothing records the result presents as healthy while losing fleet history. |
+| Read/write boundary | **ADR-0010.** A frame is a *write* when it changes what the vehicle is or does — `PARAM_SET`, mission upload, `MISSION_CLEAR_ALL`, mode change, arm/disarm, guided reposition. A frame that only *asks* the vehicle to send data is read-side, including `COMMAND_LONG` cmd 511 and cmd 512. The envelope is not the classification: cmd 512 was already scheduled at Tier 5 by ADR-0007 and the capability matrix, uncontested. Principle 3 is restated to match; the dual-gate safety model is untouched and still applies to the write column only. |
+| Discovery request round trip | **Tier 5 owns it**, per ADR-0010 §2 — not Tier 8. On first HEARTBEAT per link: cmd 512 for `AUTOPILOT_VERSION`(148) and `AVAILABLE_MODES`(435), then cmd 511 for the **nine periodic** telemetry families. `RADIO_STATUS`(109) is excluded because the SiK radio injects it and there is nothing to rate (it never appears over SITL UDP at all); `STATUSTEXT`(253) and `HOME_POSITION`(242) are excluded because they are event-driven. Fire-and-observe: no registry, no ACK correlation, no audit. Re-sent on a timer, because a lost UDP request otherwise leaves a healthy vehicle silent forever. |
+| Tier 8a scope | **Narrowed to the operator-facing capability.** `CommandService.SetMessageInterval` plus registry entry, ACK correlation, role check and audit — an operator deliberately changing a rate on a live vehicle. It no longer owns first telemetry, which is not an operator action. Gating first telemetry on Tier 8 is what made Tier 6 and Tier 7's exit gates unmeetable. |
 
 ---
 
@@ -81,7 +87,14 @@ These are closed. Do not re-open without an ADR.
 
 1. **Evidence before claims** — nothing is "done" without a test vector, schema, or SITL trace.
 2. **Offline before online** — pure folds first, then injected clock, then live sockets.
-3. **Read before write** — read-only proven before any outbound capability.
+3. **Read before write** — nothing that *changes vehicle state* leaves the GCS until the
+   read path is proven. Outbound frames that only *ask* a vehicle to send data are
+   read-side and are not gated by this: the GCS heartbeat, `PARAM_REQUEST_*`,
+   `MISSION_REQUEST_*`, `MAV_CMD_REQUEST_MESSAGE` (512) and `MAV_CMD_SET_MESSAGE_INTERVAL`
+   (511). **ADR-0010** draws the line and lists both columns. The earlier wording — "before
+   any outbound capability" — described neither the plan nor the code: Tier 5 has emitted a
+   GCS heartbeat since it opened a socket, and Tier 7 sends five of the eleven send
+   families.
 4. **Trust as process** — trust is established through resolved value → known source → fallback chain → freshness → known-answer test.
 5. **Contracts are the portable unit** — protos + golden bytes + semantic traces. Generated code is an adapter.
 6. **UI composition is deferred** — components are not scheduled until their data is proven at logic + service layer.
@@ -189,11 +202,14 @@ Vehicle fold, route table, fleet:active SET. Docker Compose scaffolding with mul
 
 **Detail:** `tier-5-transport-live.md`
 
-UDP transport, Redis client, GCS heartbeat configured on the gomavlib node (not hand-rolled), goroutine supervision, /healthz. First live SITL connection.
+UDP transport, Redis client, GCS heartbeat configured on the gomavlib node (not hand-rolled), the discovery request round trip (ADR-0010 §2), goroutine supervision, /healthz. First live SITL connection.
 
 **Gate:** Tier 4 fold + Docker Compose complete.
 
-**Exit gate:** `docker-compose up` → VEHICLE_DISCOVERED in logs; GCS heartbeat confirmed via failsafe test; goroutine count stable over 60s.
+**Exit gate:** `docker-compose up` → VEHICLE_DISCOVERED **and telemetry events** in logs;
+GCS heartbeat cardinality confirmed (the per-second count does not scale with vehicle
+count); goroutine count stable over 60s. **The failsafe assertion moved to Tier 8e** — it
+requires `MAV_CMD_COMPONENT_ARM_DISARM`, which is a write and is not available here.
 
 ---
 
@@ -203,7 +219,7 @@ UDP transport, Redis client, GCS heartbeat configured on the gomavlib node (not 
 
 FleetService, TelemetryService, track layer (MAVLink path), TrackService. Frontend adapter context + TelemetryLog component.
 
-**Gate:** Tier 5 live bridge complete.
+**Gate:** Tier 5 live bridge complete, **including the discovery request round trip**. Without it no telemetry arrives at all and this tier's exit gate cannot pass — that ordering defect is what ADR-0010 closes.
 
 **Exit gate:** Browser shows live telemetry log; each row names its MAVLink source; MockAdapter renders same component with fixture data; TrackEvent stream has MAVLink vehicle tracks.
 
@@ -215,7 +231,7 @@ FleetService, TelemetryService, track layer (MAVLink path), TrackService. Fronte
 
 Parameter read/list folds + mission download fold (pure). ParameterService, MissionService. ParametersPanel (read-only), MissionPanel.
 
-**Gate:** Tier 6 services live.
+**Gate:** Tier 6 services live; `AUTOPILOT_VERSION` folded into vehicle state by the Tier 5 round trip. The latter is what makes `GetParameterMetadata` version selection and ADR-0009 §2's UID predicate meetable — without it capabilities are permanently unknown and the only reachable exit line is the degraded one.
 
 **Exit gate:** ARMING_CHECK readable from live ArduCopter; 5-waypoint mission round-trips cleanly; all capability matrix rows for read transactions complete.
 
@@ -225,7 +241,7 @@ Parameter read/list folds + mission download fold (pure). ParameterService, Miss
 
 **Detail:** `tier-8-write-transactions.md`
 
-Command registry first. Then ordered by risk: 8a message interval → 8b param write → 8c mission upload → 8d mode change → 8e arm/disarm → MapPanel (required before 8f) → 8f guided reposition → 8g guided workflow lifecycle.
+Command registry first. Then ordered by risk: 8a message interval (**the operator-facing RPC only** — first telemetry is Tier 5, per ADR-0010 §4) → 8b param write → 8c mission upload → 8d mode change → 8e arm/disarm → MapPanel (required before 8f) → 8f guided reposition → 8g guided workflow lifecycle.
 
 **Gate:** Tier 7 read transactions complete; command registry wired.
 

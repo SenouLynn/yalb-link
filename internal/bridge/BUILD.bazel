@@ -1,0 +1,41 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "bridge",
+    srcs = [
+        "bridge.go",
+        "sink.go",
+    ],
+    importpath = "yalb.gcs/internal/bridge",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/codec",
+        "//internal/routes",
+        "//internal/vehicle",
+        "@com_github_bluenviron_gomavlib_v3//:gomavlib",
+    ],
+)
+
+go_test(
+    name = "bridge_test",
+    srcs = [
+        "bridge_test.go",
+        "harness_test.go",
+    ],
+    # keep
+    # The bridge is fed real MAVLink bytes through the real decoder, so the
+    # golden corpus has to be present in the sandbox. Same trap as the codec's
+    # test: undeclared runfiles are simply absent under Bazel, and the tests
+    # would fail on a missing file rather than on anything they assert.
+    data = ["//contracts/mavlink:fixtures"],
+    embed = [":bridge"],
+    deps = [
+        "//internal/codec",
+        "//internal/gen/gcs/v1:gcs",
+        "//internal/routes",
+        "//internal/vehicle",
+        "@com_github_bluenviron_gomavlib_v3//:gomavlib",
+        "@com_github_bluenviron_gomavlib_v3//pkg/message",
+        "@org_uber_go_goleak//:goleak",
+    ],
+)

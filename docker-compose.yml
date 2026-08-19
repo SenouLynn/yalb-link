@@ -128,6 +128,11 @@ services:
       # the transport threat model in docs/roadmap/tier-4-bridge-core.md.
       GCS_MAVLINK_SIGNING_KEY: ""
       GCS_REDIS_ADDR: redis:6379
+      # Per-frame telemetry logs live at debug. Overridable from the shell
+      # (`GCS_LOG_LEVEL=debug docker compose up`) rather than by editing this
+      # file, because the reason to want it is always a live link behaving
+      # unexpectedly — which is exactly when editing and rebuilding is worst.
+      GCS_LOG_LEVEL: ${GCS_LOG_LEVEL:-info}
     ports:
       - "8080:8080"
       # The backend is the process that listens on 14550, so this is where the

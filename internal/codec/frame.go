@@ -132,10 +132,16 @@ func NewNode(endpoints []gomavlib.EndpointConf) (*Node, error) {
 		// channel" a race.
 		IdleTimeout: LinkIdleTimeout,
 
-		// StreamRequestEnable stays false deliberately. SITL over UDP streams
-		// telemetry unprompted, so leaving this on would make Tiers 5-6 look
-		// healthy while masking that a real ArduPilot link may deliver almost
-		// nothing until SET_MESSAGE_INTERVAL is sent (Tier 8a).
+		// StreamRequestEnable stays false, but not for the reason this comment
+		// used to give. It claimed SITL streams telemetry unprompted; a
+		// six-minute run against Copter-4.7.0 produced heartbeats and zero
+		// telemetry events, so nothing streams until asked, in SITL or the
+		// field. Enabling this would send the deprecated REQUEST_DATA_STREAM
+		// (#66) for seven coarse stream groups: a distinct send family that
+		// would move the len(SendFamilies) == 11 pin permanently, with no
+		// per-message control. Telemetry is requested explicitly with
+		// MAV_CMD_SET_MESSAGE_INTERVAL at discovery instead -- see ADR-0010
+		// and tier-5 ch.7.
 		StreamRequestEnable: false,
 	}
 

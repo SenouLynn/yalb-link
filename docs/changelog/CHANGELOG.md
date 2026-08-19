@@ -7,6 +7,188 @@ Format: `## [version] - YYYY-MM-DD`. Unreleased changes accumulate at the top.
 
 ## [Unreleased]
 
+### Fixed — Documentation ordering sweep; ADR-0010 closes the stream-request defect (2026-08-19)
+
+Closes the open decision left by **"Added — Tier 5 live bridge, first SITL contact"** below,
+and five further ordering defects found by sweeping every file under `docs/` for the same
+shape: an exit criterion that depends on a capability scheduled later, or on one nothing
+schedules at all.
+
+**The premise that held the defect in place was false, in three places.**
+`tier-1-pure-domain-logic.md`, `tier-0-3-adversarial-review.md` (finding N4) and the comment
+on `StreamRequestEnable` at `internal/codec/frame.go` all asserted that SITL streams
+telemetry unprompted. The reasoning built on it was that Tiers 5–6 would look healthy and
+only first hardware bring-up would be surprised, which is what made deferring the fix to
+Tier 8a survivable. The six-minute run falsifies it: SITL streams nothing either. Per
+ADR-0008 §3 the run outranks the prose; all three are corrected. This also inverts the
+objection to `SR0_*` in the SITL overlay — with neither SITL nor a field vehicle streaming
+unprompted, an overlay would now *create* the divergence it was meant to avoid.
+
+**Principle 3 was worded wrong, not crossed — ADR-0010.** "Read-only proven before any
+outbound capability" described neither the plan nor the code. Tier 5 has emitted a GCS
+heartbeat since it opened a socket; Tier 7 sends five of the eleven send families; and
+ADR-0007 already schedules an outbound `COMMAND_LONG` cmd 512 at discovery, which
+`codec-capability-matrix.md` assigns to **Tier 5** — uncontested, with no carve-out asked
+for. The repo had been operating on an unwritten boundary: a frame that asks a vehicle to
+send data is read-side. ADR-0010 writes it down, and Principle 3 is restated in terms of
+vehicle-state mutation. The dual-gate safety model is untouched and still governs the write
+column only.
+
+**Tier 8a was misfiled, not merely late.** It sits in Tier 8 because it rides `COMMAND_LONG`,
+and everything on `COMMAND_LONG` had been filed under writes — but Tier 8's own text says of
+it "Reversible. Affects only telemetry rate. No vehicle state change." The operator-facing
+RPC, registry, ACK correlation and audit stay at 8a. First telemetry does not, because it is
+not an operator action.
+
+**The larger finding: the cmd-512 round trip that ADR-0007 mandates was scheduled in no tier
+at all.** ADR-0007 §1 requires `AUTOPILOT_VERSION` (#148) "requested at discovery" and its
+Consequences accept the round-trip cost explicitly; ADR-0009 §2 keys its entire cache
+predicate on the `uid` and `flight_sw_version` that only #148 carries; Tier 7 fails
+`GetParameterMetadata` outright when capabilities are unknown. Nothing sent the request. The
+practical consequence was that the only Tier 7 exit line reachable was the degraded one. This
+is why the resolution is one chapter rather than a reordering — **a Tier 5 outbound-request
+path had to be built regardless**, and once it exists cmd 511 is one more command through an
+encoder (`SEND-CMD-LONG`, #76) that is already `complete`.
+
+**New: `tier-5-transport-live.md` Chapter 7, the discovery request round trip.** Triggered by
+`VEHICLE_DISCOVERED` *and* `VEHICLE_RECOVERED` — keying on discovery alone repeats the
+`sync.Once` mistake the router loop was built to avoid. Sends cmd 512 for #148 and #435, then
+cmd 511 for the **nine periodic** telemetry families. Three of the twelve are deliberately
+excluded and the reasons are per-message, not a blanket rule: `RADIO_STATUS` (109) is injected
+by the SiK radio rather than produced by the autopilot, so there is nothing to rate and it
+never appears over SITL UDP at all — no gate may require it there; `STATUSTEXT` (253) and
+`HOME_POSITION` (242) are event-driven. Fire-and-observe: no registry, no ACK correlation, no
+audit. Re-sent on a timer, because a lost UDP request otherwise leaves a healthy vehicle
+silent forever, which is indistinguishable from the bug being fixed.
+
+**`StreamRequestEnable` stays false, on new reasoning.** The old justification is void. It is
+declined now because `REQUEST_DATA_STREAM` (#66) is deprecated *and a distinct message
+family* — adopting it would move `TestMatrixFamilyCounts`' `len(SendFamilies) == 11` pin to
+admit a deprecated message permanently — because it gives no per-message control, so the
+nine/three split becomes inexpressible, and because its confirmation event
+`EventStreamRequested` is one `internal/bridge/bridge.go` already ignores, making it the only
+outbound path with no observable trace. For the record, it does work: gomavlib substitutes
+4 Hz when `StreamRequestFrequency` is unset.
+
+**Tier 5's exit gate was asserting something Tier 5 cannot prove.** The heartbeat validation
+procedure opened with `HeartbeatDisable: true` → send `MAV_CMD_COMPONENT_ARM_DISARM`. That is
+Tier 8e, and it is the one gate in the roadmap Principle 3 *genuinely* blocks — arming changes
+vehicle state, unlike the Chapter 7 requests. Split: cardinality and rate stay at Tier 5, the
+failsafe assertion moves to 8e where the command already exists.
+
+**Contradictions found against executable artifacts, per ADR-0008 §3.**
+
+- `tier-8-write-transactions.md` described `MissionService.UploadMission` as a
+  client-streaming Connect RPC. `services.proto` has been unary since Tier 0, and
+  `scripts/check-tier-0.sh` enforces it. The chapter was never updated; the proto wins.
+- `tier-4-bridge-core.md` still offered `ARG ARDUPILOT_TAG=ArduCopter-4.6.0` as the pinning
+  example — verbatim the string `order-of-operations.md` records as having broken every image
+  build for three months. Corrected to `Copter-4.7.0`, with the prefix trap named inline.
+- `port-plan.md` carried "Copter 4.6.x, Plane 4.5.x", the `ardupilot-dev-jammy` base image
+  ADR-0004-era work already rejected, and `internal/transport/udp.go`, which Tier 5 as built
+  established does not exist.
+- `port-plan.md`'s phases still ran Command Surfaces before the two read phases. Its own Open
+  Questions list records that inversion as resolved to "params (read) before commands
+  (write)" — but only the list was struck; the headings and the end-to-end verification ladder
+  were never annotated. The ladder also named `ARMING_CHECK` as the first parameter write,
+  where Tier 8b names `LOG_BITMASK` precisely because it is low-consequence.
+
+**The process failure, which is the part worth keeping.** This was found on 2026-08-17 by
+reading, as finding N4 of the Tier 0–3 adversarial review, which closed with "Decide now and
+put the decision in Tier 5's gate, so first hardware bring-up is not a surprise." Nothing was
+decided, nothing reached a gate, and no mechanism existed that would notice — the same shape
+ADR-0009 §6 describes, an unowned question with no gate. It was eventually caught by running
+the system, which is the most expensive route available. N4's severity is corrected from
+medium to blocker and its tier list from "5, 8" to "5, 6, 7, 8".
+
+**Recorded as open rather than fixed**, each in the file that owns it: `MISSION_REQUEST_LIST`
+(#43) has no encoder and is in no send set, though Tier 7's mission chapter opens with it, and
+adding it moves the `len(SendFamilies) == 11` pin; and the TypeScript partial-sample
+accumulator is assigned to "the Tier 4 per-vehicle fold", which is Go-only — Tier 6's
+TelemetryLog depends on code no tier schedules.
+
+**One claim checked and dismissed**, so it is not re-raised: Tier 7's seven `PARAM-*` matrix
+rows do not conflict with `TestMatrixCoverage`. Its regex matches only rows prefixed `RECV-`
+or `SEND-` carrying a bare numeric ID.
+
+### Added — Tier 5 live bridge, first SITL contact (2026-08-19)
+
+The receive path now runs end to end against real firmware. `internal/bridge` joins the
+codec's frame stream to the vehicle fold and forwards what the fold emits to a `Sink`;
+`cmd/gcs` opens the socket, assembles it and coordinates shutdown. First light: a real
+`Copter-4.7.0` SITL was discovered over UDP as
+`VEHICLE_DISCOVERED sysid=1 compid=1 mav_type=MAV_TYPE_QUADROTOR armed=false`.
+
+**Chapter 1 of the tier plan was unbuildable and is collapsed.** It specified
+`internal/transport/udp.go` wrapping a raw `net.PacketConn` behind typed
+`InboundPacket`/`OutboundPacket` channels. There is no seam for it: Tier 4 as built made
+`codec.Node` wrap gomavlib, and gomavlib owns its socket through an `EndpointConf` — it
+takes an endpoint, not a byte stream. Sliding a `PacketConn` underneath would mean
+reimplementing framing, and the one destination-free alternative, `EndpointCustom`, is a
+*single* stream and so cannot represent N UDP peers on one bound port — it would collapse
+all three SITL instances into one channel and destroy the per-link routing Tier 4 built.
+`codec.FrameSource` is the transport port that chapter was reaching for, and it already
+existed. `cmd/gcs` now constructs `gomavlib.EndpointUDPServer` from `codec.ResolveBind`
+and hands it to `codec.NewNode`. No new package.
+
+**Chapter 2's per-vehicle goroutines are replaced by a single router loop.** The plan
+called for one goroutine per discovered vehicle, spawned on first HEARTBEAT under a
+`sync.Once` guard and cancelled on `VEHICLE_LOST`. Three reasons not to, all from reading
+Tier 4 as built: the fold is pure and cheap, so a single loop over
+`map[routes.Key]vehicle.State` has identical semantics with no lifetime problem and no
+leak surface; `VEHICLE_RECOVERED` did not exist when the plan was written, and a vehicle
+that is lost and returns needs its goroutine back — which is precisely what a `sync.Once`
+keyed on system ID prevents; and fold order across vehicles becomes nondeterministic the
+moment the folds run concurrently, discarding the replayability the fold was built for.
+`states` is single-owner and needs no mutex. The route table keeps its own, because the
+Tier 8 send path reads it from elsewhere.
+
+**A `Sink` interface, so the loop could be finished before Redis exists.** The plan
+assembled the pipeline straight into a Redis publisher, which makes the first runnable
+bridge depend on a running Redis and makes every failure ambiguous between "the fold is
+wrong" and "the publisher is wrong". `LogSink` is the first-light implementation; the
+Redis sink lands with Chapters 4–5. A sink that refuses an event stops `Run` rather than
+being logged and continued: the sink is what makes an observation durable, and a bridge
+that keeps folding while nothing records the result presents as healthy while silently
+losing the fleet history an operator will later be asked to trust.
+
+**Frames carrying our own (255, 190) identity are dropped before the fold.** gomavlib does
+not loop our writes back, so in a healthy Compose topology this never fires — but a
+misconfigured UDP route, a mavproxy relay or a second GCS on the network all deliver them,
+and folding one creates a phantom "vehicle 255" in `fleet:active` that no downstream
+filter can undo. Tested against `contracts/mavlink/heartbeat_gcs_out`, which is that exact
+frame.
+
+**A sweep tick, because the fold's own TTL check could never fire.** `Fold` runs only when
+a frame arrives, so a vehicle that stops transmitting produces no more folds and would
+never be declared lost. `vehicle.Expire` had already been added in Tier 4 for exactly this;
+Tier 5 is what finally calls it, on a 1s ticker against the injected clock.
+
+**Source attribution is the gomavlib channel label, not a parsed IP.** `EventFrame` carries
+no peer address. For a UDP server endpoint it does not need to: gomavlib opens one channel
+per remote peer and labels it `udp:<host>:<port>`, so the label already identifies the
+source at exactly the granularity the conflict check wants — and it stays meaningful on a
+serial link, where there is no IP at all. `splitLabel` recovers host/port for diagnostics
+only and degrades to zero values on anything it cannot parse, because `routes.Upsert`
+treats an empty `SrcIP` as "carry forward what you had" and a half-parsed one as truth.
+
+**The SITL image was built and run for the first time.** Tier 4 shipped it wired as a
+CI job and explicitly unproven. It builds: `Copter-4.7.0`, 120 MB runtime image against
+9.3 GB for the predecessor project's single-stage equivalent — the multi-stage split is
+carrying its weight. It also runs, and the backend talks to it.
+
+**Finding, from running it: a live ArduPilot link delivers no telemetry at all.** Over six
+minutes of continuous contact the backend logged one `VEHICLE_DISCOVERED`, zero
+`VEHICLE_LOST` (so heartbeats never stopped) and **zero telemetry events**. The pinned
+`Tools/autotest/default_params/copter.parm` sets no `SR0_*`/`SR1_*` stream rates, and
+`codec.NewNode` leaves `StreamRequestEnable` false. This is the failure the comment on
+that field predicted verbatim — and it was left false precisely so this would surface
+rather than be masked. **It is a roadmap ordering defect, not a code defect:** Tier 6's
+exit gate is "browser shows live telemetry log", Tier 7's is "ARMING_CHECK readable from
+live ArduCopter", and the stream-request path that makes either possible is currently
+scheduled at Tier 8a — two tiers later. Resolution is an open decision; see the tier 5
+file.
+
 ### Added — Mixed-vehicle SITL, doc lifecycle, parameter paradigms (2026-08-19)
 
 Five threads, all traceable to one root cause: questions that had no owner and no gate got

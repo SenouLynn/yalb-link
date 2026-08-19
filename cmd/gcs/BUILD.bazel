@@ -12,5 +12,10 @@ go_library(
     srcs = ["main.go"],
     importpath = "yalb.gcs/cmd/gcs",
     visibility = ["//visibility:private"],
-    deps = ["//internal/codec"],
+    deps = [
+        "//internal/bridge",
+        "//internal/codec",
+        "@com_github_bluenviron_gomavlib_v3//:gomavlib",
+        "@org_golang_x_sync//errgroup",
+    ],
 )

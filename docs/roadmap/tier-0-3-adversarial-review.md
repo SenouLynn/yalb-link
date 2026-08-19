@@ -78,7 +78,7 @@ nothing and costs a synchronisation obligation.
 | N1 | 5 | high | "1 Hz per discovered vehicle" is the wrong heartbeat cardinality for a shared link |
 | N2 | 1, 4 | high | Outbound targeting is undefined; the only API satisfying the Tier 1 port broadcasts to every link |
 | N3 | 4, 5 | high | Bare `0.0.0.0:14550` with no source validation; unauthenticated is the default posture |
-| N4 | 5, 8 | medium | ArduPilot stream rates: works in SITL, may deliver nothing on real hardware until Tier 8a |
+| N4 | 5, 6, 7, 8 | **blocker** | ArduPilot stream rates: delivers nothing on **SITL or** hardware until something requests a stream. Tier 6's exit gate cannot pass. Resolved 2026-08-19 by ADR-0010 + Tier 5 ch.7 |
 | N5 | 4 | medium | Two independent liveness clocks (gomavlib `IdleTimeout`, fold TTL) that will disagree |
 | BE1 | 0–3 | high | ADR-0001 says Bazel is the trusted signal; Tiers 0–3 build a parallel Make/go/pnpm toolchain and never touch it |
 | BE2 | 0 | high | `go_package` matches neither the Go module nor the Tier 3 output path; five different project names in-tree |
@@ -367,6 +367,22 @@ that require an explicit request. SITL over UDP streams by default, so Tier 5 an
 healthy; a real vehicle may deliver almost nothing until SET_MESSAGE_INTERVAL is sent, which the
 roadmap schedules at Tier 8a — three tiers after live telemetry is declared proven. Decide now and
 put the decision in Tier 5's gate, so first hardware bring-up is not a surprise.
+
+**Resolved 2026-08-19 — and the finding was worse than stated.** "SITL over UDP streams by
+default" is false. A six-minute run against the pinned `Copter-4.7.0` produced one
+`VEHICLE_DISCOVERED` and zero telemetry events, so the defect does not wait for hardware:
+it lands on Tier 6's exit gate, which cannot pass. The severity above should read
+**blocker**, not medium, and the affected tiers **5, 6, 7, 8**.
+
+Closed by **ADR-0010** — a request for data is not a write — and Tier 5 Chapter 7, which
+sends `MAV_CMD_SET_MESSAGE_INTERVAL` and `MAV_CMD_REQUEST_MESSAGE` at discovery.
+
+**The process failure is the part worth keeping.** This finding said "Decide now and put the
+decision in Tier 5's gate." Nothing was decided, nothing was put in the gate, and no
+mechanism existed that would notice — the review had no owner and produced no gate, which
+is precisely the shape ADR-0009 §6 describes as the reason a question gets reopened by
+default. It was eventually caught by running the system, which is the most expensive way
+available.
 
 ### N5 — Two liveness clocks
 

@@ -37,7 +37,7 @@
 
 **Canonical references throughout:**
 - MAVLink 2.0 spec (common.xml, ardupilotmega.xml)
-- ArduPilot SITL UDP:14550 (Copter 4.6.x, Plane 4.5.x)
+- ArduPilot SITL UDP:14550 — pinned at `Copter-4.7.0` and `Plane-4.6.3` (superseded 2026-08-19; this read "Copter 4.6.x, Plane 4.5.x"). The tags carry no `Ardu` prefix — that is the binary name. See the SITL firmware pins row in `order-of-operations.md`
 - QGroundControl source (parameter handling, MAVLink command sequences)
 - yalb-gcs ADRs 0001–0005 (highest-authority architectural guidance)
 - flight-path-hud as algorithm/pattern source material, not as a style guide
@@ -80,12 +80,12 @@
 ### 0a. Docker Compose
 Create `docker-compose.yml` with four services:
 ```
-ardupilot-sitl   — ArduCopter 4.6.x, MAVLink UDP:14550, TCP:5760 for SITL control
+ardupilot-sitl   — Copter-4.7.0 / Plane-4.6.3, MAVLink UDP:14550, TCP:5760 for SITL control
 redis            — :6379, no auth in dev
 gcs-backend      — Connect HTTP :8080, WebSocket (SITL harness) :8081
 gcs-frontend     — Vite dev server :3000, proxies Connect to :8080
 ```
-Source SITL image from `ardupilot/ardupilot-dev-jammy` or equivalent. Confirm MAVLink output with `mavproxy.py --master=udp:127.0.0.1:14550`.
+~~Source SITL image from `ardupilot/ardupilot-dev-jammy` or equivalent.~~ **Superseded:** that image is a dev environment, not a SITL runtime. `docker/sitl/Dockerfile` is a multi-stage build against a pinned tag — see Tier 4. Confirm MAVLink output with `mavproxy.py --master=udp:127.0.0.1:14550`.
 
 ### 0b. Connect Codegen (buf + Bazel)
 
@@ -340,6 +340,16 @@ frontend/src/components/
 ---
 
 ## Phase 6: Command Surfaces (Safety-Gated)
+
+> **Superseded on sequencing — this is the last phase to build, not the sixth.**
+> Phase numbers here are file-mapping identifiers, not a build order; this document is not
+> authoritative for sequencing (see the header). Writes come *after* the reads in Phases 7
+> and 8, per the resolved decision "params (read) before commands (write)" and Principle 3.
+> The Open Questions list at the end records that resolution, but these headings were never
+> annotated to match — corrected 2026-08-19. The real build order is Tier 8 in
+> `order-of-operations.md`, which sequences these by risk: message interval → param write →
+> mission upload → mode change → arm/disarm → guided reposition.
+
 **Goal:** Operator can arm/disarm, change mode, and guided-reposition from UI.
 
 ### 6a. Guided Workflow Panel (`frontend/src/components/command/GuidedWorkflowPanel.tsx`)
@@ -376,6 +386,10 @@ Port from `flight-path-hud/packages/gcs-core/src/guidedReposition.ts`:
 ---
 
 ## Phase 7: Mission Service
+
+> **Sequencing:** the *download* half precedes Phase 6 (Tier 7); the *upload* half is a
+> write and belongs with it (Tier 8c).
+
 **Goal:** Download and display active ArduPilot mission; upload a mission from GCS.
 
 ### 7a. Mission Download (`MissionService.DownloadMission`)
@@ -406,6 +420,11 @@ Port from flight-path-hud `MissionPanel`:
 ---
 
 ## Phase 8: Parameter Service
+
+> **Sequencing:** 8a is a *read* and precedes Phase 6 (Tier 7); 8b is a write (Tier 8b).
+> Note the collision: "8a" here means Parameter List/Get, while **Tier** 8a in
+> `order-of-operations.md` means message interval. They are unrelated.
+
 **Goal:** Read and display all vehicle parameters; write parameters with SITL gate.
 
 ### 8a. Parameter List/Get (`ParameterService.ListParameters`, `GetParameter`)
@@ -437,7 +456,7 @@ Port from flight-path-hud Go bridge parameter state machine:
 | `docker-compose.yml` | Create | SITL + Redis + backend + frontend |
 | `proto/buf.gen.yaml` | Create | Connect codegen for Go + TS |
 | `MODULE.bazel` | Edit | Add rules_buf |
-| `internal/transport/udp.go` | Create | UDP transport adapter |
+| ~~`internal/transport/udp.go`~~ | **Do not create** | **Superseded.** gomavlib owns its socket through an `EndpointConf` and takes an endpoint, not a byte stream, so there is no seam. `codec.FrameSource` is the transport port; `cmd/gcs` builds `gomavlib.EndpointUDPServer` and hands it to `codec.NewNode`. See the transport package placement row in `order-of-operations.md` |
 | `internal/codec/frame.go` | Create | MAVLink v1/v2 framing |
 | `internal/codec/message.go` | Create | Message deserialization |
 | `internal/vehicle/model.go` | Create | Vehicle state fold → Redis |
@@ -475,10 +494,16 @@ Phase 2 ─ curl connect endpoint → TelemetryEvent JSON
 Phase 3 ─ vitest ./frontend/src/logic/... (known-answer vectors)
 Phase 4 ─ Storybook: all 5 HUD components render
 Phase 5 ─ Browser: FleetView shows live SITL vehicle on map
-Phase 6 ─ SITL: arm copter → guided reposition → observe flight
-Phase 7 ─ SITL: download mission uploaded by QGC → verify parity
-Phase 8 ─ SITL: list params → modify ARMING_CHECK → read back
+Phase 7 ─ SITL: download mission uploaded by QGC → verify parity      (read)
+Phase 8 ─ SITL: list params → read back                               (read)
+Phase 8 ─ SITL: modify LOG_BITMASK → confirm PARAM_VALUE echo         (write)
+Phase 6 ─ SITL: arm copter → guided reposition → observe flight       (write)
 ```
+
+**The last three lines were reordered on 2026-08-19** to match "params (read) before
+commands (write)". The write target also changed: this read "modify `ARMING_CHECK`", which
+is a safety parameter. Tier 8b names `LOG_BITMASK` as the first write target specifically
+because it is low-consequence and survives a power cycle harmlessly.
 
 **Regression gate:** the tier gate for the phase must pass — `make gate-tier-0`
 through `make gate-tier-3`, then `bazel test //...` once BUILD files are generated

@@ -7,6 +7,12 @@ Wire the first Connect/gRPC services and put live telemetry data in a browser. T
 ## Dependencies
 
 - Tier 5 live bridge complete (VEHICLE_DISCOVERED visible in Redis)
+- **Tier 5 Chapter 7 complete — the discovery request round trip.** Every exit criterion
+  below needs telemetry, and an ArduPilot link sends none until asked. This dependency was
+  missing until 2026-08-19, when a six-minute SITL run produced heartbeats and nothing
+  else; ADR-0010 closes it. `RADIO_STATUS` is the one priority family that will *not*
+  appear over SITL — the SiK radio injects it and there is no radio here — so no criterion
+  below may require it
 - Tier 3 generated stubs available in `internal/gen/` and `frontend/src/gen/`
 
 ## Chapters

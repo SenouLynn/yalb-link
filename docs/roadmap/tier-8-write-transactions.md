@@ -66,7 +66,14 @@ type inFlightCommand struct {
 
 ### Chapter 3: 8a — Message Interval (lowest risk)
 
-**Goal:** Allow the GCS to request that a vehicle change the rate of a specific MAVLink message.
+**Goal:** Allow an **operator** to change the rate of a specific MAVLink message on a live
+vehicle.
+
+**Scope narrowed by ADR-0010 §4.** This chapter no longer owns *first* telemetry. The
+discovery-time request that makes a link produce any telemetry at all is Tier 5 Chapter 7 —
+it is read-side, and gating it on the command registry here is what left Tier 6 and Tier 7
+with exit criteria they could not meet. What stays here is the deliberate operator action:
+the RPC, the registry entry, ACK correlation, the role check and the audit event.
 
 **Protocol:** `COMMAND_LONG` (#76) with `command = MAV_CMD_SET_MESSAGE_INTERVAL (511)`, `param1 = message_id`, `param2 = interval_us (-1 = disable, 0 = default rate)`.
 
@@ -113,7 +120,16 @@ GCS sends:   MISSION_ITEM_INT (item n-1)
 Vehicle:     MISSION_ACK
 ```
 
-**Service:** `MissionService.UploadMission(vehicleId, stream of MissionItem)` — client-streaming Connect RPC.
+**Service:** `MissionService.UploadMission(UploadMissionRequest) returns (MissionAck)` —
+**unary**, taking `{ target, mission_type, repeated items }`.
+
+This chapter said "client-streaming Connect RPC" until 2026-08-19, which had been false
+since Tier 0. `@connectrpc/connect-web` supports unary and server-streaming only, so a
+client-streaming RPC is uncallable from the browser; `proto/gcs/v1/services.proto:152` is
+unary and `scripts/check-tier-0.sh` greps for `rpc X(stream ` so it cannot regress.
+Missions are bounded — hundreds of items at most — so one request costs nothing, and the
+backend still runs the full MAVLink handshake below. Per ADR-0008 §3 the proto was
+authoritative and this chapter was the defect.
 
 **Per-item retry:** 2s timeout per `MISSION_REQUEST_INT`; 3 retries before ABORTED.
 
@@ -188,6 +204,20 @@ Vehicle:     MISSION_ACK
 **No automatic retry.** Exactly once per user action. On failure, user must confirm and retry manually.
 
 **Post-condition:** `HEARTBEAT.base_mode & MAV_MODE_FLAG_SAFETY_ARMED (128)` observed after ACK.
+
+**Inherited from Tier 5 Chapter 3 — the GCS failsafe assertion.** Tier 5 configures the GCS
+heartbeat at 1 Hz and proves its *cardinality* (the count does not scale with vehicle
+count). It cannot prove the heartbeat is doing its job, because that takes a command the
+vehicle will refuse — and an arm command is the first one this build order permits. Run it
+here, once, while the command already exists:
+
+1. `HeartbeatDisable: true` → send `MAV_CMD_COMPONENT_ARM_DISARM` → confirm STATUSTEXT
+   "GCS Failsafe" or COMMAND_ACK with result DENIED.
+2. `HeartbeatDisable: false, HeartbeatPeriod: time.Second` → send the same command →
+   confirm COMMAND_ACK ACCEPTED.
+
+This is the one assertion in the roadmap that Principle 3 genuinely blocked from landing
+earlier: arming changes vehicle state, unlike the Tier 5 requests ADR-0010 reclassified.
 
 **UI:** CommandButton labeled "ARM" / "DISARM". Disabled when gate conditions unmet. Shows EKF status indicator when EKF gate is blocking.
 

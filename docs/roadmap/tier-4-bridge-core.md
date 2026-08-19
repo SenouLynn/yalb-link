@@ -236,7 +236,15 @@ command: >
 - Builder stage: `FROM ubuntu:22.04` — install build deps, clone ArduPilot at pinned tag, build `ArduCopter.elf` via `waf`
 - Runtime stage: `FROM ubuntu:22.04` — copy binary + required shared libs only
 
-**Pinning:** Use a specific release tag, e.g., `ARG ARDUPILOT_TAG=ArduCopter-4.6.0`. Never use a floating branch.
+**Pinning:** Use a specific release tag — `ARG ARDUPILOT_TAG=Copter-4.7.0` for Copter,
+`Plane-4.6.3` for Plane. Never a floating branch.
+
+**The tag prefix is `Copter-`/`Plane-`, not `ArduCopter-`/`ArduPlane-`.** `ArduCopter` is
+the *binary* name; there is no such tag. This example read `ArduCopter-4.6.0` until
+2026-08-19, which is the exact string `order-of-operations.md` records as having broken
+every image build for three months while the gate compared it only against itself. The
+two pinned lines are deliberately different minors — see the SITL firmware pins row in
+`order-of-operations.md` for why, and `docker-compose.yml` for the values actually built.
 
 **Build command:**
 ```dockerfile

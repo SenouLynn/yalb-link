@@ -2,13 +2,21 @@
 
 ## Overview
 
-Read before write. Prove parameter and mission download as pure transaction folds, connect to live SITL, and surface data in the UI. Nothing in this tier sends a write that changes vehicle configuration. The fold-first pattern ensures that a SITL session can be replayed from a recording without producing any outbound bytes — a property that is verified as part of the exit gate.
+Read before write. Prove parameter and mission download as pure transaction folds, connect to live SITL, and surface data in the UI. Nothing in this tier sends a write that changes vehicle configuration — that sentence, not Principle 3's older "any outbound capability" wording, is the operative rule, and ADR-0010 makes it the general one.
+
+**This tier does send.** `PARAM_REQUEST_READ`, `PARAM_REQUEST_LIST`, `MISSION_REQUEST_LIST` and `MISSION_REQUEST_INT` all go on the wire; they are requests for data, which is read-side. The zero-outbound-bytes property below is scoped to **replay** — a recorded session re-fed through the pure fold produces no bytes, because the fold is where the decisions live. It is not a claim that the live tier is silent.
 
 ## Dependencies
 
 - Tier 6 Connect services live
 - Tier 5 UDP transport and Redis wired
 - At least one parameter exists in the vehicle (ArduCopter always has ~500)
+- **`AUTOPILOT_VERSION` folded into vehicle state by Tier 5 Chapter 7.** `GetParameterMetadata`
+  selects a vendored set by `flight_sw_version` and ADR-0009 §2's cache predicate is keyed
+  on `uid`/`uid2`; both come from #148, which ArduPilot sends only when asked. Until that
+  round trip exists, capabilities are permanently unknown and the only reachable exit line
+  is the degraded one — "Metadata absent entirely → panel degrades to the raw four-column
+  view". Scheduled nowhere before ADR-0010; see `../adr/0010-requests-for-data-are-not-writes.md`
 
 ## Chapters
 
@@ -51,6 +59,13 @@ func ParameterListFold(state ParamListState, event *TelemetryEvent, nowMs int64)
 **Goal:** A pure fold that drives the MAVLink mission download protocol.
 
 **File:** `internal/transactions/mission.go`
+
+> **Open — `MISSION_REQUEST_LIST` (#43) has no encoder and is in no send set.** The protocol
+> below opens with it, but it is absent from the eleven-family priority send set in
+> `order-of-operations.md`, from the Tier 1 encoder list, and from the capability matrix.
+> Adding it moves `TestMatrixFamilyCounts`' `len(SendFamilies) == 11` pin, so it is a
+> deliberate change and not an oversight to patch quietly. Raised 2026-08-19; decide before
+> this chapter starts.
 
 **Protocol:**
 ```
