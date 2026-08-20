@@ -4,12 +4,14 @@ go_library(
     name = "bridge",
     srcs = [
         "bridge.go",
+        "rates.go",
         "sink.go",
     ],
     importpath = "yalb.gcs/internal/bridge",
     visibility = ["//:__subpackages__"],
     deps = [
         "//internal/codec",
+        "//internal/gen/gcs/v1:gcs",
         "//internal/routes",
         "//internal/vehicle",
         "@com_github_bluenviron_gomavlib_v3//:gomavlib",
@@ -21,6 +23,7 @@ go_test(
     srcs = [
         "bridge_test.go",
         "harness_test.go",
+        "rates_test.go",
     ],
     # keep
     # The bridge is fed real MAVLink bytes through the real decoder, so the
@@ -35,6 +38,7 @@ go_test(
         "//internal/routes",
         "//internal/vehicle",
         "@com_github_bluenviron_gomavlib_v3//:gomavlib",
+        "@com_github_bluenviron_gomavlib_v3//pkg/dialects/ardupilotmega",
         "@com_github_bluenviron_gomavlib_v3//pkg/message",
         "@org_uber_go_goleak//:goleak",
     ],

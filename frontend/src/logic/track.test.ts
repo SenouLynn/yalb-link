@@ -6,7 +6,11 @@ import { baseSample } from './testing';
 const ORIGIN: TrackOrigin = { latDeg: 47.6062, lonDeg: -122.3321 };
 
 function sampleAt(latDeg: number, lonDeg: number, altRelativeM = 50): ReturnType<typeof baseSample> {
-  return baseSample({ latDeg, lonDeg, altRelativeM });
+  return baseSample({
+    globalLatDeg: latDeg,
+    globalLonDeg: lonDeg,
+    globalAltRelativeM: altRelativeM,
+  });
 }
 
 describe('accumulateTrack', () => {

@@ -33,6 +33,15 @@ var SendFamilies = []uint32{
 // CmdComponentArmDisarm is MAV_CMD_COMPONENT_ARM_DISARM.
 const CmdComponentArmDisarm = 400
 
+// CmdSetMessageInterval is MAV_CMD_SET_MESSAGE_INTERVAL.
+const CmdSetMessageInterval = 511
+
+// IntervalDefaultUs restores a message to the autopilot's own default rate.
+const IntervalDefaultUs int32 = 0
+
+// IntervalDisabledUs stops a message being streamed.
+const IntervalDisabledUs int32 = -1
+
 // ForceArmMagic bypasses autopilot preflight checks and must be rejected by
 // command policy above the codec.
 const ForceArmMagic = 21196
@@ -76,6 +85,24 @@ func EncodeCommandLong(
 		Param6:          params[5],
 		Param7:          params[6],
 	}
+}
+
+// EncodeSetMessageInterval requests one message family at a fixed period.
+//
+// intervalUs is microseconds between messages, not a frequency: that is the
+// wire unit, and converting here would put a rounding step between the caller's
+// stated rate and what the autopilot is actually told. IntervalDefaultUs and
+// IntervalDisabledUs carry the two sentinel meanings.
+//
+// param7 (response target) stays 0, meaning the flight stack's default: the
+// COMMAND_ACK returns over the link the request arrived on, which is the link
+// the bridge is already reading.
+func EncodeSetMessageInterval(target Target, msgID uint32, intervalUs int32) message.Message {
+	return EncodeCommandLong(target, CmdSetMessageInterval, 0, [7]float32{
+		float32(msgID),
+		float32(intervalUs),
+		0, 0, 0, 0, 0,
+	})
 }
 
 // EncodeSetPositionTargetGlobalInt converts degrees to degE7; altitude remains

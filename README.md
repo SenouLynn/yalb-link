@@ -6,10 +6,11 @@ flight data in a React UI.
 
 ## Current state
 
-The working path is:
+The working path runs end to end:
 
 ```text
-MAVLink frame -> codec -> per-vehicle fold -> structured log sink
+SITL -> MAVLink UDP -> codec -> per-vehicle fold -> event hub
+     -> SSE (/api/events) -> React flight display
 ```
 
 The repository currently has:
@@ -17,30 +18,49 @@ The repository currently has:
 - MAVLink v1/v2 framing through `gomavlib` and golden-frame codec tests;
 - decoding for 13 fleet/telemetry families and five transaction responses;
 - addressed outbound encoders for 11 MAVLink message families;
+- automatic `MAV_CMD_SET_MESSAGE_INTERVAL` rate requests on vehicle discovery
+  and recovery, so a connected vehicle streams without external setup;
 - deterministic vehicle discovery, loss, recovery, freshness, and route-table tests;
-- pure TypeScript attitude, heading, position, track, freshness, and trajectory logic;
+- an in-memory event hub and a `GET /api/events` server-sent-event stream that
+  bootstraps each browser from retained state;
+- a fleet-aware React flight display — artificial horizon, heading tape,
+  altitude with its datum, speed, climb, power, and link health — that also
+  runs from deterministic fixtures at `?source=mock`;
+- pure TypeScript attitude, heading, position, battery, track, freshness, and
+  trajectory logic;
 - Docker Compose definitions for Copter and Plane SITL;
 - native Go/TypeScript tests and a Bazel checkpoint build.
 
-It does **not** yet have a backend-to-browser telemetry API, a flight-instrument
-UI, persistence, automatic telemetry-rate requests, or MAVLink signing.
+It is **read-only observation**. It does not yet have persistence, a command or
+mission surface, a map, authentication, or MAVLink signing.
 
 No project license has been selected or committed.
 
+### What the display refuses to do
+
+An absent or stale reading renders as `- - -`; stale provenance remains amber
+with its source and age, but stale data never drives a number or instrument.
+Freshness is measured from the backend's `observed_at` rather than the moment
+the browser received the event, so retained state replayed on reconnect reads
+as old — which is what it is.
+
 ## Next working slice
 
-The next milestone is intentionally narrow: start one SITL vehicle, observe live
-telemetry in the backend, expose that same data shape to the browser, and render
-a small instrument view that can also run from deterministic mocks. Work that
-does not help prove that end-to-end path should wait.
+The next slice has not been selected. It will be planned after this read-only
+path has passed the live SITL/browser acceptance run; no command, persistence,
+map, or authentication interface is implied yet.
 
 ## Commands
 
 ```sh
-make test          # Go and TypeScript tests
-make bazel-test    # hermetic checkpoint
-docker compose up  # Copter SITL and backend
+make test                        # Go and TypeScript tests
+make lint                        # golangci-lint and eslint
+make bazel-test                  # hermetic checkpoint
+docker compose --profile ui up   # SITL, backend, and the flight display
 ```
+
+Then open <http://localhost:3000>, or
+<http://localhost:3000/?source=mock> to run the display with no backend.
 
 See [docs/runbooks/dev-setup.md](docs/runbooks/dev-setup.md) for prerequisites
 and [docs/README.md](docs/README.md) for the documentation policy.

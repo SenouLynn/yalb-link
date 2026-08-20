@@ -232,3 +232,47 @@ func (stubSource) Events() <-chan gomavlib.Event { return nil }
 func (stubSource) WriteTo(codec.LinkID, message.Message) error { return nil }
 
 func (stubSource) Close() error { return nil }
+
+// TestBridgeForwardsCommandAck runs a real COMMAND_ACK frame the whole way
+// through, because that ack is the only evidence a rate request was honoured.
+func TestBridgeForwardsCommandAck(t *testing.T) {
+	t.Parallel()
+
+	raw, meta := loadFixture(t, "command_ack_v2")
+	h := newHarness(t)
+
+	h.feed(raw)
+
+	ev := h.sink.await(t, "COMMAND_ACK protocol event", func(ev vehicle.Event) bool {
+		return ev.Protocol.GetCommandAck() != nil
+	})
+
+	if got := ev.Protocol.GetVehicleId().GetSystemId(); got != uint32(meta.SysID) {
+		t.Errorf("sysid = %d, want %d", got, meta.SysID)
+	}
+}
+
+// TestBridgeStampsTelemetryObservedAt proves the fold's injected clock reaches
+// the wire, not just the unit test: a subscriber's freshness check is only as
+// trustworthy as this stamp.
+func TestBridgeStampsTelemetryObservedAt(t *testing.T) {
+	t.Parallel()
+
+	raw, _ := loadFixture(t, "attitude_v2")
+	h := newHarness(t)
+
+	h.feed(raw)
+
+	ev := h.sink.await(t, "ATTITUDE telemetry", func(ev vehicle.Event) bool {
+		return ev.Telemetry.GetAttitude() != nil
+	})
+
+	stamp := ev.Telemetry.GetAttitude().GetObservedAt()
+	if stamp == nil {
+		t.Fatal("ATTITUDE carried no observed_at; downstream freshness has nothing to measure")
+	}
+
+	if got := stamp.AsTime().UnixMilli(); got != clockEpochMs {
+		t.Errorf("observed_at = %d ms, want the injected clock's %d ms", got, clockEpochMs)
+	}
+}

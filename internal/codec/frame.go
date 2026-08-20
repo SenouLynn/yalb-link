@@ -77,8 +77,9 @@ func NewNode(endpoints []gomavlib.EndpointConf) (*Node, error) {
 		IdleTimeout: LinkIdleTimeout,
 
 		// REQUEST_DATA_STREAM (#66) is deprecated and offers only coarse stream
-		// groups. Keep it disabled. The application does not yet request
-		// per-message rates, so a connected vehicle may emit heartbeats only.
+		// groups. Keep it disabled: per-message rates are requested above this
+		// layer with MAV_CMD_SET_MESSAGE_INTERVAL, on discovery and recovery,
+		// so gomavlib must not also be negotiating streams of its own.
 		StreamRequestEnable: false,
 	}
 

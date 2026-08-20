@@ -1,0 +1,32 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "stream",
+    srcs = [
+        "hub.go",
+        "sse.go",
+    ],
+    importpath = "yalb.gcs/internal/stream",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/gen/gcs/v1:gcs",
+        "//internal/vehicle",
+        "@org_golang_google_protobuf//encoding/protojson",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "stream_test",
+    srcs = [
+        "hub_test.go",
+        "sse_test.go",
+    ],
+    embed = [":stream"],
+    deps = [
+        "//internal/gen/gcs/v1:gcs",
+        "//internal/vehicle",
+        "@org_golang_google_protobuf//encoding/protojson",
+        "@org_uber_go_goleak//:goleak",
+    ],
+)

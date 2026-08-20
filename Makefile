@@ -36,13 +36,19 @@ build: ## Build the Go backend
 test-go: ## Go tests with the race detector
 	$(GO) test -race ./...
 
-test-ts: ## Frontend logic tests
+test-ts: ## Frontend logic, stream, and component tests
 	cd frontend && $(PNPM) vitest run
 
 test: test-go test-ts ## Both suites via their native runners
 
 lint-go: ## golangci-lint
 	golangci-lint run
+
+.PHONY: lint-ts lint
+lint-ts: ## eslint the frontend
+	cd frontend && $(PNPM) lint
+
+lint: lint-go lint-ts ## Both linters
 
 .PHONY: check-contracts check-codegen check-codec check-matrix check-integration build-sitl
 check-contracts: ## Protobuf contract lint and repository checks
@@ -53,7 +59,10 @@ check-codegen: ## Generated stubs exist and compile
 	test -d internal/gen/gcs/v1 || { echo "FAIL: internal/gen/gcs/v1 missing — run make proto-gen"; exit 1; }
 	test -d frontend/src/gen/gcs/v1 || { echo "FAIL: frontend/src/gen/gcs/v1 missing — run make proto-gen"; exit 1; }
 	$(GO) build ./internal/gen/...
-	cd frontend && $(PNPM) tsc --noEmit
+	# `pnpm tsc --noEmit` here would be a no-op: the root tsconfig.json is
+	# solution-style and lists only references, so tsc has no files to check.
+	# The typecheck script uses `tsc -b`, which builds the referenced projects.
+	cd frontend && $(PNPM) typecheck
 	bazel build //internal/gen/...
 	bazel test //frontend:vitest_test //frontend:typecheck_typecheck_test
 
@@ -65,8 +74,9 @@ check-matrix: ## Capability matrix matches the codec and fixtures
 	./scripts/check-matrix.sh
 	$(GO) test ./internal/codec/... -run TestMatrixCoverage
 
-check-integration: ## Vehicle, routing, and container checks
-	$(GO) test -race ./internal/vehicle/... ./internal/routes/...
+check-integration: ## Vehicle, routing, streaming, and container checks
+	$(GO) test -race ./internal/vehicle/... ./internal/routes/... \
+		./internal/bridge/... ./internal/stream/...
 	./scripts/check-containers.sh
 	$(COMPOSE) config >/dev/null
 	$(COMPOSE) build gcs-backend

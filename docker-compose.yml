@@ -102,6 +102,10 @@ services:
       context: ./frontend
     container_name: yalb-frontend
     profiles: [ui]
+    environment:
+      # Vite proxies /api here, so the browser only ever uses relative URLs and
+      # the backend needs no CORS configuration.
+      GCS_BACKEND_URL: http://gcs-backend:8080
     ports:
       - "3000:3000"
     depends_on:

@@ -16,7 +16,7 @@ describe('resolvePosition', () => {
     // ~120 m, mislabelling MSL as height-above-home puts the altitude tape out
     // by the entire field elevation.
     const actual = resolvePosition(
-      baseSample({ latDeg: 47.6062, lonDeg: -122.3321, altMslM: 120.5 }),
+      baseSample({ gpsLatDeg: 47.6062, gpsLonDeg: -122.3321, gpsAltMslM: 120.5 }),
     );
 
     expect(actual?.altRef).toBe('MSL');

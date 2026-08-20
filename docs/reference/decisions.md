@@ -29,6 +29,22 @@ exists. Executable artifacts are authoritative if this file drifts.
   falls back to broadcast.
 - The GCS heartbeat is gomavlib's built-in heartbeat, configured for one second.
   `LinkIdleTimeout` is derived from `HeartbeatTTL`.
+- `StreamRequestEnable` stays off. Rates are requested above the codec with
+  `MAV_CMD_SET_MESSAGE_INTERVAL`, not with the deprecated REQUEST_DATA_STREAM.
+
+## Telemetry acquisition
+
+- `bridge.RateRequester` requests `bridge.DefaultRates` on
+  `VEHICLE_DISCOVERED` and `VEHICLE_RECOVERED` only. `HEARTBEAT_UPDATED` fires
+  on every arm and mode change and must not re-request the policy.
+- Requests go to component 1 alone. Other components on the same system ID
+  answer their own message sets and would multiply link load.
+- Rate is stated in Hz in the policy and converted to the wire's microsecond
+  interval once, at encode time.
+- A failed write is a sink failure and stops the bridge. A GCS that silently
+  failed to ask for telemetry would show a healthy link carrying nothing.
+- There is no ACK correlation or retry. `COMMAND_ACK` is decoded and logged;
+  success is judged by the telemetry that arrives.
 
 ## Vehicle state
 
@@ -37,12 +53,60 @@ exists. Executable artifacts are authoritative if this file drifts.
 - One bridge loop owns the state map and preserves frame order. `routes.Table`
   supports concurrent readers and writers, as its tests verify.
 - Sink failures stop the bridge. Continuing would report a healthy receive path
-  while discarding observations.
+  while discarding observations. `bridge.MultiSink` fans out in declaration
+  order and stops at the first failure.
+- The fold stamps `observed_at` on a *copy* of each telemetry payload, resolved
+  through the descriptor rather than a type switch, so a new family cannot be
+  added unstamped. `TelemetryEvent` and `ProtocolEvent` both reach the sinks.
+
+## Browser event stream
+
+- `GET /api/events` is the only public surface added. Two event names, `fleet`
+  and `telemetry`, each carrying the existing protobuf message as protobuf JSON.
+- The oneof payload establishes message presence. Ordinary proto3 scalar
+  defaults therefore remain safe with standard `protojson`: an ATTITUDE
+  payload containing zero roll is present and decodes as a level reading.
+- Event data is compacted to one line. SSE terminates a data field at a
+  newline, so a multi-line payload would arrive truncated.
+- The hub retains the latest fleet event per `(sysid, compid)` and the latest
+  telemetry per vehicle and family. Subscribe and bootstrap happen under one
+  lock; bootstrap is ordered fleet-first, then telemetry, both by identity.
+- Each subscriber has a bounded queue and is disconnected when it overruns.
+  `Hub.Publish` never returns an error: no browser may stop the receive path.
+- The HTTP server sets `BaseContext` from the process context. `Shutdown` waits
+  for active requests but does not cancel them, and an event stream never ends
+  on its own.
+- Memory is ephemeral. Restart, reconnect, and duplicate bootstrap events are
+  handled by keyed, idempotent state; there is no replay or `Last-Event-ID`.
+
+## Flight display
+
+- Freshness uses the backend's `observed_at`, not browser receipt time. The hub
+  replays retained state on reconnect, and stamping arrival would show
+  ten-minute-old telemetry as live. This assumes the backend and browser agree
+  roughly on the wall clock, which holds for localhost and Compose.
+- `TELEMETRY_TTL_MS` is 5 s, on `logic/freshness`'s strict boundary. Vehicle
+  loss remains the backend's 60 s TTL — a separate, slower judgement.
+- `ui/readings.ts` is the only place that decides whether a value may be shown
+  as a number. Absent and stale readings render as `- - -`; stale provenance
+  remains amber with its source and age.
+- Overlapping position and power fields remain family-qualified in
+  `TelemetrySample`; asynchronous GPS/global-position or battery/system-status
+  arrivals cannot produce a mixed tuple carrying one source label.
+- View state is keyed by the full `(sysid, compid)`. Selection distinguishes an
+  operator's explicit pick, which is sticky, from an automatic one, which is
+  revisited as the fleet changes.
+- Live SSE is the default; `?source=mock` is the only way to reach fixtures.
 
 ## Current limits
 
-- The HTTP server exposes liveness only; it has no telemetry API.
-- No persistence adapter or persistence configuration exists.
-- Transaction responses are decoded, but there is no request registry or RPC
-  surface consuming them.
+- The system is read-only. Rate requests are data acquisition, not an operator
+  command surface; nothing arms, commands, or configures a vehicle.
+- No persistence adapter or persistence configuration exists. Backend restart
+  loses all retained state.
+- Transaction responses are decoded and logged, but there is no request
+  registry or RPC surface consuming them.
 - Inbound MAVLink frames are unauthenticated; no signing configuration exists.
+- `/api/events` has no authentication and no origin restriction.
+- The UI is instrumentation only: no map, mission editor, or telemetry
+  inspector.

@@ -49,9 +49,9 @@ describe('sampleFromEvent', () => {
 
     const sample = sampleFromEvent(event, FIXED_NOW_MS);
 
-    expect(sample.latDeg).toBeCloseTo(47.6062, 6);
-    expect(sample.lonDeg).toBeCloseTo(-122.3321, 6);
-    expect(sample.altRelativeM).toBeCloseTo(50.25, 6);
+    expect(sample.globalLatDeg).toBeCloseTo(47.6062, 6);
+    expect(sample.globalLonDeg).toBeCloseTo(-122.3321, 6);
+    expect(sample.globalAltRelativeM).toBeCloseTo(50.25, 6);
     expect(sample.vzMs).toBeCloseTo(1.5, 6);
   });
 
@@ -107,6 +107,6 @@ describe('sampleFromEvent', () => {
 
     // Position is absent, not zero. A resolver needing it correctly returns
     // null until the fold merges a position partial in.
-    expect(attitude.latDeg).toBeUndefined();
+    expect(attitude.globalLatDeg).toBeUndefined();
   });
 });

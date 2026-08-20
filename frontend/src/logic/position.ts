@@ -16,27 +16,25 @@ export interface PositionResult {
 
 /** Resolves GLOBAL_POSITION_INT first, then GPS_RAW_INT, preserving the datum. */
 export function resolvePosition(sample: TelemetrySample): PositionResult | null {
-  const { latDeg, lonDeg, altRelativeM, altMslM } = sample;
-
-  if (!isNum(latDeg) || !isNum(lonDeg)) {
-    return null;
-  }
-
-  if (isNum(altRelativeM)) {
+  if (
+    isNum(sample.globalLatDeg) &&
+    isNum(sample.globalLonDeg) &&
+    isNum(sample.globalAltRelativeM)
+  ) {
     return {
-      latDeg,
-      lonDeg,
-      altM: altRelativeM,
+      latDeg: sample.globalLatDeg,
+      lonDeg: sample.globalLonDeg,
+      altM: sample.globalAltRelativeM,
       altRef: 'RELATIVE',
       source: 'GLOBAL_POSITION_INT',
     };
   }
 
-  if (isNum(altMslM)) {
+  if (isNum(sample.gpsLatDeg) && isNum(sample.gpsLonDeg) && isNum(sample.gpsAltMslM)) {
     return {
-      latDeg,
-      lonDeg,
-      altM: altMslM,
+      latDeg: sample.gpsLatDeg,
+      lonDeg: sample.gpsLonDeg,
+      altM: sample.gpsAltMslM,
       altRef: 'MSL',
       source: 'GPS_RAW_INT',
     };

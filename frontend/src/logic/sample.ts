@@ -12,13 +12,17 @@ export interface TelemetrySample {
   pitchspeedRadS?: number | undefined;
   yawspeedRadS?: number | undefined;
 
-  // Position — degrees and metres, already normalised by the codec
-  latDeg?: number | undefined;
-  lonDeg?: number | undefined;
-  /** Above mean sea level. */
-  altMslM?: number | undefined;
+  // Position — kept per family so asynchronous messages cannot create a
+  // coordinate tuple assembled from different observations.
+  globalLatDeg?: number | undefined;
+  globalLonDeg?: number | undefined;
+  globalAltMslM?: number | undefined;
   /** Above home/takeoff. Only GLOBAL_POSITION_INT carries this. */
-  altRelativeM?: number | undefined;
+  globalAltRelativeM?: number | undefined;
+  gpsLatDeg?: number | undefined;
+  gpsLonDeg?: number | undefined;
+  /** GPS_RAW_INT altitude is above mean sea level. */
+  gpsAltMslM?: number | undefined;
 
   // Velocity — NED, m/s. vzMs is positive *down*.
   vxMs?: number | undefined;
@@ -44,9 +48,13 @@ export interface TelemetrySample {
   satellitesVisible?: number | undefined;
 
   // Power
-  batteryCellVoltagesMv?: number[] | undefined;
-  batteryCurrentCa?: number | undefined;
-  batteryRemainingPct?: number | undefined;
+  batteryStatusCellVoltagesMv?: number[] | undefined;
+  batteryStatusCurrentCa?: number | undefined;
+  batteryStatusRemainingPct?: number | undefined;
+  /** SYS_STATUS pack voltage, mV. 65535 means unknown. */
+  systemStatusVoltageMv?: number | undefined;
+  systemStatusCurrentCa?: number | undefined;
+  systemStatusRemainingPct?: number | undefined;
 
   ekfFlags?: number | undefined;
 
@@ -85,10 +93,10 @@ export function sampleFromEvent(
       return {
         sourceMessage: 'GLOBAL_POSITION_INT',
         receivedAtMs,
-        latDeg: payload.value.latDeg,
-        lonDeg: payload.value.lonDeg,
-        altMslM: payload.value.altMslM,
-        altRelativeM: payload.value.altRelativeM,
+        globalLatDeg: payload.value.latDeg,
+        globalLonDeg: payload.value.lonDeg,
+        globalAltMslM: payload.value.altMslM,
+        globalAltRelativeM: payload.value.altRelativeM,
         vxMs: payload.value.vxMS,
         vyMs: payload.value.vyMS,
         vzMs: payload.value.vzMS,
@@ -99,9 +107,9 @@ export function sampleFromEvent(
       return {
         sourceMessage: 'GPS_RAW_INT',
         receivedAtMs,
-        latDeg: payload.value.latDeg,
-        lonDeg: payload.value.lonDeg,
-        altMslM: payload.value.altMslM,
+        gpsLatDeg: payload.value.latDeg,
+        gpsLonDeg: payload.value.lonDeg,
+        gpsAltMslM: payload.value.altMslM,
         cogCdeg: payload.value.cogCdeg,
         velCmS: payload.value.velCmS,
         gpsFixType: payload.value.fixType,
@@ -115,7 +123,6 @@ export function sampleFromEvent(
         airspeedMps: payload.value.airspeedMS,
         groundspeedMps: payload.value.groundspeedMS,
         headingDeg: payload.value.headingDeg,
-        altMslM: payload.value.altMslM,
         climbMps: payload.value.climbMS,
       };
 
@@ -123,17 +130,18 @@ export function sampleFromEvent(
       return {
         sourceMessage: 'BATTERY_STATUS',
         receivedAtMs,
-        batteryCellVoltagesMv: payload.value.cellVoltagesMv,
-        batteryCurrentCa: payload.value.currentBatteryCa,
-        batteryRemainingPct: payload.value.batteryRemainingPct,
+        batteryStatusCellVoltagesMv: payload.value.cellVoltagesMv,
+        batteryStatusCurrentCa: payload.value.currentBatteryCa,
+        batteryStatusRemainingPct: payload.value.batteryRemainingPct,
       };
 
     case 'systemStatus':
       return {
         sourceMessage: 'SYS_STATUS',
         receivedAtMs,
-        batteryCurrentCa: payload.value.currentBatteryCa,
-        batteryRemainingPct: payload.value.batteryRemainingPct,
+        systemStatusVoltageMv: payload.value.voltageBatteryMv,
+        systemStatusCurrentCa: payload.value.currentBatteryCa,
+        systemStatusRemainingPct: payload.value.batteryRemainingPct,
       };
 
     case 'ekfStatusReport':

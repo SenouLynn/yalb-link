@@ -12,7 +12,12 @@ export interface PositionFixture {
 export const positionFixtures: PositionFixture[] = [
   {
     name: 'primary-global-position-relative-datum',
-    input: { latDeg: 47.6062, lonDeg: -122.3321, altMslM: 120.5, altRelativeM: 50.25 },
+    input: {
+      globalLatDeg: 47.6062,
+      globalLonDeg: -122.3321,
+      globalAltMslM: 120.5,
+      globalAltRelativeM: 50.25,
+    },
     expected: {
       latDeg: 47.6062,
       lonDeg: -122.3321,
@@ -26,7 +31,7 @@ export const positionFixtures: PositionFixture[] = [
     // MSL as relative altitude is the failure altRef exists to catch, and at
     // this field elevation it would read ~120 m too high.
     name: 'fallback-gps-raw-msl-datum',
-    input: { latDeg: 47.6062, lonDeg: -122.3321, altMslM: 120.5 },
+    input: { gpsLatDeg: 47.6062, gpsLonDeg: -122.3321, gpsAltMslM: 120.5 },
     expected: {
       latDeg: 47.6062,
       lonDeg: -122.3321,
@@ -37,7 +42,7 @@ export const positionFixtures: PositionFixture[] = [
   },
   {
     name: 'missing-altitude-entirely',
-    input: { latDeg: 47.6062, lonDeg: -122.3321 },
+    input: { globalLatDeg: 47.6062, globalLonDeg: -122.3321 },
     expected: null,
   },
   {

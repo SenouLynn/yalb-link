@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +19,8 @@ import (
 
 	"yalb.gcs/internal/bridge"
 	"yalb.gcs/internal/codec"
+	"yalb.gcs/internal/routes"
+	"yalb.gcs/internal/stream"
 )
 
 // httpAddr is where the health endpoint is served.
@@ -52,14 +55,20 @@ func run(log *slog.Logger) error {
 
 	group, ctx := errgroup.WithContext(ctx)
 
+	// The hub outlives any single browser and exists even without a MAVLink
+	// socket, so the UI can connect and correctly show an empty fleet rather
+	// than failing to load.
+	hub := stream.NewHub(log, 0)
+	defer hub.Close()
+
 	if bind == "" {
 		// An explicitly empty bind disables MAVLink while retaining health checks.
 		log.Warn("MAVLink socket disabled", "reason", codec.EnvUDPBind+" set to empty")
-	} else if err := startBridge(ctx, group, log, bind); err != nil {
+	} else if err := startBridge(ctx, group, log, bind, hub); err != nil {
 		return err
 	}
 
-	serveHTTP(ctx, group, log)
+	serveHTTP(ctx, group, log, hub)
 
 	if err := group.Wait(); err != nil {
 		return fmt.Errorf("gcs: backend stopped: %w", err)
@@ -69,7 +78,13 @@ func run(log *slog.Logger) error {
 }
 
 // startBridge opens the MAVLink socket and runs the receive pipeline on it.
-func startBridge(ctx context.Context, group *errgroup.Group, log *slog.Logger, bind string) error {
+func startBridge(
+	ctx context.Context,
+	group *errgroup.Group,
+	log *slog.Logger,
+	bind string,
+	hub *stream.Hub,
+) error {
 	node, err := codec.NewNode([]gomavlib.EndpointConf{
 		gomavlib.EndpointUDPServer{Address: bind},
 	})
@@ -77,9 +92,22 @@ func startBridge(ctx context.Context, group *errgroup.Group, log *slog.Logger, b
 		return fmt.Errorf("gcs: opening MAVLink socket on %s: %w", bind, err)
 	}
 
+	// The route table is shared rather than left to the bridge to create,
+	// because the rate requester has to send to the same links the receive loop
+	// learned them from.
+	table := routes.NewTable()
+
 	br, err := bridge.New(bridge.Config{
 		Source: node,
-		Sink:   bridge.LogSink{Log: log},
+		Routes: table,
+		// Order matters: the discovery is logged, then acted on, then
+		// published, so the log explains any request a browser sees the
+		// results of.
+		Sink: bridge.MultiSink{
+			bridge.LogSink{Log: log},
+			&bridge.RateRequester{Source: node, Routes: table, Log: log},
+			hub,
+		},
 		Logger: log,
 	})
 	if err != nil {
@@ -90,6 +118,7 @@ func startBridge(ctx context.Context, group *errgroup.Group, log *slog.Logger, b
 		"heartbeat_period", codec.HeartbeatPeriod,
 		"heartbeat_ttl", codec.HeartbeatTTL,
 		"link_idle_timeout", codec.LinkIdleTimeout,
+		"requested_families", len(bridge.DefaultRates),
 	)
 
 	group.Go(func() error {
@@ -106,8 +135,9 @@ func startBridge(ctx context.Context, group *errgroup.Group, log *slog.Logger, b
 	return nil
 }
 
-// serveHTTP runs the health server and shuts it down with the context.
-func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger) {
+// serveHTTP runs the health and event servers and shuts them down with the
+// context.
+func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub *stream.Hub) {
 	mux := http.NewServeMux()
 
 	// This is liveness only; it does not assert a vehicle link.
@@ -115,14 +145,24 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger) {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	mux.HandleFunc("GET "+stream.Path, stream.Handler(hub, log))
+
 	srv := &http.Server{
 		Addr:              httpAddr,
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
+		// Event-stream handlers block until their request context is cancelled.
+		// Shutdown waits for active requests but does not cancel them, so
+		// without this an open browser tab would hold the process past its
+		// shutdown grace and turn a clean stop into a timeout error. Deriving
+		// request contexts from the process context makes cancellation reach
+		// the handlers. No WriteTimeout is set for the same reason: a live
+		// stream is a long-lived response, not a stalled one.
+		BaseContext: func(net.Listener) context.Context { return ctx },
 	}
 
 	group.Go(func() error {
-		log.Info("http listening", "addr", httpAddr)
+		log.Info("http listening", "addr", httpAddr, "events", stream.Path)
 
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("gcs: http server on %s: %w", httpAddr, err)

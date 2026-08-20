@@ -4,12 +4,36 @@ import (
 	"context"
 	"log/slog"
 
+	gcsv1 "yalb.gcs/internal/gen/gcs/v1"
 	"yalb.gcs/internal/vehicle"
 )
 
 // Sink receives fold output in order. Slow implementations must buffer.
 type Sink interface {
 	Publish(ctx context.Context, ev vehicle.Event) error
+}
+
+// MultiSink fans one event out to several sinks, in declaration order.
+//
+// Order is the contract: the sinks see the same events in the same sequence
+// the fold produced them, so a rate request and the log line describing it
+// cannot disagree about what happened first. The first failure stops the fan-
+// out and stops the bridge, for the reason Sink failures always do — a receive
+// path that keeps running while a consumer is dropping observations reports
+// health it does not have.
+type MultiSink []Sink
+
+var _ Sink = MultiSink(nil)
+
+// Publish forwards to each sink until one fails.
+func (m MultiSink) Publish(ctx context.Context, ev vehicle.Event) error {
+	for _, s := range m {
+		if err := s.Publish(ctx, ev); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // NopSink discards all events.
@@ -51,7 +75,33 @@ func (s LogSink) Publish(ctx context.Context, ev vehicle.Event) error {
 		log.DebugContext(ctx, "telemetry",
 			"sysid", ev.Telemetry.GetVehicleId().GetSystemId(),
 		)
+
+	case ev.Protocol != nil:
+		s.protocol(ctx, log, ev.Protocol)
 	}
 
 	return nil
+}
+
+// protocol renders a transaction response. COMMAND_ACK is logged at Info
+// because it is the only feedback the rate requests get: without it, an
+// autopilot refusing a message interval is indistinguishable from one that was
+// never asked.
+func (s LogSink) protocol(ctx context.Context, log *slog.Logger, ev *gcsv1.ProtocolEvent) {
+	ack := ev.GetCommandAck()
+	if ack == nil {
+		log.DebugContext(ctx, "protocol event",
+			"sysid", ev.GetVehicleId().GetSystemId(),
+			"compid", ev.GetVehicleId().GetComponentId(),
+		)
+
+		return
+	}
+
+	log.InfoContext(ctx, "command ack",
+		"sysid", ev.GetVehicleId().GetSystemId(),
+		"compid", ev.GetVehicleId().GetComponentId(),
+		"command", ack.GetCommand(),
+		"result", ack.GetResult().String(),
+	)
 }

@@ -4,6 +4,7 @@ import (
 	"maps"
 
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 
 	"yalb.gcs/internal/codec"
 	gcsv1 "yalb.gcs/internal/gen/gcs/v1"
@@ -34,10 +35,11 @@ func Fold(state State, in Inbound, nowMs int64) (State, []Event) {
 	next.Snapshot.Id = next.ID()
 	next.LastMsgSeenMs = cloneFamilies(state.LastMsgSeenMs)
 
-	events := make([]Event, 0, 3)
+	events := make([]Event, 0, 4)
 	events = append(events, lifecycle(&state, &next, in.Heartbeat, nowMs)...)
 	events = append(events, sourceConflict(&state, &next, in.SrcAddr, nowMs)...)
-	events = append(events, telemetry(&next, in.Decoded.Telemetry)...)
+	events = append(events, telemetry(&next, in.Decoded.Telemetry, nowMs)...)
+	events = append(events, protocol(in.Decoded.Transaction)...)
 
 	// Liveness is measured from any traffic, not from HEARTBEAT alone, and is
 	// updated after the lifecycle check reads the gap that just ended.
@@ -151,19 +153,72 @@ func sourceConflict(prev, next *State, srcAddr string, nowMs int64) []Event {
 }
 
 // telemetry folds a telemetry payload into the snapshot and passes it through.
-func telemetry(next *State, evt *gcsv1.TelemetryEvent) []Event {
+//
+// The emitted event is a stamped copy. The fold does not own the decoded event
+// the caller handed it, and downstream sinks retain what they are given, so
+// writing observed_at into the input would both break the no-mutation contract
+// and hand every subscriber a pointer the next frame could still change.
+func telemetry(next *State, evt *gcsv1.TelemetryEvent, nowMs int64) []Event {
 	if evt == nil {
 		return nil
 	}
 
-	if ekf := evt.GetEkfStatusReport(); ekf != nil {
+	//nolint:forcetypeassert // proto.Clone returns the concrete type it was given.
+	stamped := proto.Clone(evt).(*gcsv1.TelemetryEvent)
+	stampObservedAt(stamped, nowMs)
+
+	if ekf := stamped.GetEkfStatusReport(); ekf != nil {
 		next.EkfFlags = ekf.GetFlags()
 		next.EkfSeen = true
 	}
 
-	applySnapshot(next.Snapshot, evt)
+	applySnapshot(next.Snapshot, stamped)
 
-	return []Event{{Telemetry: evt}}
+	return []Event{{Telemetry: stamped}}
+}
+
+// Field and oneof names the stamping walk resolves by descriptor.
+const (
+	telemetryPayloadOneof = "payload"
+	observedAtField       = "observed_at"
+)
+
+// stampObservedAt records when the fold observed this payload.
+//
+// Resolved through the descriptor rather than a type switch over the oneof: the
+// timestamp is the operator's evidence that a reading is current, and a switch
+// silently omits whichever family someone adds next. Every payload in
+// telemetry.proto declares observed_at, and a payload that stopped doing so
+// would be a contract change, not something to paper over here.
+func stampObservedAt(evt *gcsv1.TelemetryEvent, nowMs int64) {
+	msg := evt.ProtoReflect()
+
+	field := msg.WhichOneof(msg.Descriptor().Oneofs().ByName(telemetryPayloadOneof))
+	if field == nil {
+		return
+	}
+
+	payload := msg.Mutable(field).Message()
+
+	stamp := payload.Descriptor().Fields().ByName(observedAtField)
+	if stamp == nil {
+		return
+	}
+
+	payload.Set(stamp, protoreflect.ValueOfMessage(timestampOf(nowMs).ProtoReflect()))
+}
+
+// protocol passes a decoded transaction response through to the sinks.
+//
+// The fold keeps no transaction state — there is no request registry yet — but
+// dropping these here would make a decoded COMMAND_ACK unobservable anywhere
+// above the codec.
+func protocol(evt *gcsv1.ProtocolEvent) []Event {
+	if evt == nil {
+		return nil
+	}
+
+	return []Event{{Protocol: evt}}
 }
 
 // applySnapshot updates fields with a single documented message source.

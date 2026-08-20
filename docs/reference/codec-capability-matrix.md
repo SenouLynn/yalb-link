@@ -66,6 +66,7 @@ Encoders return payload messages; `Node.WriteTo` selects the known link.
 | SEND-MISSION-REQUEST-INT | MISSION_REQUEST_INT | 51 | Request one item | contracts/mavlink/mission_request_int_out.bin | complete | |
 | SEND-MISSION-ITEM-INT | MISSION_ITEM_INT | 73 | One mission item | contracts/mavlink/mission_item_int_out.bin | complete | x/y convert to degE7; z stays float metres |
 | SEND-CMD-LONG | COMMAND_LONG | 76 | Command envelope | contracts/mavlink/command_long_arm_out.bin | complete | Encoder only; it performs no authorization or command validation |
+| SEND-SET-MESSAGE-INTERVAL | COMMAND_LONG (MAV_CMD 511) | 76 | Request one message family at a fixed interval | internal/bridge/rates_test.go | complete | Wraps SEND-CMD-LONG; interval is microseconds, 0 = firmware default, -1 = disabled |
 | SEND-SET-POSITION-TARGET | SET_POSITION_TARGET_GLOBAL_INT | 86 | Guided reposition | contracts/mavlink/set_position_target_global_int_out.bin | complete | type_mask 0xDF8; FORCE_SET bit asserted clear |
 
 ## Framing Cases

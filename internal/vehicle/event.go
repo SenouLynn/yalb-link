@@ -13,6 +13,7 @@ import (
 type Event struct {
 	Fleet     *gcsv1.FleetEvent
 	Telemetry *gcsv1.TelemetryEvent
+	Protocol  *gcsv1.ProtocolEvent
 	Warning   *Warning
 }
 

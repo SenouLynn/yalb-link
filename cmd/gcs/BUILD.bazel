@@ -15,6 +15,8 @@ go_library(
     deps = [
         "//internal/bridge",
         "//internal/codec",
+        "//internal/routes",
+        "//internal/stream",
         "@com_github_bluenviron_gomavlib_v3//:gomavlib",
         "@org_golang_x_sync//errgroup",
     ],
