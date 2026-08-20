@@ -11,6 +11,7 @@ import { FleetEventType, type FleetEvent } from '@/gen/gcs/v1/fleet_pb';
 import type { TelemetryEvent } from '@/gen/gcs/v1/telemetry_pb';
 import type { HeartbeatState } from '@/gen/gcs/v1/vehicle_pb';
 import { isFresh } from '@/logic/freshness';
+import { accumulateGeoTrack, type GeoPoint } from '@/logic/geoTrack';
 import { sampleFromEvent, type TelemetrySample } from '@/logic/sample';
 
 import type { StreamEvent } from '@/stream/events';
@@ -47,6 +48,9 @@ export interface VehicleView {
 
   /** Every telemetry field seen so far, merged. Latest value per field wins. */
   sample: TelemetrySample;
+
+  /** In-memory geodetic breadcrumb trail, appended only by position families. */
+  track: GeoPoint[];
 
   /**
    * When the backend observed each MAVLink family, by the resolver-facing
@@ -202,12 +206,19 @@ function applyTelemetry(event: TelemetryEvent, receivedAtMs: number): VehicleUpd
   return {
     sysId: id.systemId,
     compId: id.componentId,
-    apply: (previous) => ({
-      ...previous,
-      lastSeenMs: receivedAtMs,
-      sample: { ...previous.sample, ...partial },
-      familySeenMs: { ...previous.familySeenMs, [partial.sourceMessage]: observedMs },
-    }),
+    apply: (previous) => {
+      // Accumulate the event partial, not the merged vehicle sample. Otherwise
+      // every attitude/battery frame would re-append the last known position.
+      const track = accumulateGeoTrack(previous.track, partial);
+
+      return {
+        ...previous,
+        lastSeenMs: receivedAtMs,
+        sample: { ...previous.sample, ...partial },
+        track,
+        familySeenMs: { ...previous.familySeenMs, [partial.sourceMessage]: observedMs },
+      };
+    },
   };
 }
 
@@ -238,6 +249,7 @@ function emptyVehicle(sysId: number, compId: number, atMs: number): VehicleView 
     heartbeat: undefined,
     lastFleetAtMs: undefined,
     sample: { sourceMessage: 'NONE', receivedAtMs: atMs },
+    track: [],
     familySeenMs: {},
     lastSeenMs: atMs,
   };

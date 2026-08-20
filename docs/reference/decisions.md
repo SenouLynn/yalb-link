@@ -96,6 +96,9 @@ exists. Executable artifacts are authoritative if this file drifts.
 - View state is keyed by the full `(sysid, compid)`. Selection distinguishes an
   operator's explicit pick, which is sticky, from an automatic one, which is
   revisited as the fleet changes.
+- `frontend/src/map/MapPanel.tsx` is the renderer boundary. UI components pass
+  plain position, track, and tile-source data; MapLibre types do not leak into
+  fleet or display state.
 - Live SSE is the default; `?source=mock` is the only way to reach fixtures.
 
 ## Development topology
@@ -121,7 +124,13 @@ exists. Executable artifacts are authoritative if this file drifts.
   registry or RPC surface consuming them.
 - Inbound MAVLink frames are unauthenticated; no signing configuration exists.
 - `/api/events` has no authentication and no origin restriction.
-- The UI is instrumentation only: no map, mission editor, or telemetry
-  inspector.
+- The UI has instruments and a single-selected-vehicle map, but no mission
+  editor or telemetry inspector. Map imagery is fetched directly by the
+  browser from a public tile host, an external network dependency beyond the
+  localhost/SITL/backend path. The local tile-source seam is not wired into
+  the UI yet.
+- Vitest runs without a DOM or WebGL context, so it covers map prop wiring and
+  the pure track fold but not MapLibre's canvas lifecycle. Live browser
+  acceptance remains a manual/CI-capable gate.
 - The fixed Compose subnet is development-only and must not overlap a host or
   VPN route.

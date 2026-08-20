@@ -1,6 +1,7 @@
 /** The assembled mini flight display for one selected vehicle. */
 
 import type { FleetState, VehicleKey } from '@/fleet/state';
+import { MapPanel } from '@/map/MapPanel';
 
 import { AttitudeIndicator } from './AttitudeIndicator';
 import { HeadingIndicator } from './HeadingIndicator';
@@ -82,6 +83,11 @@ export function FlightDisplay({ fleet, nowMs, mock, onSelect }: FlightDisplayPro
       </div>
 
       <HeadingIndicator reading={readings.heading} />
+
+      <MapPanel
+        position={hasDisplayValue(readings.position) ? readings.position.value : null}
+        track={view.track}
+      />
     </div>
   );
 }

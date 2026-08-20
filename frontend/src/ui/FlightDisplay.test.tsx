@@ -195,6 +195,10 @@ describe('FlightDisplay with a fully reporting vehicle', () => {
     expect(html).toContain('LIVE');
   });
 
+  it('renders the vehicle map container', () => {
+    expect(html).toContain('aria-label="Vehicle position map"');
+  });
+
   it('renders no unavailable markers when everything is reporting', () => {
     expect(html).not.toContain(NO_VALUE);
   });

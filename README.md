@@ -24,7 +24,8 @@ The repository currently has:
 - an in-memory event hub and a `GET /api/events` server-sent-event stream that
   bootstraps each browser from retained state;
 - a fleet-aware React flight display — artificial horizon, heading tape,
-  altitude with its datum, speed, climb, power, and link health — that also
+  altitude with its datum, speed, climb, power, link health, and a live
+  MapLibre position/track map — that also
   runs from deterministic fixtures at `?source=mock`;
 - pure TypeScript attitude, heading, position, battery, track, freshness, and
   trajectory logic;
@@ -32,7 +33,7 @@ The repository currently has:
 - native Go/TypeScript tests and a Bazel checkpoint build.
 
 It is **read-only observation**. It does not yet have persistence, a command or
-mission surface, a map, authentication, or MAVLink signing.
+mission surface, authentication, or MAVLink signing.
 
 No project license has been selected or committed.
 
@@ -43,12 +44,6 @@ with its source and age, but stale data never drives a number or instrument.
 Freshness is measured from the backend's `observed_at` rather than the moment
 the browser received the event, so retained state replayed on reconnect reads
 as old — which is what it is.
-
-## Next working slice
-
-The next slice has not been selected. It will be planned after this read-only
-path has passed the live SITL/browser acceptance run; no command, persistence,
-map, or authentication interface is implied yet.
 
 ## Commands
 

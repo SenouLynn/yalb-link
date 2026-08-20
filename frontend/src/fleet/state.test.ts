@@ -15,6 +15,7 @@ import { MavType } from '@/gen/gcs/v1/types_pb';
 import { HeartbeatStateSchema, VehicleIdSchema } from '@/gen/gcs/v1/vehicle_pb';
 import { resolveBattery } from '@/logic/battery';
 import { resolvePosition } from '@/logic/position';
+import { TRACK_CAPACITY } from '@/logic/track';
 import type { StreamEvent } from '@/stream/events';
 
 import {
@@ -449,6 +450,47 @@ describe('source-coherent accumulation', () => {
       remainingPct: 80,
       source: 'BATTERY_STATUS',
     });
+  });
+});
+
+describe('geodetic track accumulation', () => {
+  function positionAt(index: number): StreamEvent {
+    return telemetryEvent(
+      1,
+      1,
+      {
+        case: 'globalPosition',
+        value: create(GlobalPositionSchema, {
+          latDeg: 37.7 + index * 1e-5,
+          lonDeg: -122.4,
+          altRelativeM: 25,
+        }),
+      },
+      T0 + index,
+    );
+  }
+
+  it('keeps position samples ordered and ignores interleaved families', () => {
+    const view = reduce(
+      positionAt(0),
+      attitude(1, 1, 0.2, T0 + 1),
+      positionAt(2),
+      vfrHud(1, 1, 7, T0 + 3),
+    ).vehicles[vehicleKey(1, 1)];
+
+    expect(view?.track).toEqual([
+      { latDeg: 37.7, lonDeg: -122.4, atMs: T0 },
+      { latDeg: 37.70002, lonDeg: -122.4, atMs: T0 + 2 },
+    ]);
+  });
+
+  it('retains only the newest capacity-sized window', () => {
+    const events = Array.from({ length: TRACK_CAPACITY + 2 }, (_, index) => positionAt(index));
+    const view = reduce(...events).vehicles[vehicleKey(1, 1)];
+
+    expect(view?.track).toHaveLength(TRACK_CAPACITY);
+    expect(view?.track[0]?.atMs).toBe(T0 + 2);
+    expect(view?.track[TRACK_CAPACITY - 1]?.atMs).toBe(T0 + TRACK_CAPACITY + 1);
   });
 });
 

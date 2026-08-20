@@ -213,6 +213,27 @@ body {
   height: auto;
 }
 
+/* --- map ---------------------------------------------------------------- */
+
+.map-panel {
+  width: 100%;
+  height: clamp(18rem, 48vw, 30rem);
+  min-height: 18rem;
+  overflow: hidden;
+  background: var(--panel-deep);
+  border: 1px solid var(--bezel);
+  border-radius: var(--radius);
+}
+
+.vehicle-marker {
+  width: 28px;
+  height: 28px;
+}
+
+.vehicle-marker svg {
+  display: block;
+}
+
 /* --- chips --------------------------------------------------------------- */
 
 .chip {
