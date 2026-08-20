@@ -68,7 +68,6 @@ jobs:
       # dispatch-table keys. This checks the other half — that no row is left
       # unstarted.
       - run: ./scripts/check-matrix.sh
-      # Two couplings live in these three lines; both bit us (ADR-0006).
       #
       # The action major selects the linter major: v6 installs golangci-lint
       # v1.x, which cannot read our `version: "2"` .golangci.yml at all. And
