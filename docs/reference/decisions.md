@@ -98,6 +98,19 @@ exists. Executable artifacts are authoritative if this file drifts.
   revisited as the fleet changes.
 - Live SSE is the default; `?source=mock` is the only way to reach fixtures.
 
+## Development topology
+
+- Compose health-gates SITL startup on the backend. ArduPilot's `udpclient`
+  parser requires a numeric IPv4 destination, so the SITL entrypoint resolves
+  `gcs-backend` before launching the autopilot.
+- The project network is `172.30.250.0/24` and the backend is fixed at
+  `172.30.250.10`. Resolution therefore remains valid when Compose recreates
+  only the backend; the running SITLs reconnect, are rediscovered, and receive
+  fresh message-rate requests without their containers restarting.
+- Each SITL process receives its vehicle identity through ArduPilot's runtime
+  `--sysid` flag, the authoritative per-process selector. Vehicle identity is
+  not injected through the defaults file.
+
 ## Current limits
 
 - The system is read-only. Rate requests are data acquisition, not an operator
@@ -110,3 +123,5 @@ exists. Executable artifacts are authoritative if this file drifts.
 - `/api/events` has no authentication and no origin restriction.
 - The UI is instrumentation only: no map, mission editor, or telemetry
   inspector.
+- The fixed Compose subnet is development-only and must not overlap a host or
+  VPN route.

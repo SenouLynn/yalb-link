@@ -18,7 +18,7 @@ x-sitl-env: &sitl-env
 x-sitl-common: &sitl-common
   depends_on:
     gcs-backend:
-      condition: service_started
+      condition: service_healthy
   restart: unless-stopped
 
 services:
@@ -96,6 +96,11 @@ services:
       retries: 3
       start_period: 5s
     restart: unless-stopped
+    networks:
+      default:
+        # SITL resolves this address once at process start. Keep it stable when
+        # Compose recreates only the backend container.
+        ipv4_address: 172.30.250.10
 
   gcs-frontend:
     build:
@@ -111,3 +116,9 @@ services:
     depends_on:
       - gcs-backend
     restart: unless-stopped
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.30.250.0/24

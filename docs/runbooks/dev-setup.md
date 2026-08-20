@@ -64,6 +64,11 @@ docker compose --profile ui up
 
 The default stack starts Copter SITL and the backend. SITL sends MAVLink
 to `gcs-backend:14550`; the backend publishes UDP 14550 for host-side tools.
+Compose health-gates SITL startup and assigns the backend `172.30.250.10` on
+the project network. The SITL entrypoint resolves the service name to that
+numeric address because ArduPilot's `udpclient` parser does not accept it
+reliably; the fixed address keeps the route valid when only the backend is
+recreated.
 
 ## Watch a vehicle fly
 
@@ -106,9 +111,10 @@ docker compose logs -f gcs-backend | grep -E "rates requested|command ack"
    ```
 3. Open <http://localhost:3000> and confirm the horizon and heading move and
    the readouts are populated.
-4. Stop the vehicle with `docker compose stop ardupilot-sitl-copter-1`. Within
-   five seconds every reading becomes `- - -` with amber, aged provenance;
-   after the 60-second vehicle TTL the link chip reads `LOST`.
+4. Stop the vehicle with `docker compose stop ardupilot-sitl-copter-1`. After
+   the five-second telemetry TTL (allow one 250 ms display tick), every reading
+   becomes `- - -` with amber, aged provenance. After the 60-second vehicle TTL
+   (allow the next one-second backend sweep), the link chip reads `LOST`.
 5. Open <http://localhost:3000/?source=mock> with the backend stopped and
    confirm the same display renders from fixtures.
 
