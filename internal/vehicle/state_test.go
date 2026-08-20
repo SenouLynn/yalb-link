@@ -240,13 +240,10 @@ func TestFamilyFreshness(t *testing.T) {
 	state, _ = Fold(state, telem(attitudeEvent(0, 0, 0), 30), t0+500)
 	state, _ = Fold(state, beat(false, 3), t0+4_000)
 
-	// Vehicle-wide age says the link is healthy...
 	if got := state.AgeMs(t0 + 4_000); got != 0 {
 		t.Errorf("AgeMs = %d, want 0", got)
 	}
 
-	// ...while ATTITUDE specifically has been silent for 3.5s. An instrument
-	// that cannot tell these apart renders stale data as live.
 	age, ok := state.FamilyAgeMs(30, t0+4_000)
 	if !ok || age != 3_500 {
 		t.Errorf("ATTITUDE age = %d (seen %v), want 3500", age, ok)
@@ -257,29 +254,7 @@ func TestFamilyFreshness(t *testing.T) {
 	}
 }
 
-func TestTTLRefreshThrottle(t *testing.T) {
-	state, _ := Fold(State{}, beat(false, 3), t0)
-
-	if !state.ShouldRefreshTTL(t0) {
-		t.Fatal("first refresh not due")
-	}
-
-	state.MarkTTLRefreshed(t0)
-
-	if state.ShouldRefreshTTL(t0 + expireThrottleMs) {
-		t.Error("refresh due again at exactly the throttle interval")
-	}
-
-	if !state.ShouldRefreshTTL(t0 + expireThrottleMs + 1) {
-		t.Error("refresh not due past the throttle interval")
-	}
-}
-
-// The fold's contract is that time is an input. This asserts it against the
-// parsed source rather than against intent — the rule is one careless import
-// away from being false, and nothing else in the suite would notice. Comments
-// are excluded by parsing rather than grepping, or the prose explaining the
-// rule would fail it.
+// TestNoWallClock enforces injected time in production vehicle code.
 func TestNoWallClock(t *testing.T) {
 	entries, err := os.ReadDir(".")
 	if err != nil {
@@ -296,8 +271,6 @@ func TestNoWallClock(t *testing.T) {
 			continue
 		}
 
-		// ParseFile rather than the deprecated ParseDir, and comments are
-		// dropped so the prose explaining this rule does not trip it.
 		file, err := parser.ParseFile(fset, name, nil, parser.SkipObjectResolution)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)

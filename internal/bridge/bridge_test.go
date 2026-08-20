@@ -14,21 +14,12 @@ import (
 	"yalb.gcs/internal/vehicle"
 )
 
-// fleetOfType matches a FleetEvent of a given type from a given system.
 func fleetOfType(t gcsv1.FleetEventType, sysID uint32) func(vehicle.Event) bool {
 	return func(ev vehicle.Event) bool {
 		return ev.Fleet.GetType() == t && ev.Fleet.GetVehicleId().GetSystemId() == sysID
 	}
 }
 
-// BRIDGE-DISCOVER: raw HEARTBEAT bytes on the wire become a VEHICLE_DISCOVERED
-// event out of the sink, and a route the send path can resolve.
-//
-// This is the whole Tier 5 receive path asserted end to end without a socket:
-// bytes → gomavlib framing → codec decode → fold → sink. It is the offline
-// version of the tier's headline gate ("VEHICLE_DISCOVERED in the logs"), so a
-// failure against live SITL after this passes is a transport problem and not a
-// pipeline one.
 func TestBridgeDiscoversVehicleFromHeartbeat(t *testing.T) {
 	t.Parallel()
 
@@ -44,9 +35,6 @@ func TestBridgeDiscoversVehicleFromHeartbeat(t *testing.T) {
 		t.Errorf("compid = %d, want %d", got, meta.CompID)
 	}
 
-	// Identity has to arrive with the discovery, not after it. A discovery
-	// event that cannot name the airframe forces every consumer to wait for a
-	// second message before it can render anything.
 	if ev.Fleet.GetHeartbeat() == nil {
 		t.Fatal("VEHICLE_DISCOVERED carried no HeartbeatState; consumers have nothing to render")
 	}
@@ -57,11 +45,6 @@ func TestBridgeDiscoversVehicleFromHeartbeat(t *testing.T) {
 	}
 }
 
-// BRIDGE-TELEMETRY: a telemetry family folds and reaches the sink.
-//
-// ATTITUDE rather than HEARTBEAT because the two take different paths through
-// the fold — one is a TelemetryEvent, the other is fleet identity — and this
-// asserts the branch the fleet test does not reach.
 func TestBridgeForwardsTelemetry(t *testing.T) {
 	t.Parallel()
 
@@ -79,14 +62,6 @@ func TestBridgeForwardsTelemetry(t *testing.T) {
 	}
 }
 
-// BRIDGE-SELF-FILTER: a frame carrying our own identity creates no vehicle.
-//
-// heartbeat_gcs_out is the GCS's own outbound heartbeat — (255, 190), the
-// identity codec.NewNode transmits under. gomavlib does not loop our writes
-// back, so this only happens when something else in the path does: a
-// misconfigured UDP route, a mavproxy relay, or a second GCS on the network.
-// Whichever it is, folding it produces a phantom "vehicle 255" that would then
-// be published to fleet:active and shown to an operator as an aircraft.
 func TestBridgeIgnoresItsOwnIdentity(t *testing.T) {
 	t.Parallel()
 
@@ -110,12 +85,6 @@ func TestBridgeIgnoresItsOwnIdentity(t *testing.T) {
 	}
 }
 
-// BRIDGE-EXPIRE: a vehicle that goes silent is declared lost by the sweep.
-//
-// The sweep exists because Fold only runs when a frame arrives, so the fold's
-// own TTL check can never fire for the case it was written for: a vehicle that
-// stops transmitting produces no more folds. Nothing but this tick closes that
-// gap, which is why the clock is injected rather than slept through.
 func TestBridgeExpiresSilentVehicle(t *testing.T) {
 	t.Parallel()
 
@@ -132,13 +101,6 @@ func TestBridgeExpiresSilentVehicle(t *testing.T) {
 		fleetOfType(gcsv1.FleetEventType_FLEET_EVENT_TYPE_VEHICLE_LOST, uint32(meta.SysID)))
 }
 
-// BRIDGE-EXPIRE-ONCE: the sweep declares a vehicle lost once per outage.
-//
-// The sweep runs every few milliseconds in this harness against a clock that
-// stays far past the TTL, so a fold that re-emitted on every tick would
-// produce hundreds of VEHICLE_LOST events. The `Lost` flag in vehicle.State is
-// what prevents that; this asserts the bridge actually carries the returned
-// state forward rather than folding from the pre-sweep copy.
 func TestBridgeExpiresOncePerOutage(t *testing.T) {
 	t.Parallel()
 
@@ -154,7 +116,6 @@ func TestBridgeExpiresOncePerOutage(t *testing.T) {
 	h.sink.await(t, "VEHICLE_LOST",
 		fleetOfType(gcsv1.FleetEventType_FLEET_EVENT_TYPE_VEHICLE_LOST, uint32(meta.SysID)))
 
-	// Let many more sweep ticks elapse at the same expired clock reading.
 	time.Sleep(200 * time.Millisecond)
 
 	lost := 0
@@ -170,12 +131,6 @@ func TestBridgeExpiresOncePerOutage(t *testing.T) {
 	}
 }
 
-// BRIDGE-SINK-ERROR: a sink that refuses an event stops the pipeline.
-//
-// Deliberately fatal rather than logged-and-continued. The sink is what makes
-// an observation durable; a bridge that keeps folding while nothing records
-// the result presents as healthy and silently loses the fleet history the
-// operator will later be asked to trust.
 func TestBridgeStopsWhenSinkFails(t *testing.T) {
 	t.Parallel()
 
@@ -198,11 +153,6 @@ func TestBridgeStopsWhenSinkFails(t *testing.T) {
 	}
 }
 
-// BRIDGE-SHUTDOWN: cancelling the context stops Run cleanly.
-//
-// nil, not context.Canceled: cancellation here is the operator stopping the
-// process, and an errgroup that reports its own shutdown as a failure makes
-// every clean exit look like a crash in the logs.
 func TestBridgeStopsOnContextCancel(t *testing.T) {
 	t.Parallel()
 
@@ -215,10 +165,6 @@ func TestBridgeStopsOnContextCancel(t *testing.T) {
 	}
 }
 
-// New refuses a Config with no source rather than defaulting one.
-//
-// There is no sensible default: a bridge with no frame source is a process
-// that binds nothing and reports healthy forever.
 func TestNewRequiresSource(t *testing.T) {
 	t.Parallel()
 
@@ -227,7 +173,6 @@ func TestNewRequiresSource(t *testing.T) {
 	}
 }
 
-// New fills in every optional field, so a Config carrying only a Source runs.
 func TestNewDefaultsOptionalFields(t *testing.T) {
 	t.Parallel()
 
@@ -245,9 +190,6 @@ func TestNewDefaultsOptionalFields(t *testing.T) {
 	}
 }
 
-// splitLabel is diagnostics only, and every case it cannot parse must degrade
-// to zero values rather than to a wrong address — routes.Upsert treats an
-// empty SrcIP as "carry forward what you had", and a half-parsed one as truth.
 func TestSplitLabel(t *testing.T) {
 	t.Parallel()
 

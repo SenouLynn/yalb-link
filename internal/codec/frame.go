@@ -1,9 +1,4 @@
-// Package codec wraps gomavlib's framing and dialect handling behind ports the
-// rest of the GCS depends on.
-//
-// This package imports nothing above itself: no Redis, no Connect services, no
-// vehicle model. Everything here is driven by bytes in and typed messages out,
-// so the decode path is testable over a net.Pipe with no UDP socket open.
+// Package codec wraps MAVLink framing and dialect handling.
 package codec
 
 import (
@@ -18,50 +13,25 @@ import (
 	"github.com/bluenviron/gomavlib/v3/pkg/message"
 )
 
-// GCS node identity. Fixed by the heartbeat-fields decision in
-// docs/roadmap/order-of-operations.md: a GCS is (255, 190).
+// GCS node identity used for outbound MAVLink frames.
 const (
 	GCSSystemID    byte = 255
 	GCSComponentID byte = 190
 )
 
-// HeartbeatPeriod overrides gomavlib's 5s default.
-//
-// gomavlib already emits a conforming GCS heartbeat on every open channel:
-// HeartbeatDisable defaults to false, HeartbeatSystemType to MAV_TYPE_GCS(6)
-// and HeartbeatAutopilotType to MAV_AUTOPILOT_GENERIC(0). Only the rate is
-// wrong. Do not add a second hand-rolled ticker — heartbeat is a per-link
-// broadcast, not a per-vehicle message, and a per-vehicle ticker both
-// double-emits and scales with fleet size on the scarce uplink direction.
+// HeartbeatPeriod sets gomavlib's per-link GCS heartbeat rate.
 const HeartbeatPeriod = time.Second
 
-// HeartbeatTTL is how long a vehicle may go without traffic before the vehicle
-// fold declares it lost.
-//
-// Two independent timeouts answer the liveness question and will disagree
-// unless one is derived from the other. This one is authoritative: it is
-// per-vehicle rather than per-link, and it is driven by an injected clock, so
-// a test can advance it. LinkIdleTimeout is derived from it.
+// HeartbeatTTL is the vehicle liveness timeout.
 const HeartbeatTTL = 60 * time.Second
 
-// LinkIdleTimeout is how long gomavlib keeps a silent channel open.
-//
-// Deliberately longer than HeartbeatTTL. If the channel were torn down first,
-// the fold would lose its input before it could emit VEHICLE_LOST, and the
-// operator would see a link event where a vehicle event belongs. Channel
-// closure is a statement about the link; vehicle liveness is the fold's.
+// LinkIdleTimeout exceeds HeartbeatTTL so vehicle loss precedes link teardown.
 const LinkIdleTimeout = 3 * HeartbeatTTL
 
-// LinkID identifies one open channel — one radio, one UDP peer, one SITL
-// instance. Writes are addressed to a link, never broadcast.
+// LinkID identifies one open MAVLink channel.
 type LinkID string
 
-// ErrUnknownLink is returned by WriteTo when the target link is not open.
-//
-// This is the "reject, never broadcast" rule. gomavlib offers WriteMessageAll
-// as the only destination-free write, and falling back to it would put a
-// command for sysid 2 on vehicle 1's radio and multiply uplink bandwidth by
-// the number of links. An unaddressable target is an error.
+// ErrUnknownLink is returned when an addressed write has no open link.
 var ErrUnknownLink = errors.New("codec: no open link for target")
 
 // FrameSource is the transport port. Implementations deliver decoded gomavlib
@@ -74,16 +44,8 @@ type FrameSource interface {
 
 var _ FrameSource = (*Node)(nil)
 
-// Node is the gomavlib-backed FrameSource.
-//
-// Beyond wrapping the node it maintains the routing table: which link each
-// vehicle system ID was last heard on. The table is populated from inbound
-// frames only — nothing pre-registers a vehicle, and a vehicle that has never
-// been heard from is not addressable.
+// Node is the gomavlib-backed FrameSource and inbound-derived route map.
 type Node struct {
-	// Field order is packed pointer-like-first to satisfy govet's
-	// fieldalignment, then grouped by ownership. The mu/links/routes grouping
-	// is the one that matters for readers: mu guards the two maps above it.
 	node    *gomavlib.Node
 	events  chan gomavlib.Event
 	closing chan struct{}
@@ -93,30 +55,15 @@ type Node struct {
 	routes map[byte]LinkID
 	mu     sync.RWMutex
 
-	// parseErrors counts frames gomavlib rejected: bad CRC, truncated, or a
-	// signing failure.
-	//
-	// Dropping an unrecognised message ID silently is correct — we do not
-	// handle every message in the dialect and never will. Dropping a *parse
-	// error* silently is not: it is the signal for a failing radio, an
-	// electrically noisy airframe, or replay tampering, and it is invisible
-	// unless something counts it.
+	// parseErrors counts frames rejected before decode.
 	parseErrors atomic.Uint64
 
 	wg        sync.WaitGroup
 	closeOnce sync.Once
 }
 
-// NewNode configures and starts a gomavlib node over the given endpoints.
-//
-// Endpoints are injected by the caller so tests can supply
-// gomavlib.EndpointCustomClient over a net.Pipe and production can supply a
-// UDP server, without this package knowing the difference.
+// NewNode starts a gomavlib node over the supplied endpoints.
 func NewNode(endpoints []gomavlib.EndpointConf) (*Node, error) {
-	// gomavlib.NodeConf and gomavlib.NewNode are both deprecated in v3
-	// ("configuration has been moved inside Node") and staticcheck SA1019 is
-	// enabled in .golangci.yml, so the deprecated path fails our own lint gate.
-	// Configure the struct and call Initialize.
 	inner := &gomavlib.Node{
 		Endpoints:      endpoints,
 		Dialect:        ardupilotmega.Dialect,
@@ -127,21 +74,11 @@ func NewNode(endpoints []gomavlib.EndpointConf) (*Node, error) {
 		HeartbeatDisable: false,
 		HeartbeatPeriod:  HeartbeatPeriod,
 
-		// Explicit, not gomavlib's 60s default, which collides exactly with
-		// the fold's heartbeat TTL and makes "lost vehicle" and "closed
-		// channel" a race.
 		IdleTimeout: LinkIdleTimeout,
 
-		// StreamRequestEnable stays false, but not for the reason this comment
-		// used to give. It claimed SITL streams telemetry unprompted; a
-		// six-minute run against Copter-4.7.0 produced heartbeats and zero
-		// telemetry events, so nothing streams until asked, in SITL or the
-		// field. Enabling this would send the deprecated REQUEST_DATA_STREAM
-		// (#66) for seven coarse stream groups: a distinct send family that
-		// would move the len(SendFamilies) == 11 pin permanently, with no
-		// per-message control. Telemetry is requested explicitly with
-		// MAV_CMD_SET_MESSAGE_INTERVAL at discovery instead -- see ADR-0010
-		// and tier-5 ch.7.
+		// REQUEST_DATA_STREAM (#66) is deprecated and offers only coarse stream
+		// groups. Keep it disabled. The application does not yet request
+		// per-message rates, so a connected vehicle may emit heartbeats only.
 		StreamRequestEnable: false,
 	}
 
@@ -163,11 +100,7 @@ func NewNode(endpoints []gomavlib.EndpointConf) (*Node, error) {
 	return n, nil
 }
 
-// Events returns the stream of decoded events.
-//
-// Events are forwarded from the underlying node after the routing table has
-// been updated, so a consumer that reacts to a frame can always address a
-// reply back to its source link.
+// Events returns decoded events after their routes have been observed.
 func (n *Node) Events() <-chan gomavlib.Event {
 	return n.events
 }
@@ -190,9 +123,6 @@ func (n *Node) WriteTo(link LinkID, msg message.Message) error {
 }
 
 // LinkFor reports the link a vehicle system ID was last heard on.
-//
-// Callers addressing a vehicle resolve through here and propagate the
-// not-found case as a rejection.
 func (n *Node) LinkFor(sysID byte) (LinkID, bool) {
 	n.mu.RLock()
 	defer n.mu.RUnlock()
@@ -202,24 +132,15 @@ func (n *Node) LinkFor(sysID byte) (LinkID, bool) {
 	return link, ok
 }
 
-// ParseErrors returns the number of frames gomavlib rejected as unparseable.
-//
-// A rising count on an otherwise healthy link points at the physical layer,
-// not at this codec.
+// ParseErrors returns the number of frames rejected before decode.
 func (n *Node) ParseErrors() uint64 {
 	return n.parseErrors.Load()
 }
 
-// Close halts the node and waits for its goroutines to return.
-//
-// Node.Initialize starts three goroutines, so the claim under goleak is "none
-// leaked", not "none running".
+// Close halts the node and waits for its goroutines.
 func (n *Node) Close() error {
 	n.closeOnce.Do(func() {
-		// Order matters. Releasing a pump that is blocked mid-send has to come
-		// first: gomavlib's Close waits for its own goroutines, and one of them
-		// can be blocked writing the event that pump is blocked forwarding.
-		// Closing the node first in that state deadlocks both.
+		// Release a blocked event send before gomavlib waits on its producers.
 		close(n.closing)
 		n.node.Close()
 		n.wg.Wait()
@@ -228,19 +149,8 @@ func (n *Node) Close() error {
 	return nil
 }
 
-// pump forwards node events, maintaining the link and route tables as it goes.
-//
-// The send is guarded by a select on closing rather than being a bare channel
-// send. Events() is unbuffered, so a bare send blocks until a consumer reads —
-// and a consumer that has stopped reading (a cancelled subscription, a test
-// that took the frame it wanted, a slow downstream) would wedge this goroutine
-// forever. Since Close waits on the WaitGroup this goroutine belongs to, that
-// turns a stalled consumer into a node that can never be shut down. Selecting
-// on closing keeps Close total: it always returns, whatever the consumer does.
-//
-// Events still in flight when Close is called are dropped. That is deliberate —
-// a shutdown path that insists on delivering telemetry nobody is reading is the
-// deadlock this exists to prevent.
+// pump forwards events while maintaining links and routes. Closing interrupts
+// a blocked consumer send; in-flight events may be dropped during shutdown.
 func (n *Node) pump() {
 	defer n.wg.Done()
 	defer close(n.events)
@@ -268,13 +178,9 @@ func (n *Node) observe(evt gomavlib.Event) {
 		n.forgetLink(linkIDOf(e.Channel))
 
 	case *gomavlib.EventParseError:
-		// No frame surfaces for these, so this counter is the only trace they
-		// leave. Decode never sees them and returns no error for them either.
 		n.parseErrors.Add(1)
 
 	case *gomavlib.EventFrame:
-		// The routing table is built from what we hear, and only from what we
-		// hear. A vehicle appearing on a new link moves; it is not duplicated.
 		link := linkIDOf(e.Channel)
 
 		n.mu.Lock()

@@ -1,31 +1,5 @@
-// Package bridge joins the codec's frame stream to the vehicle fold and
-// forwards what the fold produces to a sink.
-//
-// This is the first package in the repo that owns a goroutine. Everything
-// below it is pure: the codec turns bytes into envelopes, the fold turns an
-// envelope plus a timestamp into new state plus events, and the route table
-// answers where to send. None of them decide *when*. This package does, and it
-// is deliberately the only one that does.
-//
-// # One loop, not one goroutine per vehicle
-//
-// The Tier 5 plan called for a goroutine per discovered vehicle, spawned on
-// first HEARTBEAT under a sync.Once guard and cancelled on VEHICLE_LOST. That
-// shape is not used, for three reasons found by reading Tier 4 as built:
-//
-//   - The fold is pure and cheap. A single loop holding map[routes.Key]State
-//     and calling Fold sequentially has the same semantics with no lifetime
-//     problem, no per-vehicle context to cancel and no leak surface.
-//   - VEHICLE_RECOVERED did not exist when the plan was written. A vehicle
-//     that is lost and comes back needs its goroutine again, which is exactly
-//     what a sync.Once keyed on system ID prevents.
-//   - Fold order across vehicles becomes nondeterministic the moment the
-//     folds run concurrently, and the replayability the fold was built for is
-//     the thing that makes this system testable.
-//
-// The loop is single-owner: `states` is touched from nowhere else and needs no
-// mutex. The route table does have a mutex because the Tier 8 send path reads
-// it from another goroutine.
+// Package bridge runs the single-owner receive loop from frames through the
+// vehicle fold to an event sink.
 package bridge
 
 import (
@@ -45,14 +19,7 @@ import (
 	"yalb.gcs/internal/vehicle"
 )
 
-// SweepInterval is how often the loop asks the fold about vehicles that have
-// sent nothing.
-//
-// Fold only runs when a frame arrives, so a vehicle that goes silent for good
-// would never be declared lost without this tick. One second rather than
-// something proportional to codec.HeartbeatTTL: the sweep is a map walk over a
-// handful of vehicles, and a coarser tick only adds latency between the TTL
-// actually expiring and the operator being told.
+// SweepInterval bounds loss-detection and stale-route latency.
 const SweepInterval = time.Second
 
 // ErrNoSource is returned by New when no frame source was configured.
@@ -60,20 +27,15 @@ var ErrNoSource = errors.New("bridge: Config.Source is required")
 
 // Config assembles a Bridge. Only Source is required.
 type Config struct {
-	// Source is the transport port — codec.Node in production, anything
-	// implementing the interface in tests.
+	// Source is the transport port.
 	Source codec.FrameSource
 	// Sink receives every event the fold emits. Defaults to NopSink.
 	Sink Sink
-	// Routes is the send path's address book, populated from inbound frames.
-	// Defaults to a fresh table, readable afterwards via Bridge.Routes.
+	// Routes is populated from inbound frames.
 	Routes *routes.Table
 	// Logger receives link lifecycle lines. Defaults to slog.Default().
 	Logger *slog.Logger
-	// Now returns the current time in epoch milliseconds. Injected because
-	// every property worth testing here — discovery, loss, recovery, route
-	// eviction — is a statement about time. Defaults to the wall clock, which
-	// is the one place in the receive path allowed to read it.
+	// Now returns epoch milliseconds and is injectable for deterministic tests.
 	Now func() int64
 	// Sweep overrides SweepInterval. Tests shorten it.
 	Sweep time.Duration
@@ -132,12 +94,8 @@ func New(cfg Config) (*Bridge, error) {
 // Routes exposes the route table so the send path can resolve targets.
 func (b *Bridge) Routes() *routes.Table { return b.routes }
 
-// Run drives the pipeline until the context is cancelled or the source closes.
-//
-// It returns nil on both of those, because both are the caller shutting things
-// down rather than a failure. A non-nil return means the sink refused an
-// event, which is a real fault: the fold produced an observation nothing
-// recorded.
+// Run drives the pipeline. Cancellation and source closure are clean exits;
+// sink failures are returned.
 func (b *Bridge) Run(ctx context.Context) error {
 	ticker := time.NewTicker(b.sweep)
 	defer ticker.Stop()
@@ -170,21 +128,13 @@ func (b *Bridge) Run(ctx context.Context) error {
 	}
 }
 
-// handle dispatches one gomavlib event.
-//
-// Unrecognised event types are ignored rather than defaulted into an error:
-// gomavlib adds events (EventStreamRequested, and whatever comes next) and a
-// new one is not a fault in this bridge.
+// handle dispatches one recognized gomavlib event.
 func (b *Bridge) handle(ctx context.Context, evt gomavlib.Event) error {
 	switch e := evt.(type) {
 	case *gomavlib.EventChannelOpen:
 		b.log.InfoContext(ctx, "link open", "link", e.Channel.String())
 
 	case *gomavlib.EventChannelClose:
-		// The codec has already dropped its own link and route entries; this
-		// drops ours. A route pointing at a closed channel would make a
-		// vehicle look addressable, and the write would fail at the far end of
-		// the send path instead of being rejected here.
 		link := codec.LinkID(e.Channel.String())
 		b.log.InfoContext(ctx, "link closed",
 			"link", link,
@@ -193,9 +143,6 @@ func (b *Bridge) handle(ctx context.Context, evt gomavlib.Event) error {
 		)
 
 	case *gomavlib.EventParseError:
-		// codec.Node counts these; this line names one. Debug because a noisy
-		// radio produces a stream of them and the count is the signal, not any
-		// individual failure.
 		b.log.DebugContext(ctx, "parse error", "link", e.Channel.String(), "err", e.Error)
 
 	case *gomavlib.EventFrame:
@@ -207,12 +154,7 @@ func (b *Bridge) handle(ctx context.Context, evt gomavlib.Event) error {
 
 // frame folds one decoded frame and publishes what it produced.
 func (b *Bridge) frame(ctx context.Context, e *gomavlib.EventFrame) error {
-	// Frames carrying our own identity are dropped before anything else sees
-	// them. gomavlib does not loop our writes back to Events(), so in a
-	// healthy Compose topology this never fires — but a misconfigured UDP
-	// route, a mavproxy in the path, or a second GCS on the network all
-	// deliver (255, 190) frames, and folding those creates a phantom "vehicle
-	// 255" in fleet:active that no amount of downstream filtering can undo.
+	// Ignore externally relayed frames carrying this GCS's identity.
 	if e.SystemID() == codec.GCSSystemID && e.ComponentID() == codec.GCSComponentID {
 		return nil
 	}
@@ -229,12 +171,7 @@ func (b *Bridge) frame(ctx context.Context, e *gomavlib.EventFrame) error {
 		SrcPort: srcPort,
 	}, now)
 
-	// SrcAddr is the channel label, not a parsed IP. gomavlib does not put a
-	// peer address on EventFrame, and for a UDP server endpoint it does not
-	// need to: it opens one channel per remote peer and labels it
-	// "udp:<host>:<port>", so the label already identifies the source at
-	// exactly the granularity the conflict check wants. Using it also keeps
-	// the check meaningful on a serial link, where there is no IP at all.
+	// Channel labels identify sources across UDP, serial, and custom links.
 	in := vehicle.Inbound{
 		Heartbeat: codec.DecodeHeartbeat(e),
 		SrcAddr:   e.Channel.String(),
@@ -280,12 +217,7 @@ func (b *Bridge) emit(ctx context.Context, events []vehicle.Event) error {
 	return nil
 }
 
-// splitLabel recovers a host and port from a gomavlib channel label.
-//
-// Diagnostics only — the routable address is the LinkID, never this. Labels
-// are "<endpoint kind>:<remote address>" for server endpoints and a bare name
-// for client and custom ones, so a label with no address yields zero values
-// and routes.Upsert carries forward whatever it already had.
+// splitLabel extracts optional diagnostic host and port values.
 func splitLabel(label string) (host string, port int) {
 	_, addr, ok := strings.Cut(label, ":")
 	if !ok {

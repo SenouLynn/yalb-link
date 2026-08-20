@@ -5,18 +5,11 @@ version: v2
 # from generator config.
 
 plugins:
-  - remote: buf.build/protocolbuffers/go
+  - remote: buf.build/protocolbuffers/go:v1.36.12
     out: internal/gen
     opt: paths=source_relative
 
-  - remote: buf.build/connectrpc/go
-    out: internal/gen
-    opt: paths=source_relative
-
-  # protobuf-es v2 emits message types and service descriptors in one file.
-  # There is no separate connectrpc/es plugin in the v2 line — @connectrpc/connect
-  # v2 consumes the descriptors that this plugin already generates. Adding
-  # buf.build/connectrpc/es here would be a v1-era config.
-  - remote: buf.build/bufbuild/es
+  # Pin the generator that produced the committed TypeScript files.
+  - remote: buf.build/bufbuild/es:v2.14.0
     out: frontend/src/gen
     opt: target=ts

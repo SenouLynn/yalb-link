@@ -16,9 +16,5 @@
 # TypeScript incremental build metadata
 /frontend/*.tsbuildinfo
 
-# Local TLS material for the nginx profile — generated per developer, never
-# shared. See docs/runbooks/dev-setup.md.
-/docker/nginx/certs/
-
 # Local compose port/service overrides — machine-specific by definition.
 /docker-compose.override.yml

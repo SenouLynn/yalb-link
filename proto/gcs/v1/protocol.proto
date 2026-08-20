@@ -9,29 +9,16 @@ import "gcs/v1/vehicle.proto";
 
 option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
-// ProtocolEvent carries MAVLink transaction responses — messages that answer a
-// request the GCS made, rather than free-running telemetry.
-//
-// These are separated from TelemetryEvent because their consumer is different:
-// telemetry folds into per-vehicle state and fans out to subscribers, while a
-// transaction response must correlate against an in-flight request registry
-// (keyed by vehicle + command/param/sequence) and complete a pending RPC. A
-// single codec output type that conflated the two would force every consumer to
-// filter, and would leave the mission and parameter protocols with nowhere to
-// land.
-//
-// The codec emits exactly one of TelemetryEvent or ProtocolEvent per decoded
-// frame. Some payloads here are also returned directly from Connect RPCs
-// (ParameterValue, MissionItem, MissionAck) and keep their own vehicle_id for
-// that use; on this envelope the vehicle_id field below is authoritative.
+// ProtocolEvent carries inbound responses that require transaction
+// correlation rather than aggregation into vehicle telemetry state.
 message ProtocolEvent {
   VehicleId vehicle_id = 1;
 
   oneof payload {
-    ParameterValue param_value = 2;  // PARAM_VALUE (#22)
-    MissionCount mission_count = 3;  // MISSION_COUNT (#44)
-    MissionItem mission_item = 4;    // MISSION_ITEM_INT (#73)
-    MissionAck mission_ack = 5;      // MISSION_ACK (#47)
-    CommandAck command_ack = 6;      // COMMAND_ACK (#77)
+    ParameterValue param_value = 2;
+    MissionCount mission_count = 3;
+    MissionItem mission_item = 4;
+    MissionAck mission_ack = 5;
+    CommandAck command_ack = 6;
   }
 }

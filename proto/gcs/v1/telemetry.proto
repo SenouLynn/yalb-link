@@ -45,14 +45,8 @@ message GlobalPosition {
   google.protobuf.Timestamp observed_at = 10;
 }
 
-// GpsRaw mirrors GPS_RAW_INT (#24).
-// Raw GPS sensor data before fusion. Use GlobalPosition for fused output.
-//
-// Altitude datum warning: alt_msl_m is above mean sea level. GlobalPosition
-// carries both alt_msl_m and alt_relative_m (above home). A resolver that falls
-// back from GlobalPosition to GpsRaw must not silently substitute MSL for
-// relative altitude — the two differ by field elevation. Carry the reference
-// frame alongside the value.
+// GpsRaw mirrors unfused GPS_RAW_INT (#24). alt_msl_m is always MSL, never
+// altitude relative to home.
 message GpsRaw {
   uint64 time_usec = 1;         // µs since UNIX epoch or system boot
 
@@ -93,35 +87,13 @@ message SystemStatus {
 message VfrHud {
   float airspeed_m_s = 1;    // current indicated airspeed, m/s
   float groundspeed_m_s = 2; // current ground speed, m/s
-  // Current heading, degrees. int16_t on the wire (MAVLink documents 0–360);
-  // ArduPilot may report negative values, so consumers must normalise with
-  // ((h % 360) + 360) % 360. There is no unknown sentinel on this field —
-  // UINT16_MAX applies to GlobalPosition.hdg_cdeg and GpsRaw.cog_cdeg, not here.
+  // Signed wire heading; consumers normalise to 0–359.
   int32 heading_deg = 3;
   uint32 throttle_pct = 4;   // throttle setting, % (0–100)
   float alt_msl_m = 5;       // current altitude MSL, m
   float climb_m_s = 6;       // current climb rate, m/s
 
   google.protobuf.Timestamp observed_at = 7;
-}
-
-// NamedValueFloat mirrors NAMED_VALUE_FLOAT (#252).
-// ArduPilot uses these for real-time custom telemetry: PID internals, tuning
-// variables, and any arbitrary float the firmware wants to expose.
-// name is a null-terminated ASCII key, max 10 chars.
-message NamedValueFloat {
-  uint32 time_boot_ms = 1;
-  string name = 2;
-  float value = 3;
-  google.protobuf.Timestamp observed_at = 4;
-}
-
-// NamedValueInt mirrors NAMED_VALUE_INT (#251).
-message NamedValueInt {
-  uint32 time_boot_ms = 1;
-  string name = 2;
-  int32 value = 3;
-  google.protobuf.Timestamp observed_at = 4;
 }
 
 // StatusText mirrors STATUSTEXT (#253).
@@ -189,24 +161,6 @@ message HomePosition {
   google.protobuf.Timestamp observed_at = 15;
 }
 
-// PidTuning mirrors PID_TUNING (#194, ArduPilot dialect).
-// Real-time PID controller state for the specified axis.
-// Enable with parameter GCS_PID_MASK or MAV_CMD_SET_MESSAGE_INTERVAL.
-// Disable when not actively tuning — the stream is high frequency and
-// consumes significant radio bandwidth.
-message PidTuning {
-  PidTuningAxis axis = 1;
-  float desired = 2;    // desired rate (units: deg/s for angle axes, m/s² for ACCZ)
-  float achieved = 3;   // achieved rate
-  float ff = 4;         // feed-forward contribution
-  float p = 5;          // proportional term output
-  float i = 6;          // integral term output
-  float d = 7;          // derivative term output
-  float s_rate = 8;     // slew rate limit applied (MAVLink 2 extension)
-  float pd_mod = 9;    // P/D modifier from notch filter (MAVLink 2 extension)
-  google.protobuf.Timestamp observed_at = 10;
-}
-
 // BatteryStatus mirrors BATTERY_STATUS (#147).
 // Preferred over the battery fields in SYS_STATUS on firmware that supports it;
 // carries per-cell voltages, richer charge state, and multi-battery support.
@@ -240,20 +194,6 @@ message RadioStatus {
 }
 
 // EkfStatusReport mirrors EKF_STATUS_REPORT (#193, ArduPilot dialect).
-// Extended Kalman Filter health. Inspect flags before arming and during flight.
-//
-// flags bitmask (EKF_STATUS_FLAGS):
-//   1    EKF_ATTITUDE             attitude estimate good
-//   2    EKF_VELOCITY_HORIZ       horizontal velocity good
-//   4    EKF_VELOCITY_VERT        vertical velocity good
-//   8    EKF_POS_HORIZ_REL        horizontal position (relative) good
-//   16   EKF_POS_HORIZ_ABS        horizontal position (absolute) good
-//   32   EKF_POS_VERT_ABS         vertical position (absolute) good
-//   64   EKF_POS_VERT_AGL         terrain altitude good
-//   128  EKF_CONST_POS_MODE       EKF in constant position mode (GPS denied)
-//   256  EKF_PRED_POS_HORIZ_REL   predicted horiz pos (relative) good
-//   512  EKF_PRED_POS_HORIZ_ABS   predicted horiz pos (absolute) good
-//   1024 EKF_UNINITIALIZED        filter not yet initialised — do not fly
 message EkfStatusReport {
   uint32 flags = 1;                   // EKF_STATUS_FLAGS bitmask
   float velocity_variance = 2;
@@ -265,44 +205,11 @@ message EkfStatusReport {
   google.protobuf.Timestamp observed_at = 8;
 }
 
-// TelemetryPayloadType names each variant of the TelemetryEvent oneof.
-// Used by StreamTelemetryRequest to filter a subscription server-side.
-// Values correspond 1:1 to the oneof field numbers in TelemetryEvent.
-enum TelemetryPayloadType {
-  TELEMETRY_PAYLOAD_TYPE_UNSPECIFIED = 0;
-  TELEMETRY_PAYLOAD_TYPE_ATTITUDE = 1;
-  TELEMETRY_PAYLOAD_TYPE_GLOBAL_POSITION = 2;
-  TELEMETRY_PAYLOAD_TYPE_GPS_RAW = 3;
-  TELEMETRY_PAYLOAD_TYPE_VFR_HUD = 4;
-  TELEMETRY_PAYLOAD_TYPE_NAV_CONTROLLER_OUTPUT = 5;
-  TELEMETRY_PAYLOAD_TYPE_SYSTEM_STATUS = 6;
-  TELEMETRY_PAYLOAD_TYPE_BATTERY_STATUS = 7;
-  TELEMETRY_PAYLOAD_TYPE_RADIO_STATUS = 8;
-  TELEMETRY_PAYLOAD_TYPE_EKF_STATUS_REPORT = 9;
-  TELEMETRY_PAYLOAD_TYPE_MISSION_CURRENT = 10;
-  TELEMETRY_PAYLOAD_TYPE_HOME_POSITION = 11;
-  TELEMETRY_PAYLOAD_TYPE_PID_TUNING = 12;
-  TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_FLOAT = 13;
-  TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_INT = 14;
-  TELEMETRY_PAYLOAD_TYPE_STATUS_TEXT = 15;
-}
-
-// TelemetryEvent is the envelope type for all streamed telemetry.
-// The Connect TelemetryService streams these to subscribed clients.
-// Exactly one payload field is set per message.
-//
-// Vehicle identity lives here and nowhere else. Payload messages deliberately
-// carry no vehicle_id: duplicating it per payload doubles the wire cost at
-// telemetry rates and creates two sources of truth that can disagree. The codec
-// reads (system_id, component_id) from the MAVLink frame header once and sets
-// it on the envelope.
-//
-// This envelope carries streaming telemetry only. MAVLink transaction responses
-// (PARAM_VALUE, MISSION_COUNT, MISSION_ITEM_INT, MISSION_ACK, COMMAND_ACK) are
-// not telemetry — they correlate against an in-flight request registry and are
-// carried by ProtocolEvent in protocol.proto.
+// TelemetryEvent carries one streaming payload and its frame-header identity.
+// Transaction responses use ProtocolEvent.
 message TelemetryEvent {
   VehicleId vehicle_id = 1;
+  reserved 13, 14, 15;
 
   oneof payload {
     // Core flight state
@@ -321,11 +228,6 @@ message TelemetryEvent {
     // Mission state
     MissionCurrent mission_current = 11;
     HomePosition home_position = 12;
-
-    // Tuning and diagnostics
-    PidTuning pid_tuning = 13;
-    NamedValueFloat named_value_float = 14;
-    NamedValueInt named_value_int = 15;
 
     // Autopilot log messages
     StatusText status_text = 16;

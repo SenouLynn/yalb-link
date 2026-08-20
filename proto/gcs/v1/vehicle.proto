@@ -34,29 +34,9 @@ message HeartbeatState {
   bool test_enabled = 11;
   bool custom_mode_enabled = 12;
 
-  // HEARTBEAT.custom_mode: firmware-specific flight mode integer. The integer
-  // is always authoritative; the name beside it may be absent.
+  // HEARTBEAT.custom_mode: firmware-specific flight mode integer.
   uint32 custom_mode = 13;
-
-  // Human-readable mode name, resolved in three ordered layers (ADR-0007 R1):
-  //
-  //   (a) AVAILABLE_MODES.mode_name (#435) when the vehicle supplies it —
-  //       authoritative, and the only source that also carries
-  //       NOT_USER_SELECTABLE / ADVANCED for UI gating. ArduPilot >= 4.7.0.
-  //   (b) otherwise the generated gomavlib dialect enum — COPTER_MODE,
-  //       PLANE_MODE, ROVER_MODE, SUB_MODE, TRACKER_MODE — selected by
-  //       (autopilot, type) and rendered via its String() method. Never a
-  //       hand-typed table: see the MavType note in types.proto for what a
-  //       retyped integer list costs.
-  //   (c) otherwise **empty**.
-  //
-  // Empty means unknown, not "no mode". Render custom_mode as an integer in that
-  // case. Never fabricate a name — a plausible wrong mode name is worse than a
-  // number, because the operator cannot tell it is wrong.
-  //
-  // This replaces an earlier comment naming a "firmware adapter layer" that was
-  // never built, which left the field permanently empty with no explanation.
-  string flight_mode_name = 14; // e.g. "GUIDED", "AUTO", "LOITER"; empty = unknown
+  reserved 14;
 
   uint32 mavlink_version = 15;
 
@@ -95,65 +75,5 @@ message VehicleSnapshot {
 
   google.protobuf.Timestamp last_updated_at = 17;
 
-  // Populated from AUTOPILOT_VERSION (#148), requested once at discovery.
-  // Absent until the vehicle answers; see VehicleCapabilities.observed_at.
-  VehicleCapabilities capabilities = 18;
-}
-
-// VehicleCapabilities is the vehicle's own declaration of what it supports,
-// decoded from AUTOPILOT_VERSION (#148). Requested at discovery with
-// MAV_CMD_REQUEST_MESSAGE (512).
-//
-// ADR-0007: this is how firmware variance is absorbed. Optional protocol paths
-// are gated on a bit here, never on a firmware name — an ArduPilot 4.5 vehicle
-// and an ArduPilot 4.7 vehicle differ more, on the things we branch on, than an
-// ArduPilot and a PX4 vehicle do on any single feature. Identity is a proxy for
-// capability that is wrong in both directions.
-//
-// **Absent is not empty.** A VehicleSnapshot with no capabilities message means
-// the vehicle has not answered yet (or does not implement #148), which is
-// distinct from a vehicle that answered with no bits set. Consumers must not
-// treat a missing message as "supports nothing" or as "supports the usual
-// things"; both are guesses. observed_at unset marks the message as never
-// populated.
-message VehicleCapabilities {
-  VehicleId id = 1;
-
-  // AUTOPILOT_VERSION.capabilities, the raw 64-bit bitmask, carried verbatim.
-  // Authoritative. A vehicle may set bits MavProtocolCapability does not yet
-  // mirror, and truncating to the known set would drop them silently.
-  uint64 capability_flags = 2;
-
-  // The same bitmask decomposed into the flags we mirror, for consumers that
-  // should not be doing bit arithmetic. Derived from capability_flags by the
-  // codec; if the two ever disagree, capability_flags wins.
-  repeated MavProtocolCapability capabilities = 3;
-
-  // AUTOPILOT_VERSION.flight_sw_version, packed (major)(minor)(patch)(type)
-  // from MSB to LSB. Carried packed rather than split because the packing is
-  // the wire contract and splitting it here would mean two representations to
-  // keep consistent. This selects the vendored parameter-metadata set — see
-  // ParameterMetadataSet in parameters.proto.
-  uint32 flight_sw_version = 4;
-  uint32 middleware_sw_version = 5;
-  uint32 os_sw_version = 6;
-
-  // AUTOPILOT_VERSION.board_version: low 8 bits are silicon ID, first 16 bits
-  // a board type from the ArduPilot/PX4 bootloader board_types tables.
-  uint32 board_version = 7;
-  uint32 vendor_id = 8;  // uint16 on the wire
-  uint32 product_id = 9; // uint16 on the wire
-
-  // Hardware identity. uid2 supersedes uid when non-empty (it is a MAVLink 2
-  // extension field, so older firmware sends only uid). This — not VehicleId —
-  // is the durable key for anything scoped to a physical vehicle: (system_id,
-  // component_id) is transport identity, and sysid is operator-assignable and
-  // reused across airframes. See SettingsScope in auth.proto.
-  uint64 uid = 10;
-  bytes uid2 = 11; // 18 bytes when present; empty when the vehicle sends none
-
-  // When AUTOPILOT_VERSION was received. Unset means never — the request is
-  // outstanding or unanswered, and every capability above is unknown rather
-  // than false.
-  google.protobuf.Timestamp observed_at = 12;
+  reserved 18;
 }

@@ -6,34 +6,21 @@ import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { MavCmd, MavFrame, MavMissionResult, MavMissionType } from "./types_pb";
 import { file_gcs_v1_types } from "./types_pb";
-import type { VehicleId } from "./vehicle_pb";
-import { file_gcs_v1_vehicle } from "./vehicle_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file gcs/v1/missions.proto.
  */
 export const file_gcs_v1_missions: GenFile = /*@__PURE__*/
-  fileDesc("ChVnY3MvdjEvbWlzc2lvbnMucHJvdG8SBmdjcy52MSK5AgoLTWlzc2lvbkl0ZW0SJQoKdmVoaWNsZV9pZBgBIAEoCzIRLmdjcy52MS5WZWhpY2xlSWQSCwoDc2VxGAIgASgNEh8KBWZyYW1lGAMgASgOMhAuZ2NzLnYxLk1hdkZyYW1lEh8KB2NvbW1hbmQYBCABKA4yDi5nY3MudjEuTWF2Q21kEg8KB2N1cnJlbnQYBSABKAgSFAoMYXV0b2NvbnRpbnVlGAYgASgIEg4KBnBhcmFtMRgHIAEoAhIOCgZwYXJhbTIYCCABKAISDgoGcGFyYW0zGAkgASgCEg4KBnBhcmFtNBgKIAEoAhIJCgF4GAsgASgBEgkKAXkYDCABKAESCQoBehgNIAEoAhIsCgxtaXNzaW9uX3R5cGUYDiABKA4yFi5nY3MudjEuTWF2TWlzc2lvblR5cGUiSwoMTWlzc2lvbkNvdW50Eg0KBWNvdW50GAEgASgNEiwKDG1pc3Npb25fdHlwZRgCIAEoDjIWLmdjcy52MS5NYXZNaXNzaW9uVHlwZSKLAQoKTWlzc2lvbkFjaxIlCgp2ZWhpY2xlX2lkGAEgASgLMhEuZ2NzLnYxLlZlaGljbGVJZBIoCgZyZXN1bHQYAiABKA4yGC5nY3MudjEuTWF2TWlzc2lvblJlc3VsdBIsCgxtaXNzaW9uX3R5cGUYAyABKA4yFi5nY3MudjEuTWF2TWlzc2lvblR5cGUiaQoWRG93bmxvYWRNaXNzaW9uUmVxdWVzdBIhCgZ0YXJnZXQYASABKAsyES5nY3MudjEuVmVoaWNsZUlkEiwKDG1pc3Npb25fdHlwZRgCIAEoDjIWLmdjcy52MS5NYXZNaXNzaW9uVHlwZSJmChNDbGVhck1pc3Npb25SZXF1ZXN0EiEKBnRhcmdldBgBIAEoCzIRLmdjcy52MS5WZWhpY2xlSWQSLAoMbWlzc2lvbl90eXBlGAIgASgOMhYuZ2NzLnYxLk1hdk1pc3Npb25UeXBlIkcKFVNldEN1cnJlbnRJdGVtUmVxdWVzdBIhCgZ0YXJnZXQYASABKAsyES5nY3MudjEuVmVoaWNsZUlkEgsKA3NlcRgCIAEoDSKLAQoUVXBsb2FkTWlzc2lvblJlcXVlc3QSIQoGdGFyZ2V0GAEgASgLMhEuZ2NzLnYxLlZlaGljbGVJZBIsCgxtaXNzaW9uX3R5cGUYAiABKA4yFi5nY3MudjEuTWF2TWlzc2lvblR5cGUSIgoFaXRlbXMYAyADKAsyEy5nY3MudjEuTWlzc2lvbkl0ZW1CJFoieWFsYi5nY3MvaW50ZXJuYWwvZ2VuL2djcy92MTtnY3N2MWIGcHJvdG8z", [file_gcs_v1_types, file_gcs_v1_vehicle]);
+  fileDesc("ChVnY3MvdjEvbWlzc2lvbnMucHJvdG8SBmdjcy52MSKYAgoLTWlzc2lvbkl0ZW0SCwoDc2VxGAIgASgNEh8KBWZyYW1lGAMgASgOMhAuZ2NzLnYxLk1hdkZyYW1lEh8KB2NvbW1hbmQYBCABKA4yDi5nY3MudjEuTWF2Q21kEg8KB2N1cnJlbnQYBSABKAgSFAoMYXV0b2NvbnRpbnVlGAYgASgIEg4KBnBhcmFtMRgHIAEoAhIOCgZwYXJhbTIYCCABKAISDgoGcGFyYW0zGAkgASgCEg4KBnBhcmFtNBgKIAEoAhIJCgF4GAsgASgBEgkKAXkYDCABKAESCQoBehgNIAEoAhIsCgxtaXNzaW9uX3R5cGUYDiABKA4yFi5nY3MudjEuTWF2TWlzc2lvblR5cGVKBAgBEAIiSwoMTWlzc2lvbkNvdW50Eg0KBWNvdW50GAEgASgNEiwKDG1pc3Npb25fdHlwZRgCIAEoDjIWLmdjcy52MS5NYXZNaXNzaW9uVHlwZSJqCgpNaXNzaW9uQWNrEigKBnJlc3VsdBgCIAEoDjIYLmdjcy52MS5NYXZNaXNzaW9uUmVzdWx0EiwKDG1pc3Npb25fdHlwZRgDIAEoDjIWLmdjcy52MS5NYXZNaXNzaW9uVHlwZUoECAEQAkIkWiJ5YWxiLmdjcy9pbnRlcm5hbC9nZW4vZ2NzL3YxO2djc3YxYgZwcm90bzM", [file_gcs_v1_types]);
 
 /**
- * MissionItem mirrors MISSION_ITEM_INT (#73).
- * lat/lon are normalised from degE7 (int32) to degrees (double).
- * For local frames, x/y are in metres and carried as double for consistency.
- * z is always in metres regardless of frame.
- * param1–4 semantics depend on command; see MAVLink common.xml MAV_CMD entries.
+ * Inbound MAVLink mission transaction payloads currently decoded by the codec.
  *
  * @generated from message gcs.v1.MissionItem
  */
 export type MissionItem = Message<"gcs.v1.MissionItem"> & {
   /**
-   * @generated from field: gcs.v1.VehicleId vehicle_id = 1;
-   */
-  vehicleId?: VehicleId | undefined;
-
-  /**
-   * 0-based waypoint sequence number
-   *
    * @generated from field: uint32 seq = 2;
    */
   seq: number;
@@ -49,15 +36,11 @@ export type MissionItem = Message<"gcs.v1.MissionItem"> & {
   command: MavCmd;
 
   /**
-   * true if this is the active waypoint
-   *
    * @generated from field: bool current = 5;
    */
   current: boolean;
 
   /**
-   * proceed to next item on completion
-   *
    * @generated from field: bool autocontinue = 6;
    */
   autocontinue: boolean;
@@ -78,28 +61,26 @@ export type MissionItem = Message<"gcs.v1.MissionItem"> & {
   param3: number;
 
   /**
-   * yaw, radians; NaN = not used
-   *
    * @generated from field: float param4 = 10;
    */
   param4: number;
 
   /**
-   * latitude (degrees) or local x (metres)
+   * latitude in degrees, or local x in metres
    *
    * @generated from field: double x = 11;
    */
   x: number;
 
   /**
-   * longitude (degrees) or local y (metres)
+   * longitude in degrees, or local y in metres
    *
    * @generated from field: double y = 12;
    */
   y: number;
 
   /**
-   * altitude or local z, metres
+   * altitude or local z in metres
    *
    * @generated from field: float z = 13;
    */
@@ -119,17 +100,10 @@ export const MissionItemSchema: GenMessage<MissionItem> = /*@__PURE__*/
   messageDesc(file_gcs_v1_missions, 0);
 
 /**
- * MissionCount mirrors MISSION_COUNT (#44).
- * Sent by the vehicle to open a download, and by the GCS to open an upload.
- * Carried as a ProtocolEvent payload on the inbound path; identity lives on
- * the ProtocolEvent envelope.
- *
  * @generated from message gcs.v1.MissionCount
  */
 export type MissionCount = Message<"gcs.v1.MissionCount"> & {
   /**
-   * number of items in the mission
-   *
    * @generated from field: uint32 count = 1;
    */
   count: number;
@@ -148,17 +122,9 @@ export const MissionCountSchema: GenMessage<MissionCount> = /*@__PURE__*/
   messageDesc(file_gcs_v1_missions, 1);
 
 /**
- * MissionAck mirrors MISSION_ACK (#47).
- * Returned by the vehicle at the end of an upload, download, or clear operation.
- *
  * @generated from message gcs.v1.MissionAck
  */
 export type MissionAck = Message<"gcs.v1.MissionAck"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId vehicle_id = 1;
-   */
-  vehicleId?: VehicleId | undefined;
-
   /**
    * @generated from field: gcs.v1.MavMissionResult result = 2;
    */
@@ -176,115 +142,4 @@ export type MissionAck = Message<"gcs.v1.MissionAck"> & {
  */
 export const MissionAckSchema: GenMessage<MissionAck> = /*@__PURE__*/
   messageDesc(file_gcs_v1_missions, 2);
-
-/**
- * DownloadMissionRequest triggers MISSION_REQUEST_LIST followed by
- * sequential MISSION_REQUEST_INT for each item.
- *
- * @generated from message gcs.v1.DownloadMissionRequest
- */
-export type DownloadMissionRequest = Message<"gcs.v1.DownloadMissionRequest"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId target = 1;
-   */
-  target?: VehicleId | undefined;
-
-  /**
-   * @generated from field: gcs.v1.MavMissionType mission_type = 2;
-   */
-  missionType: MavMissionType;
-};
-
-/**
- * Describes the message gcs.v1.DownloadMissionRequest.
- * Use `create(DownloadMissionRequestSchema)` to create a new message.
- */
-export const DownloadMissionRequestSchema: GenMessage<DownloadMissionRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_missions, 3);
-
-/**
- * ClearMissionRequest sends MISSION_CLEAR_ALL to the vehicle.
- *
- * @generated from message gcs.v1.ClearMissionRequest
- */
-export type ClearMissionRequest = Message<"gcs.v1.ClearMissionRequest"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId target = 1;
-   */
-  target?: VehicleId | undefined;
-
-  /**
-   * @generated from field: gcs.v1.MavMissionType mission_type = 2;
-   */
-  missionType: MavMissionType;
-};
-
-/**
- * Describes the message gcs.v1.ClearMissionRequest.
- * Use `create(ClearMissionRequestSchema)` to create a new message.
- */
-export const ClearMissionRequestSchema: GenMessage<ClearMissionRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_missions, 4);
-
-/**
- * SetCurrentItemRequest sends MISSION_SET_CURRENT to activate a waypoint.
- *
- * @generated from message gcs.v1.SetCurrentItemRequest
- */
-export type SetCurrentItemRequest = Message<"gcs.v1.SetCurrentItemRequest"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId target = 1;
-   */
-  target?: VehicleId | undefined;
-
-  /**
-   * @generated from field: uint32 seq = 2;
-   */
-  seq: number;
-};
-
-/**
- * Describes the message gcs.v1.SetCurrentItemRequest.
- * Use `create(SetCurrentItemRequestSchema)` to create a new message.
- */
-export const SetCurrentItemRequestSchema: GenMessage<SetCurrentItemRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_missions, 5);
-
-/**
- * UploadMissionRequest carries a complete mission for upload in one unary call.
- *
- * This is deliberately not a client-streaming RPC. @connectrpc/connect-web
- * supports unary and server-streaming only; client and bidirectional streaming
- * are unavailable to browser clients, so a streaming upload would be uncallable
- * from the frontend. Missions are bounded (hundreds of items at most), so a
- * single request costs nothing.
- *
- * The backend performs the MAVLink handshake (MISSION_COUNT → MISSION_REQUEST_INT
- * × N → MISSION_ITEM_INT × N → MISSION_ACK) and returns the vehicle's final ack.
- *
- * @generated from message gcs.v1.UploadMissionRequest
- */
-export type UploadMissionRequest = Message<"gcs.v1.UploadMissionRequest"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId target = 1;
-   */
-  target?: VehicleId | undefined;
-
-  /**
-   * @generated from field: gcs.v1.MavMissionType mission_type = 2;
-   */
-  missionType: MavMissionType;
-
-  /**
-   * @generated from field: repeated gcs.v1.MissionItem items = 3;
-   */
-  items: MissionItem[];
-};
-
-/**
- * Describes the message gcs.v1.UploadMissionRequest.
- * Use `create(UploadMissionRequestSchema)` to create a new message.
- */
-export const UploadMissionRequestSchema: GenMessage<UploadMissionRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_missions, 6);
 

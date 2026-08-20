@@ -21,21 +21,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ProtocolEvent carries MAVLink transaction responses — messages that answer a
-// request the GCS made, rather than free-running telemetry.
-//
-// These are separated from TelemetryEvent because their consumer is different:
-// telemetry folds into per-vehicle state and fans out to subscribers, while a
-// transaction response must correlate against an in-flight request registry
-// (keyed by vehicle + command/param/sequence) and complete a pending RPC. A
-// single codec output type that conflated the two would force every consumer to
-// filter, and would leave the mission and parameter protocols with nowhere to
-// land.
-//
-// The codec emits exactly one of TelemetryEvent or ProtocolEvent per decoded
-// frame. Some payloads here are also returned directly from Connect RPCs
-// (ParameterValue, MissionItem, MissionAck) and keep their own vehicle_id for
-// that use; on this envelope the vehicle_id field below is authoritative.
+// ProtocolEvent carries inbound responses that require transaction
+// correlation rather than aggregation into vehicle telemetry state.
 type ProtocolEvent struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	VehicleId *VehicleId             `protobuf:"bytes,1,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"`
@@ -145,23 +132,23 @@ type isProtocolEvent_Payload interface {
 }
 
 type ProtocolEvent_ParamValue struct {
-	ParamValue *ParameterValue `protobuf:"bytes,2,opt,name=param_value,json=paramValue,proto3,oneof"` // PARAM_VALUE (#22)
+	ParamValue *ParameterValue `protobuf:"bytes,2,opt,name=param_value,json=paramValue,proto3,oneof"`
 }
 
 type ProtocolEvent_MissionCount struct {
-	MissionCount *MissionCount `protobuf:"bytes,3,opt,name=mission_count,json=missionCount,proto3,oneof"` // MISSION_COUNT (#44)
+	MissionCount *MissionCount `protobuf:"bytes,3,opt,name=mission_count,json=missionCount,proto3,oneof"`
 }
 
 type ProtocolEvent_MissionItem struct {
-	MissionItem *MissionItem `protobuf:"bytes,4,opt,name=mission_item,json=missionItem,proto3,oneof"` // MISSION_ITEM_INT (#73)
+	MissionItem *MissionItem `protobuf:"bytes,4,opt,name=mission_item,json=missionItem,proto3,oneof"`
 }
 
 type ProtocolEvent_MissionAck struct {
-	MissionAck *MissionAck `protobuf:"bytes,5,opt,name=mission_ack,json=missionAck,proto3,oneof"` // MISSION_ACK (#47)
+	MissionAck *MissionAck `protobuf:"bytes,5,opt,name=mission_ack,json=missionAck,proto3,oneof"`
 }
 
 type ProtocolEvent_CommandAck struct {
-	CommandAck *CommandAck `protobuf:"bytes,6,opt,name=command_ack,json=commandAck,proto3,oneof"` // COMMAND_ACK (#77)
+	CommandAck *CommandAck `protobuf:"bytes,6,opt,name=command_ack,json=commandAck,proto3,oneof"`
 }
 
 func (*ProtocolEvent_ParamValue) isProtocolEvent_Payload() {}

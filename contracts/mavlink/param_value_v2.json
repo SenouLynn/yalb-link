@@ -9,7 +9,7 @@
   },
   "message_id": 22,
   "message_name": "PARAM_VALUE",
-  "note": "the Tier 7 exit gate reads exactly this parameter off a live ArduCopter",
+  "note": "representative integer parameter response",
   "seq": 42,
   "sys_id": 1
 }

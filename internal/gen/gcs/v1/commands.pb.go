@@ -9,7 +9,6 @@ package gcsv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
-	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -22,169 +21,20 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// CommandLong is a GCS-originated COMMAND_LONG (#76) request.
-// param1–param7 semantics are command-specific; see MAVLink common.xml.
-// confirmation increments on each retry; start at 0.
-//
-// SAFETY — this message is the open command surface. Removing
-// SetArmedRequest.force does not close force-arm: any caller able to reach
-// SendCommand can send MAV_CMD_COMPONENT_ARM_DISARM (400) with param2 = 21196
-// directly, and raw_command admits command IDs outside the MavCmd enum. The
-// field removal states intent; it is not the control.
-//
-// The control is server-side validation in CommandService.SendCommand, which
-// MUST:
-//  1. reject command 400 with param2 == 21196 (force-arm magic) outright;
-//  2. reject any command not on an explicit allowlist, including via
-//     raw_command — unknown commands are denied, not passed through;
-//  3. apply the per-command role requirement before dispatch.
-//
-// Implemented with the command registry in Tier 8. Until then no write path
-// is exposed.
-type CommandLong struct {
-	state        protoimpl.MessageState `protogen:"open.v1"`
-	Target       *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	Command      MavCmd                 `protobuf:"varint,2,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
-	Confirmation uint32                 `protobuf:"varint,3,opt,name=confirmation,proto3" json:"confirmation,omitempty"` // retry count; 0 on first send
-	Param1       float32                `protobuf:"fixed32,4,opt,name=param1,proto3" json:"param1,omitempty"`
-	Param2       float32                `protobuf:"fixed32,5,opt,name=param2,proto3" json:"param2,omitempty"`
-	Param3       float32                `protobuf:"fixed32,6,opt,name=param3,proto3" json:"param3,omitempty"`
-	Param4       float32                `protobuf:"fixed32,7,opt,name=param4,proto3" json:"param4,omitempty"`
-	Param5       float32                `protobuf:"fixed32,8,opt,name=param5,proto3" json:"param5,omitempty"`
-	Param6       float32                `protobuf:"fixed32,9,opt,name=param6,proto3" json:"param6,omitempty"`
-	Param7       float32                `protobuf:"fixed32,10,opt,name=param7,proto3" json:"param7,omitempty"`
-	// Populated when command is not in the MavCmd enum.
-	// Subject to the same allowlist as `command` — the backend does NOT pass
-	// unrecognised command IDs through to the vehicle.
-	RawCommand    uint32 `protobuf:"varint,11,opt,name=raw_command,json=rawCommand,proto3" json:"raw_command,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CommandLong) Reset() {
-	*x = CommandLong{}
-	mi := &file_gcs_v1_commands_proto_msgTypes[0]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CommandLong) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CommandLong) ProtoMessage() {}
-
-func (x *CommandLong) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_commands_proto_msgTypes[0]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CommandLong.ProtoReflect.Descriptor instead.
-func (*CommandLong) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *CommandLong) GetTarget() *VehicleId {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *CommandLong) GetCommand() MavCmd {
-	if x != nil {
-		return x.Command
-	}
-	return MavCmd_MAV_CMD_UNSPECIFIED
-}
-
-func (x *CommandLong) GetConfirmation() uint32 {
-	if x != nil {
-		return x.Confirmation
-	}
-	return 0
-}
-
-func (x *CommandLong) GetParam1() float32 {
-	if x != nil {
-		return x.Param1
-	}
-	return 0
-}
-
-func (x *CommandLong) GetParam2() float32 {
-	if x != nil {
-		return x.Param2
-	}
-	return 0
-}
-
-func (x *CommandLong) GetParam3() float32 {
-	if x != nil {
-		return x.Param3
-	}
-	return 0
-}
-
-func (x *CommandLong) GetParam4() float32 {
-	if x != nil {
-		return x.Param4
-	}
-	return 0
-}
-
-func (x *CommandLong) GetParam5() float32 {
-	if x != nil {
-		return x.Param5
-	}
-	return 0
-}
-
-func (x *CommandLong) GetParam6() float32 {
-	if x != nil {
-		return x.Param6
-	}
-	return 0
-}
-
-func (x *CommandLong) GetParam7() float32 {
-	if x != nil {
-		return x.Param7
-	}
-	return 0
-}
-
-func (x *CommandLong) GetRawCommand() uint32 {
-	if x != nil {
-		return x.RawCommand
-	}
-	return 0
-}
-
-// CommandAck mirrors COMMAND_ACK (#77) received from the vehicle.
-// progress is only meaningful when result == MAV_RESULT_IN_PROGRESS (0–100).
+// CommandAck mirrors COMMAND_ACK (#77) received from a vehicle.
 type CommandAck struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Command       MavCmd                 `protobuf:"varint,1,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
 	Result        MavResult              `protobuf:"varint,2,opt,name=result,proto3,enum=gcs.v1.MavResult" json:"result,omitempty"`
-	Progress      uint32                 `protobuf:"varint,3,opt,name=progress,proto3" json:"progress,omitempty"`                             // 0–100 for in-progress commands; 255 = unknown
-	ResultParam2  int32                  `protobuf:"varint,4,opt,name=result_param2,json=resultParam2,proto3" json:"result_param2,omitempty"` // command-specific additional result info
-	Source        *VehicleId             `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
-	ReceivedAt    *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=received_at,json=receivedAt,proto3" json:"received_at,omitempty"`
+	Progress      uint32                 `protobuf:"varint,3,opt,name=progress,proto3" json:"progress,omitempty"`                             // 0-100 while in progress; 255 = unknown
+	ResultParam2  int32                  `protobuf:"varint,4,opt,name=result_param2,json=resultParam2,proto3" json:"result_param2,omitempty"` // command-specific detail
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CommandAck) Reset() {
 	*x = CommandAck{}
-	mi := &file_gcs_v1_commands_proto_msgTypes[1]
+	mi := &file_gcs_v1_commands_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -196,7 +46,7 @@ func (x *CommandAck) String() string {
 func (*CommandAck) ProtoMessage() {}
 
 func (x *CommandAck) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_commands_proto_msgTypes[1]
+	mi := &file_gcs_v1_commands_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -209,7 +59,7 @@ func (x *CommandAck) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandAck.ProtoReflect.Descriptor instead.
 func (*CommandAck) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{1}
+	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *CommandAck) GetCommand() MavCmd {
@@ -240,619 +90,17 @@ func (x *CommandAck) GetResultParam2() int32 {
 	return 0
 }
 
-func (x *CommandAck) GetSource() *VehicleId {
-	if x != nil {
-		return x.Source
-	}
-	return nil
-}
-
-func (x *CommandAck) GetReceivedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ReceivedAt
-	}
-	return nil
-}
-
-// CommandResult wraps a CommandAck with GCS-level tracking metadata.
-// Returned by CommandService.SendCommand after the ack cycle completes.
-type CommandResult struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Ack           *CommandAck            `protobuf:"bytes,1,opt,name=ack,proto3" json:"ack,omitempty"`
-	Attempts      uint32                 `protobuf:"varint,2,opt,name=attempts,proto3" json:"attempts,omitempty"`                 // how many COMMAND_LONG sends before ack received
-	TimedOut      bool                   `protobuf:"varint,3,opt,name=timed_out,json=timedOut,proto3" json:"timed_out,omitempty"` // true if no ack arrived within the retry budget
-	SentAt        *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=sent_at,json=sentAt,proto3" json:"sent_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *CommandResult) Reset() {
-	*x = CommandResult{}
-	mi := &file_gcs_v1_commands_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *CommandResult) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*CommandResult) ProtoMessage() {}
-
-func (x *CommandResult) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_commands_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use CommandResult.ProtoReflect.Descriptor instead.
-func (*CommandResult) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *CommandResult) GetAck() *CommandAck {
-	if x != nil {
-		return x.Ack
-	}
-	return nil
-}
-
-func (x *CommandResult) GetAttempts() uint32 {
-	if x != nil {
-		return x.Attempts
-	}
-	return 0
-}
-
-func (x *CommandResult) GetTimedOut() bool {
-	if x != nil {
-		return x.TimedOut
-	}
-	return false
-}
-
-func (x *CommandResult) GetSentAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.SentAt
-	}
-	return nil
-}
-
-// SetArmedRequest arms or disarms the vehicle via MAV_CMD_COMPONENT_ARM_DISARM.
-// Force-arm (param2=21196) is never permitted. The absence of a force field
-// states that intent; enforcement is the SendCommand allowlist described on
-// CommandLong above, which this RPC shares.
-type SetArmedRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	Arm           bool                   `protobuf:"varint,2,opt,name=arm,proto3" json:"arm,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SetArmedRequest) Reset() {
-	*x = SetArmedRequest{}
-	mi := &file_gcs_v1_commands_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SetArmedRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SetArmedRequest) ProtoMessage() {}
-
-func (x *SetArmedRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_commands_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SetArmedRequest.ProtoReflect.Descriptor instead.
-func (*SetArmedRequest) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *SetArmedRequest) GetTarget() *VehicleId {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *SetArmedRequest) GetArm() bool {
-	if x != nil {
-		return x.Arm
-	}
-	return false
-}
-
-// SetModeRequest changes the vehicle flight mode via MAV_CMD_DO_SET_MODE.
-// custom_mode is the firmware-specific mode integer (e.g. ArduCopter GUIDED = 4).
-// base_mode must include MAV_MODE_FLAG_CUSTOM_MODE_ENABLED (128) when setting custom_mode.
-type SetModeRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	BaseMode      uint32                 `protobuf:"varint,2,opt,name=base_mode,json=baseMode,proto3" json:"base_mode,omitempty"`
-	CustomMode    uint32                 `protobuf:"varint,3,opt,name=custom_mode,json=customMode,proto3" json:"custom_mode,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SetModeRequest) Reset() {
-	*x = SetModeRequest{}
-	mi := &file_gcs_v1_commands_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SetModeRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SetModeRequest) ProtoMessage() {}
-
-func (x *SetModeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_commands_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SetModeRequest.ProtoReflect.Descriptor instead.
-func (*SetModeRequest) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *SetModeRequest) GetTarget() *VehicleId {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *SetModeRequest) GetBaseMode() uint32 {
-	if x != nil {
-		return x.BaseMode
-	}
-	return 0
-}
-
-func (x *SetModeRequest) GetCustomMode() uint32 {
-	if x != nil {
-		return x.CustomMode
-	}
-	return 0
-}
-
-// PositionTargetGlobal maps to SET_POSITION_TARGET_GLOBAL_INT (#86).
-// Used in GUIDED mode for continuous position/velocity/acceleration setpoints.
-// This is NOT a COMMAND_LONG — it has no ack cycle and is sent at 4–10 Hz.
-// The autopilot ignores fields absent from the message (type_mask on the wire).
-// Recommended frame: MAV_FRAME_GLOBAL_RELATIVE_ALT_INT for altitude above home.
-type PositionTargetGlobal struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Target          *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	CoordinateFrame MavFrame               `protobuf:"varint,2,opt,name=coordinate_frame,json=coordinateFrame,proto3,enum=gcs.v1.MavFrame" json:"coordinate_frame,omitempty"`
-	// Position setpoint. Leave unset to exclude from control (type_mask bit set).
-	LatDeg *float64 `protobuf:"fixed64,3,opt,name=lat_deg,json=latDeg,proto3,oneof" json:"lat_deg,omitempty"`
-	LonDeg *float64 `protobuf:"fixed64,4,opt,name=lon_deg,json=lonDeg,proto3,oneof" json:"lon_deg,omitempty"`
-	AltM   *float32 `protobuf:"fixed32,5,opt,name=alt_m,json=altM,proto3,oneof" json:"alt_m,omitempty"`
-	// Velocity feedforward, m/s in NED. Leave unset to ignore.
-	VxMS *float32 `protobuf:"fixed32,6,opt,name=vx_m_s,json=vxMS,proto3,oneof" json:"vx_m_s,omitempty"`
-	VyMS *float32 `protobuf:"fixed32,7,opt,name=vy_m_s,json=vyMS,proto3,oneof" json:"vy_m_s,omitempty"`
-	VzMS *float32 `protobuf:"fixed32,8,opt,name=vz_m_s,json=vzMS,proto3,oneof" json:"vz_m_s,omitempty"` // positive = descending
-	// Acceleration (or force if use_force = true) in NED. Leave unset to ignore.
-	Afx      *float32 `protobuf:"fixed32,9,opt,name=afx,proto3,oneof" json:"afx,omitempty"`
-	Afy      *float32 `protobuf:"fixed32,10,opt,name=afy,proto3,oneof" json:"afy,omitempty"`
-	Afz      *float32 `protobuf:"fixed32,11,opt,name=afz,proto3,oneof" json:"afz,omitempty"`
-	UseForce bool     `protobuf:"varint,12,opt,name=use_force,json=useForce,proto3" json:"use_force,omitempty"` // if true, af* fields are forces (N); default: acceleration (m/s²)
-	// Yaw setpoint, radians. Leave unset to ignore.
-	YawRad        *float32 `protobuf:"fixed32,13,opt,name=yaw_rad,json=yawRad,proto3,oneof" json:"yaw_rad,omitempty"`
-	YawRateRadS   *float32 `protobuf:"fixed32,14,opt,name=yaw_rate_rad_s,json=yawRateRadS,proto3,oneof" json:"yaw_rate_rad_s,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PositionTargetGlobal) Reset() {
-	*x = PositionTargetGlobal{}
-	mi := &file_gcs_v1_commands_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PositionTargetGlobal) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PositionTargetGlobal) ProtoMessage() {}
-
-func (x *PositionTargetGlobal) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_commands_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PositionTargetGlobal.ProtoReflect.Descriptor instead.
-func (*PositionTargetGlobal) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *PositionTargetGlobal) GetTarget() *VehicleId {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *PositionTargetGlobal) GetCoordinateFrame() MavFrame {
-	if x != nil {
-		return x.CoordinateFrame
-	}
-	return MavFrame_MAV_FRAME_GLOBAL
-}
-
-func (x *PositionTargetGlobal) GetLatDeg() float64 {
-	if x != nil && x.LatDeg != nil {
-		return *x.LatDeg
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetLonDeg() float64 {
-	if x != nil && x.LonDeg != nil {
-		return *x.LonDeg
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetAltM() float32 {
-	if x != nil && x.AltM != nil {
-		return *x.AltM
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetVxMS() float32 {
-	if x != nil && x.VxMS != nil {
-		return *x.VxMS
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetVyMS() float32 {
-	if x != nil && x.VyMS != nil {
-		return *x.VyMS
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetVzMS() float32 {
-	if x != nil && x.VzMS != nil {
-		return *x.VzMS
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetAfx() float32 {
-	if x != nil && x.Afx != nil {
-		return *x.Afx
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetAfy() float32 {
-	if x != nil && x.Afy != nil {
-		return *x.Afy
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetAfz() float32 {
-	if x != nil && x.Afz != nil {
-		return *x.Afz
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetUseForce() bool {
-	if x != nil {
-		return x.UseForce
-	}
-	return false
-}
-
-func (x *PositionTargetGlobal) GetYawRad() float32 {
-	if x != nil && x.YawRad != nil {
-		return *x.YawRad
-	}
-	return 0
-}
-
-func (x *PositionTargetGlobal) GetYawRateRadS() float32 {
-	if x != nil && x.YawRateRadS != nil {
-		return *x.YawRateRadS
-	}
-	return 0
-}
-
-// PositionTargetLocal maps to SET_POSITION_TARGET_LOCAL_NED (#84).
-// Same semantics as PositionTargetGlobal but in the local NED frame.
-// x = north (m), y = east (m), z = down (m) from EKF origin.
-// Use MAV_FRAME_LOCAL_NED or MAV_FRAME_LOCAL_OFFSET_NED.
-type PositionTargetLocal struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Target          *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	CoordinateFrame MavFrame               `protobuf:"varint,2,opt,name=coordinate_frame,json=coordinateFrame,proto3,enum=gcs.v1.MavFrame" json:"coordinate_frame,omitempty"`
-	XM              *float32               `protobuf:"fixed32,3,opt,name=x_m,json=xM,proto3,oneof" json:"x_m,omitempty"`
-	YM              *float32               `protobuf:"fixed32,4,opt,name=y_m,json=yM,proto3,oneof" json:"y_m,omitempty"`
-	ZM              *float32               `protobuf:"fixed32,5,opt,name=z_m,json=zM,proto3,oneof" json:"z_m,omitempty"` // positive = down
-	VxMS            *float32               `protobuf:"fixed32,6,opt,name=vx_m_s,json=vxMS,proto3,oneof" json:"vx_m_s,omitempty"`
-	VyMS            *float32               `protobuf:"fixed32,7,opt,name=vy_m_s,json=vyMS,proto3,oneof" json:"vy_m_s,omitempty"`
-	VzMS            *float32               `protobuf:"fixed32,8,opt,name=vz_m_s,json=vzMS,proto3,oneof" json:"vz_m_s,omitempty"`
-	Afx             *float32               `protobuf:"fixed32,9,opt,name=afx,proto3,oneof" json:"afx,omitempty"`
-	Afy             *float32               `protobuf:"fixed32,10,opt,name=afy,proto3,oneof" json:"afy,omitempty"`
-	Afz             *float32               `protobuf:"fixed32,11,opt,name=afz,proto3,oneof" json:"afz,omitempty"`
-	UseForce        bool                   `protobuf:"varint,12,opt,name=use_force,json=useForce,proto3" json:"use_force,omitempty"`
-	YawRad          *float32               `protobuf:"fixed32,13,opt,name=yaw_rad,json=yawRad,proto3,oneof" json:"yaw_rad,omitempty"`
-	YawRateRadS     *float32               `protobuf:"fixed32,14,opt,name=yaw_rate_rad_s,json=yawRateRadS,proto3,oneof" json:"yaw_rate_rad_s,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
-}
-
-func (x *PositionTargetLocal) Reset() {
-	*x = PositionTargetLocal{}
-	mi := &file_gcs_v1_commands_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PositionTargetLocal) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PositionTargetLocal) ProtoMessage() {}
-
-func (x *PositionTargetLocal) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_commands_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PositionTargetLocal.ProtoReflect.Descriptor instead.
-func (*PositionTargetLocal) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *PositionTargetLocal) GetTarget() *VehicleId {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *PositionTargetLocal) GetCoordinateFrame() MavFrame {
-	if x != nil {
-		return x.CoordinateFrame
-	}
-	return MavFrame_MAV_FRAME_GLOBAL
-}
-
-func (x *PositionTargetLocal) GetXM() float32 {
-	if x != nil && x.XM != nil {
-		return *x.XM
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetYM() float32 {
-	if x != nil && x.YM != nil {
-		return *x.YM
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetZM() float32 {
-	if x != nil && x.ZM != nil {
-		return *x.ZM
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetVxMS() float32 {
-	if x != nil && x.VxMS != nil {
-		return *x.VxMS
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetVyMS() float32 {
-	if x != nil && x.VyMS != nil {
-		return *x.VyMS
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetVzMS() float32 {
-	if x != nil && x.VzMS != nil {
-		return *x.VzMS
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetAfx() float32 {
-	if x != nil && x.Afx != nil {
-		return *x.Afx
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetAfy() float32 {
-	if x != nil && x.Afy != nil {
-		return *x.Afy
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetAfz() float32 {
-	if x != nil && x.Afz != nil {
-		return *x.Afz
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetUseForce() bool {
-	if x != nil {
-		return x.UseForce
-	}
-	return false
-}
-
-func (x *PositionTargetLocal) GetYawRad() float32 {
-	if x != nil && x.YawRad != nil {
-		return *x.YawRad
-	}
-	return 0
-}
-
-func (x *PositionTargetLocal) GetYawRateRadS() float32 {
-	if x != nil && x.YawRateRadS != nil {
-		return *x.YawRateRadS
-	}
-	return 0
-}
-
 var File_gcs_v1_commands_proto protoreflect.FileDescriptor
 
 const file_gcs_v1_commands_proto_rawDesc = "" +
 	"\n" +
-	"\x15gcs/v1/commands.proto\x12\x06gcs.v1\x1a\x12gcs/v1/types.proto\x1a\x14gcs/v1/vehicle.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xcf\x02\n" +
-	"\vCommandLong\x12)\n" +
-	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x12(\n" +
-	"\acommand\x18\x02 \x01(\x0e2\x0e.gcs.v1.MavCmdR\acommand\x12\"\n" +
-	"\fconfirmation\x18\x03 \x01(\rR\fconfirmation\x12\x16\n" +
-	"\x06param1\x18\x04 \x01(\x02R\x06param1\x12\x16\n" +
-	"\x06param2\x18\x05 \x01(\x02R\x06param2\x12\x16\n" +
-	"\x06param3\x18\x06 \x01(\x02R\x06param3\x12\x16\n" +
-	"\x06param4\x18\a \x01(\x02R\x06param4\x12\x16\n" +
-	"\x06param5\x18\b \x01(\x02R\x06param5\x12\x16\n" +
-	"\x06param6\x18\t \x01(\x02R\x06param6\x12\x16\n" +
-	"\x06param7\x18\n" +
-	" \x01(\x02R\x06param7\x12\x1f\n" +
-	"\vraw_command\x18\v \x01(\rR\n" +
-	"rawCommand\"\x8a\x02\n" +
+	"\x15gcs/v1/commands.proto\x12\x06gcs.v1\x1a\x12gcs/v1/types.proto\"\xa2\x01\n" +
 	"\n" +
 	"CommandAck\x12(\n" +
 	"\acommand\x18\x01 \x01(\x0e2\x0e.gcs.v1.MavCmdR\acommand\x12)\n" +
 	"\x06result\x18\x02 \x01(\x0e2\x11.gcs.v1.MavResultR\x06result\x12\x1a\n" +
 	"\bprogress\x18\x03 \x01(\rR\bprogress\x12#\n" +
-	"\rresult_param2\x18\x04 \x01(\x05R\fresultParam2\x12)\n" +
-	"\x06source\x18\x05 \x01(\v2\x11.gcs.v1.VehicleIdR\x06source\x12;\n" +
-	"\vreceived_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"receivedAt\"\xa3\x01\n" +
-	"\rCommandResult\x12$\n" +
-	"\x03ack\x18\x01 \x01(\v2\x12.gcs.v1.CommandAckR\x03ack\x12\x1a\n" +
-	"\battempts\x18\x02 \x01(\rR\battempts\x12\x1b\n" +
-	"\ttimed_out\x18\x03 \x01(\bR\btimedOut\x123\n" +
-	"\asent_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x06sentAt\"N\n" +
-	"\x0fSetArmedRequest\x12)\n" +
-	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x12\x10\n" +
-	"\x03arm\x18\x02 \x01(\bR\x03arm\"y\n" +
-	"\x0eSetModeRequest\x12)\n" +
-	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x12\x1b\n" +
-	"\tbase_mode\x18\x02 \x01(\rR\bbaseMode\x12\x1f\n" +
-	"\vcustom_mode\x18\x03 \x01(\rR\n" +
-	"customMode\"\xc9\x04\n" +
-	"\x14PositionTargetGlobal\x12)\n" +
-	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x12;\n" +
-	"\x10coordinate_frame\x18\x02 \x01(\x0e2\x10.gcs.v1.MavFrameR\x0fcoordinateFrame\x12\x1c\n" +
-	"\alat_deg\x18\x03 \x01(\x01H\x00R\x06latDeg\x88\x01\x01\x12\x1c\n" +
-	"\alon_deg\x18\x04 \x01(\x01H\x01R\x06lonDeg\x88\x01\x01\x12\x18\n" +
-	"\x05alt_m\x18\x05 \x01(\x02H\x02R\x04altM\x88\x01\x01\x12\x19\n" +
-	"\x06vx_m_s\x18\x06 \x01(\x02H\x03R\x04vxMS\x88\x01\x01\x12\x19\n" +
-	"\x06vy_m_s\x18\a \x01(\x02H\x04R\x04vyMS\x88\x01\x01\x12\x19\n" +
-	"\x06vz_m_s\x18\b \x01(\x02H\x05R\x04vzMS\x88\x01\x01\x12\x15\n" +
-	"\x03afx\x18\t \x01(\x02H\x06R\x03afx\x88\x01\x01\x12\x15\n" +
-	"\x03afy\x18\n" +
-	" \x01(\x02H\aR\x03afy\x88\x01\x01\x12\x15\n" +
-	"\x03afz\x18\v \x01(\x02H\bR\x03afz\x88\x01\x01\x12\x1b\n" +
-	"\tuse_force\x18\f \x01(\bR\buseForce\x12\x1c\n" +
-	"\ayaw_rad\x18\r \x01(\x02H\tR\x06yawRad\x88\x01\x01\x12(\n" +
-	"\x0eyaw_rate_rad_s\x18\x0e \x01(\x02H\n" +
-	"R\vyawRateRadS\x88\x01\x01B\n" +
-	"\n" +
-	"\b_lat_degB\n" +
-	"\n" +
-	"\b_lon_degB\b\n" +
-	"\x06_alt_mB\t\n" +
-	"\a_vx_m_sB\t\n" +
-	"\a_vy_m_sB\t\n" +
-	"\a_vz_m_sB\x06\n" +
-	"\x04_afxB\x06\n" +
-	"\x04_afyB\x06\n" +
-	"\x04_afzB\n" +
-	"\n" +
-	"\b_yaw_radB\x11\n" +
-	"\x0f_yaw_rate_rad_s\"\xaa\x04\n" +
-	"\x13PositionTargetLocal\x12)\n" +
-	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x12;\n" +
-	"\x10coordinate_frame\x18\x02 \x01(\x0e2\x10.gcs.v1.MavFrameR\x0fcoordinateFrame\x12\x14\n" +
-	"\x03x_m\x18\x03 \x01(\x02H\x00R\x02xM\x88\x01\x01\x12\x14\n" +
-	"\x03y_m\x18\x04 \x01(\x02H\x01R\x02yM\x88\x01\x01\x12\x14\n" +
-	"\x03z_m\x18\x05 \x01(\x02H\x02R\x02zM\x88\x01\x01\x12\x19\n" +
-	"\x06vx_m_s\x18\x06 \x01(\x02H\x03R\x04vxMS\x88\x01\x01\x12\x19\n" +
-	"\x06vy_m_s\x18\a \x01(\x02H\x04R\x04vyMS\x88\x01\x01\x12\x19\n" +
-	"\x06vz_m_s\x18\b \x01(\x02H\x05R\x04vzMS\x88\x01\x01\x12\x15\n" +
-	"\x03afx\x18\t \x01(\x02H\x06R\x03afx\x88\x01\x01\x12\x15\n" +
-	"\x03afy\x18\n" +
-	" \x01(\x02H\aR\x03afy\x88\x01\x01\x12\x15\n" +
-	"\x03afz\x18\v \x01(\x02H\bR\x03afz\x88\x01\x01\x12\x1b\n" +
-	"\tuse_force\x18\f \x01(\bR\buseForce\x12\x1c\n" +
-	"\ayaw_rad\x18\r \x01(\x02H\tR\x06yawRad\x88\x01\x01\x12(\n" +
-	"\x0eyaw_rate_rad_s\x18\x0e \x01(\x02H\n" +
-	"R\vyawRateRadS\x88\x01\x01B\x06\n" +
-	"\x04_x_mB\x06\n" +
-	"\x04_y_mB\x06\n" +
-	"\x04_z_mB\t\n" +
-	"\a_vx_m_sB\t\n" +
-	"\a_vy_m_sB\t\n" +
-	"\a_vz_m_sB\x06\n" +
-	"\x04_afxB\x06\n" +
-	"\x04_afyB\x06\n" +
-	"\x04_afzB\n" +
-	"\n" +
-	"\b_yaw_radB\x11\n" +
-	"\x0f_yaw_rate_rad_sB$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
+	"\rresult_param2\x18\x04 \x01(\x05R\fresultParam2B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
 
 var (
 	file_gcs_v1_commands_proto_rawDescOnce sync.Once
@@ -866,41 +114,20 @@ func file_gcs_v1_commands_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_commands_proto_rawDescData
 }
 
-var file_gcs_v1_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_gcs_v1_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
 var file_gcs_v1_commands_proto_goTypes = []any{
-	(*CommandLong)(nil),           // 0: gcs.v1.CommandLong
-	(*CommandAck)(nil),            // 1: gcs.v1.CommandAck
-	(*CommandResult)(nil),         // 2: gcs.v1.CommandResult
-	(*SetArmedRequest)(nil),       // 3: gcs.v1.SetArmedRequest
-	(*SetModeRequest)(nil),        // 4: gcs.v1.SetModeRequest
-	(*PositionTargetGlobal)(nil),  // 5: gcs.v1.PositionTargetGlobal
-	(*PositionTargetLocal)(nil),   // 6: gcs.v1.PositionTargetLocal
-	(*VehicleId)(nil),             // 7: gcs.v1.VehicleId
-	(MavCmd)(0),                   // 8: gcs.v1.MavCmd
-	(MavResult)(0),                // 9: gcs.v1.MavResult
-	(*timestamppb.Timestamp)(nil), // 10: google.protobuf.Timestamp
-	(MavFrame)(0),                 // 11: gcs.v1.MavFrame
+	(*CommandAck)(nil), // 0: gcs.v1.CommandAck
+	(MavCmd)(0),        // 1: gcs.v1.MavCmd
+	(MavResult)(0),     // 2: gcs.v1.MavResult
 }
 var file_gcs_v1_commands_proto_depIdxs = []int32{
-	7,  // 0: gcs.v1.CommandLong.target:type_name -> gcs.v1.VehicleId
-	8,  // 1: gcs.v1.CommandLong.command:type_name -> gcs.v1.MavCmd
-	8,  // 2: gcs.v1.CommandAck.command:type_name -> gcs.v1.MavCmd
-	9,  // 3: gcs.v1.CommandAck.result:type_name -> gcs.v1.MavResult
-	7,  // 4: gcs.v1.CommandAck.source:type_name -> gcs.v1.VehicleId
-	10, // 5: gcs.v1.CommandAck.received_at:type_name -> google.protobuf.Timestamp
-	1,  // 6: gcs.v1.CommandResult.ack:type_name -> gcs.v1.CommandAck
-	10, // 7: gcs.v1.CommandResult.sent_at:type_name -> google.protobuf.Timestamp
-	7,  // 8: gcs.v1.SetArmedRequest.target:type_name -> gcs.v1.VehicleId
-	7,  // 9: gcs.v1.SetModeRequest.target:type_name -> gcs.v1.VehicleId
-	7,  // 10: gcs.v1.PositionTargetGlobal.target:type_name -> gcs.v1.VehicleId
-	11, // 11: gcs.v1.PositionTargetGlobal.coordinate_frame:type_name -> gcs.v1.MavFrame
-	7,  // 12: gcs.v1.PositionTargetLocal.target:type_name -> gcs.v1.VehicleId
-	11, // 13: gcs.v1.PositionTargetLocal.coordinate_frame:type_name -> gcs.v1.MavFrame
-	14, // [14:14] is the sub-list for method output_type
-	14, // [14:14] is the sub-list for method input_type
-	14, // [14:14] is the sub-list for extension type_name
-	14, // [14:14] is the sub-list for extension extendee
-	0,  // [0:14] is the sub-list for field type_name
+	1, // 0: gcs.v1.CommandAck.command:type_name -> gcs.v1.MavCmd
+	2, // 1: gcs.v1.CommandAck.result:type_name -> gcs.v1.MavResult
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_gcs_v1_commands_proto_init() }
@@ -909,16 +136,13 @@ func file_gcs_v1_commands_proto_init() {
 		return
 	}
 	file_gcs_v1_types_proto_init()
-	file_gcs_v1_vehicle_proto_init()
-	file_gcs_v1_commands_proto_msgTypes[5].OneofWrappers = []any{}
-	file_gcs_v1_commands_proto_msgTypes[6].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_commands_proto_rawDesc), len(file_gcs_v1_commands_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   1,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

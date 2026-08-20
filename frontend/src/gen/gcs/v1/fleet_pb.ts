@@ -4,11 +4,7 @@
 
 import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { LinkSecurityConfig } from "./security_pb";
-import { file_gcs_v1_security } from "./security_pb";
-import type { LinkState } from "./types_pb";
-import { file_gcs_v1_types } from "./types_pb";
-import type { HeartbeatState, VehicleId, VehicleSnapshot } from "./vehicle_pb";
+import type { HeartbeatState, VehicleId } from "./vehicle_pb";
 import { file_gcs_v1_vehicle } from "./vehicle_pb";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
@@ -18,11 +14,9 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file gcs/v1/fleet.proto.
  */
 export const file_gcs_v1_fleet: GenFile = /*@__PURE__*/
-  fileDesc("ChJnY3MvdjEvZmxlZXQucHJvdG8SBmdjcy52MSK1AQoKRmxlZXRFdmVudBIkCgR0eXBlGAEgASgOMhYuZ2NzLnYxLkZsZWV0RXZlbnRUeXBlEiUKCnZlaGljbGVfaWQYAiABKAsyES5nY3MudjEuVmVoaWNsZUlkEikKCWhlYXJ0YmVhdBgDIAEoCzIWLmdjcy52MS5IZWFydGJlYXRTdGF0ZRIvCgtvY2N1cnJlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAi+AEKC0xpbmtRdWFsaXR5EiUKCnZlaGljbGVfaWQYASABKAsyES5nY3MudjEuVmVoaWNsZUlkEg8KB2xpbmtfaWQYAiABKAkSDAoEcnNzaRgDIAEoDRIPCgdyZW1yc3NpGAQgASgNEhEKCXR4YnVmX3BjdBgFIAEoDRINCgVub2lzZRgGIAEoDRIQCghyZW1ub2lzZRgHIAEoDRIYChByeF9kcm9wX3JhdGVfcGN0GAggASgCEhMKC2Vycm9yc19jb21tGAkgASgNEi8KC29ic2VydmVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKhAQoKTGlua1N0YXR1cxIPCgdsaW5rX2lkGAEgASgJEiAKBXN0YXRlGAIgASgOMhEuZ2NzLnYxLkxpbmtTdGF0ZRILCgN1cmkYAyABKAkSIwoIdmVoaWNsZXMYBCADKAsyES5nY3MudjEuVmVoaWNsZUlkEi4KCnVwZGF0ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIk8KEkNvbm5lY3RMaW5rUmVxdWVzdBILCgN1cmkYASABKAkSLAoIc2VjdXJpdHkYAiABKAsyGi5nY3MudjEuTGlua1NlY3VyaXR5Q29uZmlnIjUKE0Nvbm5lY3RMaW5rUmVzcG9uc2USDwoHbGlua19pZBgBIAEoCRINCgVlcnJvchgCIAEoCSIoChVEaXNjb25uZWN0TGlua1JlcXVlc3QSDwoHbGlua19pZBgBIAEoCSIpChZEaXNjb25uZWN0TGlua1Jlc3BvbnNlEg8KB2xpbmtfaWQYASABKAkiOwoRV2F0Y2hGbGVldFJlcXVlc3QSJgoLdmVoaWNsZV9pZHMYASADKAsyES5nY3MudjEuVmVoaWNsZUlkIhUKE0xpc3RWZWhpY2xlc1JlcXVlc3QiQQoUTGlzdFZlaGljbGVzUmVzcG9uc2USKQoIdmVoaWNsZXMYASADKAsyFy5nY3MudjEuVmVoaWNsZVNuYXBzaG90Ks4BCg5GbGVldEV2ZW50VHlwZRIgChxGTEVFVF9FVkVOVF9UWVBFX1VOU1BFQ0lGSUVEEAASJwojRkxFRVRfRVZFTlRfVFlQRV9WRUhJQ0xFX0RJU0NPVkVSRUQQARIhCh1GTEVFVF9FVkVOVF9UWVBFX1ZFSElDTEVfTE9TVBACEiYKIkZMRUVUX0VWRU5UX1RZUEVfVkVISUNMRV9SRUNPVkVSRUQQAxImCiJGTEVFVF9FVkVOVF9UWVBFX0hFQVJUQkVBVF9VUERBVEVEEARCJFoieWFsYi5nY3MvaW50ZXJuYWwvZ2VuL2djcy92MTtnY3N2MWIGcHJvdG8z", [file_gcs_v1_security, file_gcs_v1_types, file_gcs_v1_vehicle, file_google_protobuf_timestamp]);
+  fileDesc("ChJnY3MvdjEvZmxlZXQucHJvdG8SBmdjcy52MSK1AQoKRmxlZXRFdmVudBIkCgR0eXBlGAEgASgOMhYuZ2NzLnYxLkZsZWV0RXZlbnRUeXBlEiUKCnZlaGljbGVfaWQYAiABKAsyES5nY3MudjEuVmVoaWNsZUlkEikKCWhlYXJ0YmVhdBgDIAEoCzIWLmdjcy52MS5IZWFydGJlYXRTdGF0ZRIvCgtvY2N1cnJlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAqzgEKDkZsZWV0RXZlbnRUeXBlEiAKHEZMRUVUX0VWRU5UX1RZUEVfVU5TUEVDSUZJRUQQABInCiNGTEVFVF9FVkVOVF9UWVBFX1ZFSElDTEVfRElTQ09WRVJFRBABEiEKHUZMRUVUX0VWRU5UX1RZUEVfVkVISUNMRV9MT1NUEAISJgoiRkxFRVRfRVZFTlRfVFlQRV9WRUhJQ0xFX1JFQ09WRVJFRBADEiYKIkZMRUVUX0VWRU5UX1RZUEVfSEVBUlRCRUFUX1VQREFURUQQBEIkWiJ5YWxiLmdjcy9pbnRlcm5hbC9nZW4vZ2NzL3YxO2djc3YxYgZwcm90bzM", [file_gcs_v1_vehicle, file_google_protobuf_timestamp]);
 
 /**
- * FleetEvent is streamed to all connected clients when fleet state changes.
- *
  * @generated from message gcs.v1.FleetEvent
  */
 export type FleetEvent = Message<"gcs.v1.FleetEvent"> & {
@@ -37,8 +31,6 @@ export type FleetEvent = Message<"gcs.v1.FleetEvent"> & {
   vehicleId?: VehicleId | undefined;
 
   /**
-   * populated for all event types
-   *
    * @generated from field: gcs.v1.HeartbeatState heartbeat = 3;
    */
   heartbeat?: HeartbeatState | undefined;
@@ -57,276 +49,6 @@ export const FleetEventSchema: GenMessage<FleetEvent> = /*@__PURE__*/
   messageDesc(file_gcs_v1_fleet, 0);
 
 /**
- * LinkQuality carries transport-layer signal and reliability metrics.
- * Derived from packet sequence gaps and radio status messages (RADIO_STATUS #109).
- *
- * @generated from message gcs.v1.LinkQuality
- */
-export type LinkQuality = Message<"gcs.v1.LinkQuality"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId vehicle_id = 1;
-   */
-  vehicleId?: VehicleId | undefined;
-
-  /**
-   * opaque backend-assigned identifier
-   *
-   * @generated from field: string link_id = 2;
-   */
-  linkId: string;
-
-  /**
-   * received signal strength, 0–254; 255 = unknown
-   *
-   * @generated from field: uint32 rssi = 3;
-   */
-  rssi: number;
-
-  /**
-   * remote RSSI; same scale
-   *
-   * @generated from field: uint32 remrssi = 4;
-   */
-  remrssi: number;
-
-  /**
-   * transmit buffer fill, % (from RADIO_STATUS)
-   *
-   * @generated from field: uint32 txbuf_pct = 5;
-   */
-  txbufPct: number;
-
-  /**
-   * background noise level
-   *
-   * @generated from field: uint32 noise = 6;
-   */
-  noise: number;
-
-  /**
-   * remote noise level
-   *
-   * @generated from field: uint32 remnoise = 7;
-   */
-  remnoise: number;
-
-  /**
-   * packet drop rate computed from sequence gaps
-   *
-   * @generated from field: float rx_drop_rate_pct = 8;
-   */
-  rxDropRatePct: number;
-
-  /**
-   * cumulative communication errors
-   *
-   * @generated from field: uint32 errors_comm = 9;
-   */
-  errorsComm: number;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp observed_at = 10;
-   */
-  observedAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message gcs.v1.LinkQuality.
- * Use `create(LinkQualitySchema)` to create a new message.
- */
-export const LinkQualitySchema: GenMessage<LinkQuality> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_fleet, 1);
-
-/**
- * LinkStatus describes the connection state of a transport link.
- *
- * @generated from message gcs.v1.LinkStatus
- */
-export type LinkStatus = Message<"gcs.v1.LinkStatus"> & {
-  /**
-   * @generated from field: string link_id = 1;
-   */
-  linkId: string;
-
-  /**
-   * @generated from field: gcs.v1.LinkState state = 2;
-   */
-  state: LinkState;
-
-  /**
-   * e.g. "udp://0.0.0.0:14550", "serial:///dev/ttyUSB0:57600"
-   *
-   * @generated from field: string uri = 3;
-   */
-  uri: string;
-
-  /**
-   * vehicles seen on this link
-   *
-   * @generated from field: repeated gcs.v1.VehicleId vehicles = 4;
-   */
-  vehicles: VehicleId[];
-
-  /**
-   * @generated from field: google.protobuf.Timestamp updated_at = 5;
-   */
-  updatedAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message gcs.v1.LinkStatus.
- * Use `create(LinkStatusSchema)` to create a new message.
- */
-export const LinkStatusSchema: GenMessage<LinkStatus> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_fleet, 2);
-
-/**
- * ConnectLinkRequest opens a new transport connection.
- * uri scheme determines the adapter: udp/tcp/serial/meshtastic/wireguard
- * security applies signing, TLS, and WireGuard configuration for this link.
- *
- * @generated from message gcs.v1.ConnectLinkRequest
- */
-export type ConnectLinkRequest = Message<"gcs.v1.ConnectLinkRequest"> & {
-  /**
-   * @generated from field: string uri = 1;
-   */
-  uri: string;
-
-  /**
-   * @generated from field: gcs.v1.LinkSecurityConfig security = 2;
-   */
-  security?: LinkSecurityConfig | undefined;
-};
-
-/**
- * Describes the message gcs.v1.ConnectLinkRequest.
- * Use `create(ConnectLinkRequestSchema)` to create a new message.
- */
-export const ConnectLinkRequestSchema: GenMessage<ConnectLinkRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_fleet, 3);
-
-/**
- * ConnectLinkResponse returns the assigned link_id on success.
- *
- * @generated from message gcs.v1.ConnectLinkResponse
- */
-export type ConnectLinkResponse = Message<"gcs.v1.ConnectLinkResponse"> & {
-  /**
-   * @generated from field: string link_id = 1;
-   */
-  linkId: string;
-
-  /**
-   * non-empty on failure
-   *
-   * @generated from field: string error = 2;
-   */
-  error: string;
-};
-
-/**
- * Describes the message gcs.v1.ConnectLinkResponse.
- * Use `create(ConnectLinkResponseSchema)` to create a new message.
- */
-export const ConnectLinkResponseSchema: GenMessage<ConnectLinkResponse> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_fleet, 4);
-
-/**
- * DisconnectLinkRequest closes an existing transport connection.
- *
- * @generated from message gcs.v1.DisconnectLinkRequest
- */
-export type DisconnectLinkRequest = Message<"gcs.v1.DisconnectLinkRequest"> & {
-  /**
-   * @generated from field: string link_id = 1;
-   */
-  linkId: string;
-};
-
-/**
- * Describes the message gcs.v1.DisconnectLinkRequest.
- * Use `create(DisconnectLinkRequestSchema)` to create a new message.
- */
-export const DisconnectLinkRequestSchema: GenMessage<DisconnectLinkRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_fleet, 5);
-
-/**
- * DisconnectLinkResponse confirms closure.
- *
- * @generated from message gcs.v1.DisconnectLinkResponse
- */
-export type DisconnectLinkResponse = Message<"gcs.v1.DisconnectLinkResponse"> & {
-  /**
-   * @generated from field: string link_id = 1;
-   */
-  linkId: string;
-};
-
-/**
- * Describes the message gcs.v1.DisconnectLinkResponse.
- * Use `create(DisconnectLinkResponseSchema)` to create a new message.
- */
-export const DisconnectLinkResponseSchema: GenMessage<DisconnectLinkResponse> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_fleet, 6);
-
-/**
- * WatchFleetRequest subscribes to all fleet lifecycle events.
- * An empty vehicle_ids list subscribes to all vehicles.
- *
- * @generated from message gcs.v1.WatchFleetRequest
- */
-export type WatchFleetRequest = Message<"gcs.v1.WatchFleetRequest"> & {
-  /**
-   * @generated from field: repeated gcs.v1.VehicleId vehicle_ids = 1;
-   */
-  vehicleIds: VehicleId[];
-};
-
-/**
- * Describes the message gcs.v1.WatchFleetRequest.
- * Use `create(WatchFleetRequestSchema)` to create a new message.
- */
-export const WatchFleetRequestSchema: GenMessage<WatchFleetRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_fleet, 7);
-
-/**
- * ListVehiclesRequest returns the current known fleet from Redis.
- *
- * @generated from message gcs.v1.ListVehiclesRequest
- */
-export type ListVehiclesRequest = Message<"gcs.v1.ListVehiclesRequest"> & {
-};
-
-/**
- * Describes the message gcs.v1.ListVehiclesRequest.
- * Use `create(ListVehiclesRequestSchema)` to create a new message.
- */
-export const ListVehiclesRequestSchema: GenMessage<ListVehiclesRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_fleet, 8);
-
-/**
- * ListVehiclesResponse carries the current vehicle snapshots.
- *
- * @generated from message gcs.v1.ListVehiclesResponse
- */
-export type ListVehiclesResponse = Message<"gcs.v1.ListVehiclesResponse"> & {
-  /**
-   * @generated from field: repeated gcs.v1.VehicleSnapshot vehicles = 1;
-   */
-  vehicles: VehicleSnapshot[];
-};
-
-/**
- * Describes the message gcs.v1.ListVehiclesResponse.
- * Use `create(ListVehiclesResponseSchema)` to create a new message.
- */
-export const ListVehiclesResponseSchema: GenMessage<ListVehiclesResponse> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_fleet, 9);
-
-/**
- * FleetEventType classifies vehicle lifecycle transitions observed by the GCS.
- *
  * @generated from enum gcs.v1.FleetEventType
  */
 export enum FleetEventType {
@@ -336,29 +58,21 @@ export enum FleetEventType {
   UNSPECIFIED = 0,
 
   /**
-   * first HEARTBEAT from a new sysid
-   *
    * @generated from enum value: FLEET_EVENT_TYPE_VEHICLE_DISCOVERED = 1;
    */
   VEHICLE_DISCOVERED = 1,
 
   /**
-   * heartbeat timeout exceeded
-   *
    * @generated from enum value: FLEET_EVENT_TYPE_VEHICLE_LOST = 2;
    */
   VEHICLE_LOST = 2,
 
   /**
-   * heartbeat resumed after timeout
-   *
    * @generated from enum value: FLEET_EVENT_TYPE_VEHICLE_RECOVERED = 3;
    */
   VEHICLE_RECOVERED = 3,
 
   /**
-   * mode, armed state, or status changed
-   *
    * @generated from enum value: FLEET_EVENT_TYPE_HEARTBEAT_UPDATED = 4;
    */
   HEARTBEAT_UPDATED = 4,

@@ -1,10 +1,4 @@
-/**
- * Flight path vector — track, ground speed, climb rate and flight path angle.
- *
- * The climb rate has two possible sources with opposite sign conventions, and
- * getting that wrong inverts the vertical needle. `source` names the winner;
- * sources are never mixed within one result.
- */
+/** Flight path vector with an explicit, unmixed climb-rate source. */
 
 import { isNum } from './finite';
 import { normaliseDeg, resolveHeading } from './heading';
@@ -48,22 +42,13 @@ export function resolveFlightPath2d(sample: TelemetrySample): FlightPathResult |
     trackDeg,
     groundSpeedMps,
     climbMps: climb.climbMps,
-    // atan2 is safe at groundSpeedMps === 0: atan2(x, 0) is ±π/2, a vertical
-    // flight path, which is the correct reading for a climbing hover.
+    // Zero ground speed correctly yields a vertical ±π/2 path.
     fpaRad: Math.atan2(climb.climbMps, groundSpeedMps),
     source: climb.source,
   };
 }
 
-/**
- * Climb rate, positive up.
- *
- * VFR_HUD.climb is already positive-up and passes through untouched. The
- * GLOBAL_POSITION_INT path carries NED velocity where vz is positive *down*,
- * so it is negated. Note there is no division: the proto boundary already
- * normalised cm/s to m/s, and dividing again here is the double-conversion
- * this codebase's unit rule exists to prevent.
- */
+/** Positive-up climb: VFR_HUD passes through; NED vz is negated. */
 function resolveClimb(
   sample: TelemetrySample,
 ): { climbMps: number; source: FlightPathResult['source'] } | null {
@@ -91,14 +76,7 @@ function resolveGroundSpeed(sample: TelemetrySample): number | null {
   return null;
 }
 
-/**
- * Track over ground.
- *
- * Course over ground from the NED velocity vector when the vehicle is moving,
- * since that is the direction actually travelled. Below the threshold the
- * velocity vector is noise, so heading stands in — a hovering copter has a
- * heading but no meaningful track.
- */
+/** Uses NED course while moving and heading below the motion threshold. */
 function resolveTrack(sample: TelemetrySample): number | null {
   if (isNum(sample.vxMs) && isNum(sample.vyMs)) {
     if (Math.hypot(sample.vxMs, sample.vyMs) >= MOVING_THRESHOLD_MPS) {

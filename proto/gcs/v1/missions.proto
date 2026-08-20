@@ -3,83 +3,34 @@ syntax = "proto3";
 package gcs.v1;
 
 import "gcs/v1/types.proto";
-import "gcs/v1/vehicle.proto";
 
 option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
-// MissionItem mirrors MISSION_ITEM_INT (#73).
-// lat/lon are normalised from degE7 (int32) to degrees (double).
-// For local frames, x/y are in metres and carried as double for consistency.
-// z is always in metres regardless of frame.
-// param1–4 semantics depend on command; see MAVLink common.xml MAV_CMD entries.
+// Inbound MAVLink mission transaction payloads currently decoded by the codec.
 message MissionItem {
-  VehicleId vehicle_id = 1;
-  uint32 seq = 2;               // 0-based waypoint sequence number
+  reserved 1;
+  uint32 seq = 2;
   MavFrame frame = 3;
   MavCmd command = 4;
-  bool current = 5;             // true if this is the active waypoint
-  bool autocontinue = 6;        // proceed to next item on completion
-
+  bool current = 5;
+  bool autocontinue = 6;
   float param1 = 7;
   float param2 = 8;
   float param3 = 9;
-  float param4 = 10;            // yaw, radians; NaN = not used
-
-  double x = 11;                // latitude (degrees) or local x (metres)
-  double y = 12;                // longitude (degrees) or local y (metres)
-  float z = 13;                 // altitude or local z, metres
-
+  float param4 = 10;
+  double x = 11; // latitude in degrees, or local x in metres
+  double y = 12; // longitude in degrees, or local y in metres
+  float z = 13;  // altitude or local z in metres
   MavMissionType mission_type = 14;
 }
 
-// MissionCount mirrors MISSION_COUNT (#44).
-// Sent by the vehicle to open a download, and by the GCS to open an upload.
-// Carried as a ProtocolEvent payload on the inbound path; identity lives on
-// the ProtocolEvent envelope.
 message MissionCount {
-  uint32 count = 1;             // number of items in the mission
+  uint32 count = 1;
   MavMissionType mission_type = 2;
 }
 
-// MissionAck mirrors MISSION_ACK (#47).
-// Returned by the vehicle at the end of an upload, download, or clear operation.
 message MissionAck {
-  VehicleId vehicle_id = 1;
+  reserved 1;
   MavMissionResult result = 2;
   MavMissionType mission_type = 3;
-}
-
-// DownloadMissionRequest triggers MISSION_REQUEST_LIST followed by
-// sequential MISSION_REQUEST_INT for each item.
-message DownloadMissionRequest {
-  VehicleId target = 1;
-  MavMissionType mission_type = 2;
-}
-
-// ClearMissionRequest sends MISSION_CLEAR_ALL to the vehicle.
-message ClearMissionRequest {
-  VehicleId target = 1;
-  MavMissionType mission_type = 2;
-}
-
-// SetCurrentItemRequest sends MISSION_SET_CURRENT to activate a waypoint.
-message SetCurrentItemRequest {
-  VehicleId target = 1;
-  uint32 seq = 2;
-}
-
-// UploadMissionRequest carries a complete mission for upload in one unary call.
-//
-// This is deliberately not a client-streaming RPC. @connectrpc/connect-web
-// supports unary and server-streaming only; client and bidirectional streaming
-// are unavailable to browser clients, so a streaming upload would be uncallable
-// from the frontend. Missions are bounded (hundreds of items at most), so a
-// single request costs nothing.
-//
-// The backend performs the MAVLink handshake (MISSION_COUNT → MISSION_REQUEST_INT
-// × N → MISSION_ITEM_INT × N → MISSION_ACK) and returns the vehicle's final ack.
-message UploadMissionRequest {
-  VehicleId target = 1;
-  MavMissionType mission_type = 2;
-  repeated MissionItem items = 3;
 }

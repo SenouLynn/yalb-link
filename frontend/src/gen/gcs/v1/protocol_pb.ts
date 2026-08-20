@@ -21,21 +21,8 @@ export const file_gcs_v1_protocol: GenFile = /*@__PURE__*/
   fileDesc("ChVnY3MvdjEvcHJvdG9jb2wucHJvdG8SBmdjcy52MSKiAgoNUHJvdG9jb2xFdmVudBIlCgp2ZWhpY2xlX2lkGAEgASgLMhEuZ2NzLnYxLlZlaGljbGVJZBItCgtwYXJhbV92YWx1ZRgCIAEoCzIWLmdjcy52MS5QYXJhbWV0ZXJWYWx1ZUgAEi0KDW1pc3Npb25fY291bnQYAyABKAsyFC5nY3MudjEuTWlzc2lvbkNvdW50SAASKwoMbWlzc2lvbl9pdGVtGAQgASgLMhMuZ2NzLnYxLk1pc3Npb25JdGVtSAASKQoLbWlzc2lvbl9hY2sYBSABKAsyEi5nY3MudjEuTWlzc2lvbkFja0gAEikKC2NvbW1hbmRfYWNrGAYgASgLMhIuZ2NzLnYxLkNvbW1hbmRBY2tIAEIJCgdwYXlsb2FkQiRaInlhbGIuZ2NzL2ludGVybmFsL2dlbi9nY3MvdjE7Z2NzdjFiBnByb3RvMw", [file_gcs_v1_commands, file_gcs_v1_missions, file_gcs_v1_parameters, file_gcs_v1_vehicle]);
 
 /**
- * ProtocolEvent carries MAVLink transaction responses — messages that answer a
- * request the GCS made, rather than free-running telemetry.
- *
- * These are separated from TelemetryEvent because their consumer is different:
- * telemetry folds into per-vehicle state and fans out to subscribers, while a
- * transaction response must correlate against an in-flight request registry
- * (keyed by vehicle + command/param/sequence) and complete a pending RPC. A
- * single codec output type that conflated the two would force every consumer to
- * filter, and would leave the mission and parameter protocols with nowhere to
- * land.
- *
- * The codec emits exactly one of TelemetryEvent or ProtocolEvent per decoded
- * frame. Some payloads here are also returned directly from Connect RPCs
- * (ParameterValue, MissionItem, MissionAck) and keep their own vehicle_id for
- * that use; on this envelope the vehicle_id field below is authoritative.
+ * ProtocolEvent carries inbound responses that require transaction
+ * correlation rather than aggregation into vehicle telemetry state.
  *
  * @generated from message gcs.v1.ProtocolEvent
  */
@@ -50,40 +37,30 @@ export type ProtocolEvent = Message<"gcs.v1.ProtocolEvent"> & {
    */
   payload: {
     /**
-     * PARAM_VALUE (#22)
-     *
      * @generated from field: gcs.v1.ParameterValue param_value = 2;
      */
     value: ParameterValue;
     case: "paramValue";
   } | {
     /**
-     * MISSION_COUNT (#44)
-     *
      * @generated from field: gcs.v1.MissionCount mission_count = 3;
      */
     value: MissionCount;
     case: "missionCount";
   } | {
     /**
-     * MISSION_ITEM_INT (#73)
-     *
      * @generated from field: gcs.v1.MissionItem mission_item = 4;
      */
     value: MissionItem;
     case: "missionItem";
   } | {
     /**
-     * MISSION_ACK (#47)
-     *
      * @generated from field: gcs.v1.MissionAck mission_ack = 5;
      */
     value: MissionAck;
     case: "missionAck";
   } | {
     /**
-     * COMMAND_ACK (#77)
-     *
      * @generated from field: gcs.v1.CommandAck command_ack = 6;
      */
     value: CommandAck;

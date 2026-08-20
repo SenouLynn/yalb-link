@@ -10,12 +10,6 @@ import (
 	"github.com/bluenviron/gomavlib/v3"
 )
 
-// FRAME-V1-ACCEPT: a v1 frame decodes on a node configured with OutVersion V2.
-//
-// OutVersion governs what we transmit, not what we accept — gomavlib's parser
-// handles both framings inbound. Asserting it rather than assuming it matters
-// because a mixed fleet with an older radio or autopilot will send v1, and the
-// failure mode would be a vehicle that silently never appears.
 func TestFrameV1Accepted(t *testing.T) {
 	t.Parallel()
 
@@ -36,7 +30,6 @@ func TestFrameV1Accepted(t *testing.T) {
 	}
 }
 
-// FRAME-V2-UNSIGNED.
 func TestFrameV2Unsigned(t *testing.T) {
 	t.Parallel()
 
@@ -53,14 +46,6 @@ func TestFrameV2Unsigned(t *testing.T) {
 	}
 }
 
-// FRAME-BAD-CRC and FRAME-TRUNCATED.
-//
-// Both assert the same three things: no frame surfaces, nothing panics, and the
-// parse-error counter moves. Note what is deliberately *not* asserted — an
-// error return from Decode. Decode returns a zero Decoded for a parse error and
-// for an unhandled message ID alike, because it never sees either: gomavlib
-// emits EventParseError in place of EventFrame. Asserting an error here would
-// be asserting an API that does not and should not exist.
 func TestFrameBadCRCDoesNotSurface(t *testing.T) {
 	t.Parallel()
 
@@ -69,14 +54,10 @@ func TestFrameBadCRCDoesNotSurface(t *testing.T) {
 
 	before := h.node.ParseErrors()
 
-	// feed returns nil on timeout, which is the expected outcome: a frame that
-	// fails CRC validation produces no EventFrame at all.
 	if frame := h.feed(raw); frame != nil {
 		t.Errorf("corrupt frame surfaced as an EventFrame: %#v", frame.Message())
 	}
 
-	// The counter is incremented on the pump goroutine, so allow it to be
-	// observed rather than reading it once and racing.
 	deadline := time.Now().Add(2 * time.Second)
 	for h.node.ParseErrors() == before && time.Now().Before(deadline) {
 		time.Sleep(5 * time.Millisecond)
@@ -88,22 +69,7 @@ func TestFrameBadCRCDoesNotSurface(t *testing.T) {
 	}
 }
 
-// FRAME-TRUNCATED.
-//
-// This does NOT behave like a bad CRC, and the difference was found by running
-// it. gomavlib's parser is stream-oriented: a frame cut mid-payload with no
-// following bytes leaves it waiting for the remainder, so it emits no
-// EventParseError and no counter moves. The roadmap asserted the opposite.
-//
-// The observable contract is therefore only "no frame surfaces, no panic".
-// Asserting a parse error here would be asserting behaviour the library does
-// not have — and would have been "fixed" by weakening the bad-CRC path, which
-// does work.
-//
-// Worth knowing operationally: the damaging case is a truncated frame followed
-// by more traffic, where the parser consumes the next frame's bytes as this
-// one's remainder and both are lost. That is a Tier 5 concern against a live
-// link, not something this fixture can express.
+// A lone truncated stream remains pending and surfaces no gomavlib event.
 func TestFrameTruncatedWaitsForContinuation(t *testing.T) {
 	t.Parallel()
 
@@ -122,13 +88,11 @@ func TestFrameTruncatedWaitsForContinuation(t *testing.T) {
 	}
 }
 
-// A vehicle is addressable only after it has been heard from.
 func TestRoutingTableIsBuiltFromInboundFramesOnly(t *testing.T) {
 	t.Parallel()
 
 	h := newHarness(t)
 
-	// Nothing heard yet: sysid 1 is not addressable.
 	if _, ok := h.node.LinkFor(1); ok {
 		t.Error("sysid 1 was addressable before any frame arrived")
 	}
@@ -149,12 +113,6 @@ func TestRoutingTableIsBuiltFromInboundFramesOnly(t *testing.T) {
 	}
 }
 
-// An unaddressable target is rejected, never broadcast.
-//
-// gomavlib's only destination-free write is WriteMessageAll, so a port shaped
-// WriteMessage(msg) could only be satisfied by transmitting to every channel:
-// N-times the uplink bandwidth, and a command for one vehicle physically sent
-// over another's radio. This test pins the rejection.
 func TestWriteToUnknownLinkIsRejected(t *testing.T) {
 	t.Parallel()
 
@@ -170,11 +128,6 @@ func TestWriteToUnknownLinkIsRejected(t *testing.T) {
 	}
 }
 
-// Close must return even when nobody is draining Events.
-//
-// This is the deadlock the pump's select guards against: an unbuffered channel
-// plus a consumer that stopped reading used to wedge the pump goroutine, and
-// Close waits on that goroutine.
 func TestCloseReturnsWithNoEventConsumer(t *testing.T) {
 	t.Parallel()
 
@@ -192,8 +145,7 @@ func TestCloseReturnsWithNoEventConsumer(t *testing.T) {
 
 	defer func() { _ = testSide.Close() }()
 
-	// Deliberately never read node.Events(). The node emits its own heartbeat,
-	// so the pump will have something to forward and will block on the send.
+	// Leave Events unread to exercise shutdown of a blocked pump.
 	drained := make(chan struct{})
 
 	go func() {

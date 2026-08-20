@@ -1,7 +1,4 @@
-# Frontend dev server. This is the Vite dev server on purpose: Tier 4 needs a
-# container that serves the UI against a live backend, and a production static
-# build behind nginx is a Tier 10 concern with different cache and CSP
-# questions.
+# Frontend development server. This image is not a production static build.
 #
 # Node 22 matches the version CI installs (.github/workflows/ci.yml). pnpm is
 # not pinned here — package.json's packageManager field owns that, and corepack

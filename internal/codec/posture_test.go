@@ -9,15 +9,13 @@ func TestPostureWarning(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		bind    string
-		key     string
 		wantFor string
 	}{
 		{name: "unauthenticated bind warns", bind: "0.0.0.0:14550", wantFor: "0.0.0.0:14550"},
-		{name: "signing key silences it", bind: "0.0.0.0:14550", key: "secret"},
 		{name: "disabled socket has nothing to warn about", bind: ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got := PostureWarning(tc.bind, tc.key)
+			got := PostureWarning(tc.bind)
 
 			if tc.wantFor == "" {
 				if got != "" {

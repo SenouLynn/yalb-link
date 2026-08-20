@@ -5,7 +5,6 @@ go_library(
     srcs = [
         "event.go",
         "fold.go",
-        "registry.go",
         "state.go",
     ],
     importpath = "yalb.gcs/internal/vehicle",

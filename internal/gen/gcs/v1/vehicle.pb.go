@@ -94,28 +94,8 @@ type HeartbeatState struct {
 	AutoEnabled        bool `protobuf:"varint,10,opt,name=auto_enabled,json=autoEnabled,proto3" json:"auto_enabled,omitempty"`
 	TestEnabled        bool `protobuf:"varint,11,opt,name=test_enabled,json=testEnabled,proto3" json:"test_enabled,omitempty"`
 	CustomModeEnabled  bool `protobuf:"varint,12,opt,name=custom_mode_enabled,json=customModeEnabled,proto3" json:"custom_mode_enabled,omitempty"`
-	// HEARTBEAT.custom_mode: firmware-specific flight mode integer. The integer
-	// is always authoritative; the name beside it may be absent.
-	CustomMode uint32 `protobuf:"varint,13,opt,name=custom_mode,json=customMode,proto3" json:"custom_mode,omitempty"`
-	// Human-readable mode name, resolved in three ordered layers (ADR-0007 R1):
-	//
-	//	(a) AVAILABLE_MODES.mode_name (#435) when the vehicle supplies it —
-	//	    authoritative, and the only source that also carries
-	//	    NOT_USER_SELECTABLE / ADVANCED for UI gating. ArduPilot >= 4.7.0.
-	//	(b) otherwise the generated gomavlib dialect enum — COPTER_MODE,
-	//	    PLANE_MODE, ROVER_MODE, SUB_MODE, TRACKER_MODE — selected by
-	//	    (autopilot, type) and rendered via its String() method. Never a
-	//	    hand-typed table: see the MavType note in types.proto for what a
-	//	    retyped integer list costs.
-	//	(c) otherwise **empty**.
-	//
-	// Empty means unknown, not "no mode". Render custom_mode as an integer in that
-	// case. Never fabricate a name — a plausible wrong mode name is worse than a
-	// number, because the operator cannot tell it is wrong.
-	//
-	// This replaces an earlier comment naming a "firmware adapter layer" that was
-	// never built, which left the field permanently empty with no explanation.
-	FlightModeName string                 `protobuf:"bytes,14,opt,name=flight_mode_name,json=flightModeName,proto3" json:"flight_mode_name,omitempty"` // e.g. "GUIDED", "AUTO", "LOITER"; empty = unknown
+	// HEARTBEAT.custom_mode: firmware-specific flight mode integer.
+	CustomMode     uint32                 `protobuf:"varint,13,opt,name=custom_mode,json=customMode,proto3" json:"custom_mode,omitempty"`
 	MavlinkVersion uint32                 `protobuf:"varint,15,opt,name=mavlink_version,json=mavlinkVersion,proto3" json:"mavlink_version,omitempty"`
 	ObservedAt     *timestamppb.Timestamp `protobuf:"bytes,16,opt,name=observed_at,json=observedAt,proto3" json:"observed_at,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -243,13 +223,6 @@ func (x *HeartbeatState) GetCustomMode() uint32 {
 	return 0
 }
 
-func (x *HeartbeatState) GetFlightModeName() string {
-	if x != nil {
-		return x.FlightModeName
-	}
-	return ""
-}
-
 func (x *HeartbeatState) GetMavlinkVersion() uint32 {
 	if x != nil {
 		return x.MavlinkVersion
@@ -291,11 +264,8 @@ type VehicleSnapshot struct {
 	CurrentBatteryCa    int32                  `protobuf:"varint,15,opt,name=current_battery_ca,json=currentBatteryCa,proto3" json:"current_battery_ca,omitempty"`          // centiamperes (10 mA resolution)
 	BatteryRemainingPct int32                  `protobuf:"varint,16,opt,name=battery_remaining_pct,json=batteryRemainingPct,proto3" json:"battery_remaining_pct,omitempty"` // -1 = unknown
 	LastUpdatedAt       *timestamppb.Timestamp `protobuf:"bytes,17,opt,name=last_updated_at,json=lastUpdatedAt,proto3" json:"last_updated_at,omitempty"`
-	// Populated from AUTOPILOT_VERSION (#148), requested once at discovery.
-	// Absent until the vehicle answers; see VehicleCapabilities.observed_at.
-	Capabilities  *VehicleCapabilities `protobuf:"bytes,18,opt,name=capabilities,proto3" json:"capabilities,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
 }
 
 func (x *VehicleSnapshot) Reset() {
@@ -447,182 +417,6 @@ func (x *VehicleSnapshot) GetLastUpdatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-func (x *VehicleSnapshot) GetCapabilities() *VehicleCapabilities {
-	if x != nil {
-		return x.Capabilities
-	}
-	return nil
-}
-
-// VehicleCapabilities is the vehicle's own declaration of what it supports,
-// decoded from AUTOPILOT_VERSION (#148). Requested at discovery with
-// MAV_CMD_REQUEST_MESSAGE (512).
-//
-// ADR-0007: this is how firmware variance is absorbed. Optional protocol paths
-// are gated on a bit here, never on a firmware name — an ArduPilot 4.5 vehicle
-// and an ArduPilot 4.7 vehicle differ more, on the things we branch on, than an
-// ArduPilot and a PX4 vehicle do on any single feature. Identity is a proxy for
-// capability that is wrong in both directions.
-//
-// **Absent is not empty.** A VehicleSnapshot with no capabilities message means
-// the vehicle has not answered yet (or does not implement #148), which is
-// distinct from a vehicle that answered with no bits set. Consumers must not
-// treat a missing message as "supports nothing" or as "supports the usual
-// things"; both are guesses. observed_at unset marks the message as never
-// populated.
-type VehicleCapabilities struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    *VehicleId             `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// AUTOPILOT_VERSION.capabilities, the raw 64-bit bitmask, carried verbatim.
-	// Authoritative. A vehicle may set bits MavProtocolCapability does not yet
-	// mirror, and truncating to the known set would drop them silently.
-	CapabilityFlags uint64 `protobuf:"varint,2,opt,name=capability_flags,json=capabilityFlags,proto3" json:"capability_flags,omitempty"`
-	// The same bitmask decomposed into the flags we mirror, for consumers that
-	// should not be doing bit arithmetic. Derived from capability_flags by the
-	// codec; if the two ever disagree, capability_flags wins.
-	Capabilities []MavProtocolCapability `protobuf:"varint,3,rep,packed,name=capabilities,proto3,enum=gcs.v1.MavProtocolCapability" json:"capabilities,omitempty"`
-	// AUTOPILOT_VERSION.flight_sw_version, packed (major)(minor)(patch)(type)
-	// from MSB to LSB. Carried packed rather than split because the packing is
-	// the wire contract and splitting it here would mean two representations to
-	// keep consistent. This selects the vendored parameter-metadata set — see
-	// ParameterMetadataSet in parameters.proto.
-	FlightSwVersion     uint32 `protobuf:"varint,4,opt,name=flight_sw_version,json=flightSwVersion,proto3" json:"flight_sw_version,omitempty"`
-	MiddlewareSwVersion uint32 `protobuf:"varint,5,opt,name=middleware_sw_version,json=middlewareSwVersion,proto3" json:"middleware_sw_version,omitempty"`
-	OsSwVersion         uint32 `protobuf:"varint,6,opt,name=os_sw_version,json=osSwVersion,proto3" json:"os_sw_version,omitempty"`
-	// AUTOPILOT_VERSION.board_version: low 8 bits are silicon ID, first 16 bits
-	// a board type from the ArduPilot/PX4 bootloader board_types tables.
-	BoardVersion uint32 `protobuf:"varint,7,opt,name=board_version,json=boardVersion,proto3" json:"board_version,omitempty"`
-	VendorId     uint32 `protobuf:"varint,8,opt,name=vendor_id,json=vendorId,proto3" json:"vendor_id,omitempty"`    // uint16 on the wire
-	ProductId    uint32 `protobuf:"varint,9,opt,name=product_id,json=productId,proto3" json:"product_id,omitempty"` // uint16 on the wire
-	// Hardware identity. uid2 supersedes uid when non-empty (it is a MAVLink 2
-	// extension field, so older firmware sends only uid). This — not VehicleId —
-	// is the durable key for anything scoped to a physical vehicle: (system_id,
-	// component_id) is transport identity, and sysid is operator-assignable and
-	// reused across airframes. See SettingsScope in auth.proto.
-	Uid  uint64 `protobuf:"varint,10,opt,name=uid,proto3" json:"uid,omitempty"`
-	Uid2 []byte `protobuf:"bytes,11,opt,name=uid2,proto3" json:"uid2,omitempty"` // 18 bytes when present; empty when the vehicle sends none
-	// When AUTOPILOT_VERSION was received. Unset means never — the request is
-	// outstanding or unanswered, and every capability above is unknown rather
-	// than false.
-	ObservedAt    *timestamppb.Timestamp `protobuf:"bytes,12,opt,name=observed_at,json=observedAt,proto3" json:"observed_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *VehicleCapabilities) Reset() {
-	*x = VehicleCapabilities{}
-	mi := &file_gcs_v1_vehicle_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *VehicleCapabilities) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*VehicleCapabilities) ProtoMessage() {}
-
-func (x *VehicleCapabilities) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_vehicle_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use VehicleCapabilities.ProtoReflect.Descriptor instead.
-func (*VehicleCapabilities) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_vehicle_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *VehicleCapabilities) GetId() *VehicleId {
-	if x != nil {
-		return x.Id
-	}
-	return nil
-}
-
-func (x *VehicleCapabilities) GetCapabilityFlags() uint64 {
-	if x != nil {
-		return x.CapabilityFlags
-	}
-	return 0
-}
-
-func (x *VehicleCapabilities) GetCapabilities() []MavProtocolCapability {
-	if x != nil {
-		return x.Capabilities
-	}
-	return nil
-}
-
-func (x *VehicleCapabilities) GetFlightSwVersion() uint32 {
-	if x != nil {
-		return x.FlightSwVersion
-	}
-	return 0
-}
-
-func (x *VehicleCapabilities) GetMiddlewareSwVersion() uint32 {
-	if x != nil {
-		return x.MiddlewareSwVersion
-	}
-	return 0
-}
-
-func (x *VehicleCapabilities) GetOsSwVersion() uint32 {
-	if x != nil {
-		return x.OsSwVersion
-	}
-	return 0
-}
-
-func (x *VehicleCapabilities) GetBoardVersion() uint32 {
-	if x != nil {
-		return x.BoardVersion
-	}
-	return 0
-}
-
-func (x *VehicleCapabilities) GetVendorId() uint32 {
-	if x != nil {
-		return x.VendorId
-	}
-	return 0
-}
-
-func (x *VehicleCapabilities) GetProductId() uint32 {
-	if x != nil {
-		return x.ProductId
-	}
-	return 0
-}
-
-func (x *VehicleCapabilities) GetUid() uint64 {
-	if x != nil {
-		return x.Uid
-	}
-	return 0
-}
-
-func (x *VehicleCapabilities) GetUid2() []byte {
-	if x != nil {
-		return x.Uid2
-	}
-	return nil
-}
-
-func (x *VehicleCapabilities) GetObservedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ObservedAt
-	}
-	return nil
-}
-
 var File_gcs_v1_vehicle_proto protoreflect.FileDescriptor
 
 const file_gcs_v1_vehicle_proto_rawDesc = "" +
@@ -630,7 +424,7 @@ const file_gcs_v1_vehicle_proto_rawDesc = "" +
 	"\x14gcs/v1/vehicle.proto\x12\x06gcs.v1\x1a\x12gcs/v1/types.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"K\n" +
 	"\tVehicleId\x12\x1b\n" +
 	"\tsystem_id\x18\x01 \x01(\rR\bsystemId\x12!\n" +
-	"\fcomponent_id\x18\x02 \x01(\rR\vcomponentId\"\xa7\x05\n" +
+	"\fcomponent_id\x18\x02 \x01(\rR\vcomponentId\"\x83\x05\n" +
 	"\x0eHeartbeatState\x12!\n" +
 	"\x02id\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x02id\x12#\n" +
 	"\x04type\x18\x02 \x01(\x0e2\x0f.gcs.v1.MavTypeR\x04type\x122\n" +
@@ -647,11 +441,10 @@ const file_gcs_v1_vehicle_proto_rawDesc = "" +
 	"\ftest_enabled\x18\v \x01(\bR\vtestEnabled\x12.\n" +
 	"\x13custom_mode_enabled\x18\f \x01(\bR\x11customModeEnabled\x12\x1f\n" +
 	"\vcustom_mode\x18\r \x01(\rR\n" +
-	"customMode\x12(\n" +
-	"\x10flight_mode_name\x18\x0e \x01(\tR\x0eflightModeName\x12'\n" +
+	"customMode\x12'\n" +
 	"\x0fmavlink_version\x18\x0f \x01(\rR\x0emavlinkVersion\x12;\n" +
 	"\vobserved_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"observedAt\"\xfe\x05\n" +
+	"observedAtJ\x04\b\x0e\x10\x0f\"\xc3\x05\n" +
 	"\x0fVehicleSnapshot\x12!\n" +
 	"\x02id\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x02id\x124\n" +
 	"\theartbeat\x18\x02 \x01(\v2\x16.gcs.v1.HeartbeatStateR\theartbeat\x12!\n" +
@@ -672,24 +465,7 @@ const file_gcs_v1_vehicle_proto_rawDesc = "" +
 	"\x12voltage_battery_mv\x18\x0e \x01(\rR\x10voltageBatteryMv\x12,\n" +
 	"\x12current_battery_ca\x18\x0f \x01(\x05R\x10currentBatteryCa\x122\n" +
 	"\x15battery_remaining_pct\x18\x10 \x01(\x05R\x13batteryRemainingPct\x12B\n" +
-	"\x0flast_updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\rlastUpdatedAt\x12?\n" +
-	"\fcapabilities\x18\x12 \x01(\v2\x1b.gcs.v1.VehicleCapabilitiesR\fcapabilities\"\xee\x03\n" +
-	"\x13VehicleCapabilities\x12!\n" +
-	"\x02id\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x02id\x12)\n" +
-	"\x10capability_flags\x18\x02 \x01(\x04R\x0fcapabilityFlags\x12A\n" +
-	"\fcapabilities\x18\x03 \x03(\x0e2\x1d.gcs.v1.MavProtocolCapabilityR\fcapabilities\x12*\n" +
-	"\x11flight_sw_version\x18\x04 \x01(\rR\x0fflightSwVersion\x122\n" +
-	"\x15middleware_sw_version\x18\x05 \x01(\rR\x13middlewareSwVersion\x12\"\n" +
-	"\ros_sw_version\x18\x06 \x01(\rR\vosSwVersion\x12#\n" +
-	"\rboard_version\x18\a \x01(\rR\fboardVersion\x12\x1b\n" +
-	"\tvendor_id\x18\b \x01(\rR\bvendorId\x12\x1d\n" +
-	"\n" +
-	"product_id\x18\t \x01(\rR\tproductId\x12\x10\n" +
-	"\x03uid\x18\n" +
-	" \x01(\x04R\x03uid\x12\x12\n" +
-	"\x04uid2\x18\v \x01(\fR\x04uid2\x12;\n" +
-	"\vobserved_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"observedAtB$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
+	"\x0flast_updated_at\x18\x11 \x01(\v2\x1a.google.protobuf.TimestampR\rlastUpdatedAtJ\x04\b\x12\x10\x13B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
 
 var (
 	file_gcs_v1_vehicle_proto_rawDescOnce sync.Once
@@ -703,36 +479,30 @@ func file_gcs_v1_vehicle_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_vehicle_proto_rawDescData
 }
 
-var file_gcs_v1_vehicle_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_gcs_v1_vehicle_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_gcs_v1_vehicle_proto_goTypes = []any{
 	(*VehicleId)(nil),             // 0: gcs.v1.VehicleId
 	(*HeartbeatState)(nil),        // 1: gcs.v1.HeartbeatState
 	(*VehicleSnapshot)(nil),       // 2: gcs.v1.VehicleSnapshot
-	(*VehicleCapabilities)(nil),   // 3: gcs.v1.VehicleCapabilities
-	(MavType)(0),                  // 4: gcs.v1.MavType
-	(MavAutopilot)(0),             // 5: gcs.v1.MavAutopilot
-	(MavState)(0),                 // 6: gcs.v1.MavState
-	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
-	(MavProtocolCapability)(0),    // 8: gcs.v1.MavProtocolCapability
+	(MavType)(0),                  // 3: gcs.v1.MavType
+	(MavAutopilot)(0),             // 4: gcs.v1.MavAutopilot
+	(MavState)(0),                 // 5: gcs.v1.MavState
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_gcs_v1_vehicle_proto_depIdxs = []int32{
-	0,  // 0: gcs.v1.HeartbeatState.id:type_name -> gcs.v1.VehicleId
-	4,  // 1: gcs.v1.HeartbeatState.type:type_name -> gcs.v1.MavType
-	5,  // 2: gcs.v1.HeartbeatState.autopilot:type_name -> gcs.v1.MavAutopilot
-	6,  // 3: gcs.v1.HeartbeatState.system_status:type_name -> gcs.v1.MavState
-	7,  // 4: gcs.v1.HeartbeatState.observed_at:type_name -> google.protobuf.Timestamp
-	0,  // 5: gcs.v1.VehicleSnapshot.id:type_name -> gcs.v1.VehicleId
-	1,  // 6: gcs.v1.VehicleSnapshot.heartbeat:type_name -> gcs.v1.HeartbeatState
-	7,  // 7: gcs.v1.VehicleSnapshot.last_updated_at:type_name -> google.protobuf.Timestamp
-	3,  // 8: gcs.v1.VehicleSnapshot.capabilities:type_name -> gcs.v1.VehicleCapabilities
-	0,  // 9: gcs.v1.VehicleCapabilities.id:type_name -> gcs.v1.VehicleId
-	8,  // 10: gcs.v1.VehicleCapabilities.capabilities:type_name -> gcs.v1.MavProtocolCapability
-	7,  // 11: gcs.v1.VehicleCapabilities.observed_at:type_name -> google.protobuf.Timestamp
-	12, // [12:12] is the sub-list for method output_type
-	12, // [12:12] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	0, // 0: gcs.v1.HeartbeatState.id:type_name -> gcs.v1.VehicleId
+	3, // 1: gcs.v1.HeartbeatState.type:type_name -> gcs.v1.MavType
+	4, // 2: gcs.v1.HeartbeatState.autopilot:type_name -> gcs.v1.MavAutopilot
+	5, // 3: gcs.v1.HeartbeatState.system_status:type_name -> gcs.v1.MavState
+	6, // 4: gcs.v1.HeartbeatState.observed_at:type_name -> google.protobuf.Timestamp
+	0, // 5: gcs.v1.VehicleSnapshot.id:type_name -> gcs.v1.VehicleId
+	1, // 6: gcs.v1.VehicleSnapshot.heartbeat:type_name -> gcs.v1.HeartbeatState
+	6, // 7: gcs.v1.VehicleSnapshot.last_updated_at:type_name -> google.protobuf.Timestamp
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_gcs_v1_vehicle_proto_init() }
@@ -747,7 +517,7 @@ func file_gcs_v1_vehicle_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_vehicle_proto_rawDesc), len(file_gcs_v1_vehicle_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

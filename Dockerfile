@@ -1,8 +1,8 @@
-# Backend image. Plain `go build`, not Bazel: ADR-0001 keeps Bazel as the
-# hermetic checkpoint signal, and putting it inside a container build would
+# Backend image. Plain `go build`, not Bazel: Bazel is the separate hermetic
+# checkpoint signal, and putting it inside a container build would
 # mean shipping a Bazel cache to produce a binary `make build` already makes.
 # What matters here is that the Go version matches everything else that pins
-# one — scripts/check-tier-4.sh fails the build if this drifts from go.mod and
+# one — scripts/check-containers.sh fails the build if this drifts from go.mod and
 # MODULE.bazel.
 ARG GO_VERSION=1.25.0
 

@@ -4,58 +4,30 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { MavParamType, MavType } from "./types_pb";
+import type { MavParamType } from "./types_pb";
 import { file_gcs_v1_types } from "./types_pb";
-import type { VehicleId } from "./vehicle_pb";
-import { file_gcs_v1_vehicle } from "./vehicle_pb";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file gcs/v1/parameters.proto.
  */
 export const file_gcs_v1_parameters: GenFile = /*@__PURE__*/
-  fileDesc("ChdnY3MvdjEvcGFyYW1ldGVycy5wcm90bxIGZ2NzLnYxIuMBCg5QYXJhbWV0ZXJWYWx1ZRIlCgp2ZWhpY2xlX2lkGAEgASgLMhEuZ2NzLnYxLlZlaGljbGVJZBIQCghwYXJhbV9pZBgCIAEoCRITCgtwYXJhbV92YWx1ZRgDIAEoAhIoCgpwYXJhbV90eXBlGAQgASgOMhQuZ2NzLnYxLk1hdlBhcmFtVHlwZRITCgtwYXJhbV9jb3VudBgFIAEoDRITCgtwYXJhbV9pbmRleBgGIAEoDRIvCgtvYnNlcnZlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAiOgoVTGlzdFBhcmFtZXRlcnNSZXF1ZXN0EiEKBnRhcmdldBgBIAEoCzIRLmdjcy52MS5WZWhpY2xlSWQiSgoTR2V0UGFyYW1ldGVyUmVxdWVzdBIhCgZ0YXJnZXQYASABKAsyES5nY3MudjEuVmVoaWNsZUlkEhAKCHBhcmFtX2lkGAIgASgJIokBChNTZXRQYXJhbWV0ZXJSZXF1ZXN0EiEKBnRhcmdldBgBIAEoCzIRLmdjcy52MS5WZWhpY2xlSWQSEAoIcGFyYW1faWQYAiABKAkSEwoLcGFyYW1fdmFsdWUYAyABKAISKAoKcGFyYW1fdHlwZRgEIAEoDjIULmdjcy52MS5NYXZQYXJhbVR5cGUiogQKEVBhcmFtZXRlck1ldGFkYXRhEhAKCHBhcmFtX2lkGAEgASgJEhIKCmh1bWFuX25hbWUYAiABKAkSFQoNZG9jdW1lbnRhdGlvbhgDIAEoCRINCgV1bml0cxgEIAEoCRIRCgl1bml0X3RleHQYBSABKAkSFgoJcmFuZ2VfbG93GAYgASgBSACIAQESFwoKcmFuZ2VfaGlnaBgHIAEoAUgBiAEBEhYKCWluY3JlbWVudBgIIAEoAUgCiAEBEhcKD3JlYm9vdF9yZXF1aXJlZBgJIAEoCBIRCglyZWFkX29ubHkYCiABKAgSFgoOdm9sYXRpbGVfdmFsdWUYCyABKAgSEwoLY2FsaWJyYXRpb24YDCABKAgSEgoKdXNlcl9sZXZlbBgNIAEoCRI1CgZ2YWx1ZXMYDiADKAsyJS5nY3MudjEuUGFyYW1ldGVyTWV0YWRhdGEuVmFsdWVzRW50cnkSNwoHYml0bWFzaxgPIAMoCzImLmdjcy52MS5QYXJhbWV0ZXJNZXRhZGF0YS5CaXRtYXNrRW50cnkaLQoLVmFsdWVzRW50cnkSCwoDa2V5GAEgASgDEg0KBXZhbHVlGAIgASgJOgI4ARouCgxCaXRtYXNrRW50cnkSCwoDa2V5GAEgASgNEg0KBXZhbHVlGAIgASgJOgI4AUIMCgpfcmFuZ2VfbG93Qg0KC19yYW5nZV9oaWdoQgwKCl9pbmNyZW1lbnQivgEKFFBhcmFtZXRlck1ldGFkYXRhU2V0EiUKDHZlaGljbGVfdHlwZRgBIAEoDjIPLmdjcy52MS5NYXZUeXBlEhgKEGZpcm13YXJlX3ZlcnNpb24YAiABKA0SHgoWZmlybXdhcmVfdmVyc2lvbl9sYWJlbBgDIAEoCRIWCg5pc19leGFjdF9tYXRjaBgEIAEoCBItCgpwYXJhbWV0ZXJzGAUgAygLMhkuZ2NzLnYxLlBhcmFtZXRlck1ldGFkYXRhIlMKG0dldFBhcmFtZXRlck1ldGFkYXRhUmVxdWVzdBIhCgZ0YXJnZXQYASABKAsyES5nY3MudjEuVmVoaWNsZUlkEhEKCXBhcmFtX2lkcxgCIAMoCUIkWiJ5YWxiLmdjcy9pbnRlcm5hbC9nZW4vZ2NzL3YxO2djc3YxYgZwcm90bzM", [file_gcs_v1_types, file_gcs_v1_vehicle, file_google_protobuf_timestamp]);
+  fileDesc("ChdnY3MvdjEvcGFyYW1ldGVycy5wcm90bxIGZ2NzLnYxIpcBCg5QYXJhbWV0ZXJWYWx1ZRIQCghwYXJhbV9pZBgCIAEoCRITCgtwYXJhbV92YWx1ZRgDIAEoAhIoCgpwYXJhbV90eXBlGAQgASgOMhQuZ2NzLnYxLk1hdlBhcmFtVHlwZRITCgtwYXJhbV9jb3VudBgFIAEoDRITCgtwYXJhbV9pbmRleBgGIAEoDUoECAEQAkoECAcQCEIkWiJ5YWxiLmdjcy9pbnRlcm5hbC9nZW4vZ2NzL3YxO2djc3YxYgZwcm90bzM", [file_gcs_v1_types]);
 
 /**
- * ParameterValue mirrors PARAM_VALUE (#22).
- * param_id is the 16-character null-padded ASCII name from the wire;
- * trailing nulls are stripped before this message is populated.
- *
- * param_value is always a float on the wire. How an *integer* parameter is
- * packed into that float is not fixed: MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_BYTEWISE
- * (16) and MAV_PROTOCOL_CAPABILITY_PARAM_ENCODE_C_CAST (131072) are mutually
- * exclusive declarations of it, and exactly one should be set by a vehicle that
- * supports the parameter protocol. The cast is therefore a function of
- * VehicleCapabilities, not a constant.
- *
- * **If neither bit is declared, do not decode integer parameters.** Guessing
- * C_CAST because it is the common case produces finite, plausible, wrong numbers
- * with no error raised anywhere: a bit pattern reinterpreted as a magnitude is
- * still a float, so a "NaN never returned" gate passes. LOG_BITMASK — Tier 8b's
- * first write target — is an integer bitmask straight through this path, and a
- * bitmask is the worst case, because every bit is independently meaningful and
- * nothing about a wrong value looks wrong. ADR-0007 R3.
+ * ParameterValue mirrors PARAM_VALUE (#22). The value remains in its wire
+ * representation; interpreting integer parameters depends on the negotiated
+ * MAVLink parameter encoding and is not implemented yet.
  *
  * @generated from message gcs.v1.ParameterValue
  */
 export type ParameterValue = Message<"gcs.v1.ParameterValue"> & {
   /**
-   * @generated from field: gcs.v1.VehicleId vehicle_id = 1;
-   */
-  vehicleId?: VehicleId | undefined;
-
-  /**
-   * max 16 ASCII chars
-   *
    * @generated from field: string param_id = 2;
    */
   paramId: string;
 
   /**
-   * wire value; reinterpret per param_type
-   *
    * @generated from field: float param_value = 3;
    */
   paramValue: number;
@@ -66,23 +38,16 @@ export type ParameterValue = Message<"gcs.v1.ParameterValue"> & {
   paramType: MavParamType;
 
   /**
-   * total parameter count on this vehicle
-   *
    * @generated from field: uint32 param_count = 5;
    */
   paramCount: number;
 
   /**
-   * 0-based index; 65535 = unknown
+   * 65535 = unknown
    *
    * @generated from field: uint32 param_index = 6;
    */
   paramIndex: number;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp observed_at = 7;
-   */
-  observedAt?: Timestamp | undefined;
 };
 
 /**
@@ -91,337 +56,4 @@ export type ParameterValue = Message<"gcs.v1.ParameterValue"> & {
  */
 export const ParameterValueSchema: GenMessage<ParameterValue> = /*@__PURE__*/
   messageDesc(file_gcs_v1_parameters, 0);
-
-/**
- * ListParametersRequest triggers a full PARAM_REQUEST_LIST from the backend.
- *
- * @generated from message gcs.v1.ListParametersRequest
- */
-export type ListParametersRequest = Message<"gcs.v1.ListParametersRequest"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId target = 1;
-   */
-  target?: VehicleId | undefined;
-};
-
-/**
- * Describes the message gcs.v1.ListParametersRequest.
- * Use `create(ListParametersRequestSchema)` to create a new message.
- */
-export const ListParametersRequestSchema: GenMessage<ListParametersRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_parameters, 1);
-
-/**
- * GetParameterRequest fetches a single parameter by name (PARAM_REQUEST_READ).
- *
- * @generated from message gcs.v1.GetParameterRequest
- */
-export type GetParameterRequest = Message<"gcs.v1.GetParameterRequest"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId target = 1;
-   */
-  target?: VehicleId | undefined;
-
-  /**
-   * @generated from field: string param_id = 2;
-   */
-  paramId: string;
-};
-
-/**
- * Describes the message gcs.v1.GetParameterRequest.
- * Use `create(GetParameterRequestSchema)` to create a new message.
- */
-export const GetParameterRequestSchema: GenMessage<GetParameterRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_parameters, 2);
-
-/**
- * SetParameterRequest sends a PARAM_SET to the vehicle.
- * The vehicle echoes back a PARAM_VALUE on success; the service returns it.
- *
- * @generated from message gcs.v1.SetParameterRequest
- */
-export type SetParameterRequest = Message<"gcs.v1.SetParameterRequest"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId target = 1;
-   */
-  target?: VehicleId | undefined;
-
-  /**
-   * @generated from field: string param_id = 2;
-   */
-  paramId: string;
-
-  /**
-   * @generated from field: float param_value = 3;
-   */
-  paramValue: number;
-
-  /**
-   * @generated from field: gcs.v1.MavParamType param_type = 4;
-   */
-  paramType: MavParamType;
-};
-
-/**
- * Describes the message gcs.v1.SetParameterRequest.
- * Use `create(SetParameterRequestSchema)` to create a new message.
- */
-export const SetParameterRequestSchema: GenMessage<SetParameterRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_parameters, 3);
-
-/**
- * ParameterMetadata describes one parameter: what it means, what it is allowed
- * to be, and what happens when it changes. Sourced from ArduPilot's published
- * per-tag `apm.pdef.xml`, converted at build time.
- *
- * This exists so a parameter editor is generated from a schema rather than
- * hardcoded. Without it a ParametersPanel can only show name / value / type,
- * which is what Tier 7 would otherwise write its tests against.
- *
- * ## Unset versus zero
- *
- * Every optional numeric field below is proto3 `optional` and carries explicit
- * presence. This is not stylistic: 0 is a legal value for range_low, range_high
- * and increment, so a bare scalar cannot distinguish "the range starts at zero"
- * from "upstream declared no range". A slider built on the second reading of the
- * first case silently clamps a parameter to [0, 0].
- *
- * Only ~half of ArduPilot's parameters declare a Range at all (2388 of 4820 in
- * Copter 4.6.0), so absence is the common case, not the edge case. Read presence
- * before reading value. The booleans are plain proto3 scalars because absent and
- * false mean the same thing for all four.
- *
- * ## The name prefix rule
- *
- * param_id here is **unprefixed** and matches PARAM_VALUE.param_id directly.
- * Upstream is not consistent: vehicle-specific parameters appear as
- * `ArduCopter:SYSID_THISMAV` while library parameters appear bare as
- * `ARMING_CHECK`. The `<Vehicle>:` prefix is stripped by the converter, before
- * this message is populated.
- *
- * Skip that strip and the failure is silent and partial: every vehicle-specific
- * parameter loses its metadata while every library parameter keeps its own, which
- * reads as patchy upstream coverage rather than as a bug on our side.
- *
- * @generated from message gcs.v1.ParameterMetadata
- */
-export type ParameterMetadata = Message<"gcs.v1.ParameterMetadata"> & {
-  /**
-   * unprefixed, max 16 ASCII chars; matches PARAM_VALUE.param_id
-   *
-   * @generated from field: string param_id = 1;
-   */
-  paramId: string;
-
-  /**
-   * pdef attr `humanName`
-   *
-   * @generated from field: string human_name = 2;
-   */
-  humanName: string;
-
-  /**
-   * pdef attr `documentation`; may be several sentences
-   *
-   * @generated from field: string documentation = 3;
-   */
-  documentation: string;
-
-  /**
-   * Units. `units` is the machine token (e.g. "m/s", "deg", "Hz"); `unit_text`
-   * is the display string upstream supplies alongside it. Both may be empty —
-   * 1409 of 4820 parameters declare either. These are the parameter's own units
-   * and are **not** normalised: the "unit normalisation happens once in the
-   * codec" rule applies to telemetry fields with a known wire unit, and a
-   * parameter's unit is data, not schema.
-   *
-   * @generated from field: string units = 4;
-   */
-  units: string;
-
-  /**
-   * @generated from field: string unit_text = 5;
-   */
-  unitText: string;
-
-  /**
-   * Valid range, inclusive. Present together or not at all.
-   *
-   * @generated from field: optional double range_low = 6;
-   */
-  rangeLow?: number | undefined;
-
-  /**
-   * @generated from field: optional double range_high = 7;
-   */
-  rangeHigh?: number | undefined;
-
-  /**
-   * Step size for a spinner or slider. 973 of 4820 declare one.
-   *
-   * @generated from field: optional double increment = 8;
-   */
-  increment?: number | undefined;
-
-  /**
-   * vehicle must be rebooted before this takes effect
-   *
-   * @generated from field: bool reboot_required = 9;
-   */
-  rebootRequired: boolean;
-
-  /**
-   * reject writes; do not render an editor
-   *
-   * @generated from field: bool read_only = 10;
-   */
-  readOnly: boolean;
-
-  /**
-   * changes on its own; do not cache, do not diff
-   *
-   * @generated from field: bool volatile_value = 11;
-   */
-  volatileValue: boolean;
-
-  /**
-   * written by a calibration routine, not by hand
-   *
-   * @generated from field: bool calibration = 12;
-   */
-  calibration: boolean;
-
-  /**
-   * pdef attr `user`: "Standard" or "Advanced". Verbatim, not parsed into an
-   * enum — it is upstream's vocabulary and upstream may extend it.
-   *
-   * @generated from field: string user_level = 13;
-   */
-  userLevel: string;
-
-  /**
-   * Enumerated values, from `<values><value code=...>`. Key is the code, value
-   * is the label. Empty when the parameter is not enumerated.
-   *
-   * @generated from field: map<int64, string> values = 14;
-   */
-  values: { [key: string]: string };
-
-  /**
-   * Bit labels, from `<bitmask><bit code=...>`. Key is the **bit index**, not
-   * the bit's numeric value: upstream writes `code="0"` for the least
-   * significant bit. Rendering `1 << code` on a value-keyed map produces an
-   * editor whose bits are all one position off. 222 of 4820 declare a bitmask.
-   *
-   * @generated from field: map<uint32, string> bitmask = 15;
-   */
-  bitmask: { [key: number]: string };
-};
-
-/**
- * Describes the message gcs.v1.ParameterMetadata.
- * Use `create(ParameterMetadataSchema)` to create a new message.
- */
-export const ParameterMetadataSchema: GenMessage<ParameterMetadata> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_parameters, 4);
-
-/**
- * ParameterMetadataSet is the metadata for one (vehicle, firmware version) pair.
- *
- * ## Why the version is on the set and not implicit
- *
- * Metadata drifts fast enough that a wrong version is a wrong answer, and the
- * drift is concentrated at minor boundaries. Measured on published pdef files:
- * Copter 4.5.6 -> 4.5.7 (a patch release) changes 1 parameter name; 4.5.7 ->
- * 4.6.0 changes 329. So sets are vendored per **minor line** — latest patch of
- * each minor line — and selected at runtime from
- * VehicleCapabilities.flight_sw_version: nearest vendored version <= actual.
- *
- * `is_exact_match` exists because that selection is lossy and the loss must be
- * visible. Cockpit's failure here is instructive: each vehicle class statically
- * imports one hardcoded metadata version (`arducopter.ts` -> Copter-4.3), with no
- * runtime negotiation at all, so a 4.6 vehicle is described by 4.3 metadata and
- * nothing anywhere says so.
- *
- * @generated from message gcs.v1.ParameterMetadataSet
- */
-export type ParameterMetadataSet = Message<"gcs.v1.ParameterMetadataSet"> & {
-  /**
-   * which vehicle family this set describes
-   *
-   * @generated from field: gcs.v1.MavType vehicle_type = 1;
-   */
-  vehicleType: MavType;
-
-  /**
-   * The firmware version this set was generated for, packed exactly as
-   * VehicleCapabilities.flight_sw_version, so the two are directly comparable.
-   *
-   * @generated from field: uint32 firmware_version = 2;
-   */
-  firmwareVersion: number;
-
-  /**
-   * Human-readable form of the above, as published upstream (e.g. "4.6.0").
-   *
-   * @generated from field: string firmware_version_label = 3;
-   */
-  firmwareVersionLabel: string;
-
-  /**
-   * False when this set was chosen as the nearest vendored version <= the
-   * vehicle's actual firmware. The UI must say so; a parameter editor claiming
-   * authority it does not have is the specific mistake this field prevents.
-   *
-   * @generated from field: bool is_exact_match = 4;
-   */
-  isExactMatch: boolean;
-
-  /**
-   * @generated from field: repeated gcs.v1.ParameterMetadata parameters = 5;
-   */
-  parameters: ParameterMetadata[];
-};
-
-/**
- * Describes the message gcs.v1.ParameterMetadataSet.
- * Use `create(ParameterMetadataSetSchema)` to create a new message.
- */
-export const ParameterMetadataSetSchema: GenMessage<ParameterMetadataSet> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_parameters, 5);
-
-/**
- * GetParameterMetadataRequest asks for the metadata set matching a vehicle's
- * reported firmware.
- *
- * Read-only and vehicle-independent in effect: it sends nothing to the vehicle
- * and consults VehicleCapabilities the backend already holds. If capabilities
- * are not yet known the backend cannot choose a set, and says so rather than
- * guessing a version.
- *
- * @generated from message gcs.v1.GetParameterMetadataRequest
- */
-export type GetParameterMetadataRequest = Message<"gcs.v1.GetParameterMetadataRequest"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId target = 1;
-   */
-  target?: VehicleId | undefined;
-
-  /**
-   * Restrict the response to these parameter names (unprefixed). Empty = all.
-   * A full Copter set is ~4800 entries and a panel usually needs the page it is
-   * showing.
-   *
-   * @generated from field: repeated string param_ids = 2;
-   */
-  paramIds: string[];
-};
-
-/**
- * Describes the message gcs.v1.GetParameterMetadataRequest.
- * Use `create(GetParameterMetadataRequestSchema)` to create a new message.
- */
-export const GetParameterMetadataRequestSchema: GenMessage<GetParameterMetadataRequest> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_parameters, 6);
 

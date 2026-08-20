@@ -1,28 +1,8 @@
-/**
- * Flattens a `TelemetryEvent` oneof into a flat `TelemetrySample`.
- *
- * This file is the only place in the frontend that knows the proto envelope's
- * shape. Resolvers take a `TelemetrySample` and never import generated types.
- *
- * **Units are SI and degrees.** The Go codec normalises at the proto boundary,
- * so nothing here divides by 1e7, 1000 or 100 — with the two documented
- * exceptions the protos name explicitly (`hdgCdeg`, `cogCdeg` are
- * centidegrees; `velCmS` is cm/s). Those keep their wire units and their
- * wire-unit names all the way to the resolver that consumes them, because the
- * unknown-value sentinel is defined in wire units and checking it after a
- * conversion is how the sentinel gets lost.
- */
+/** Adapts generated telemetry events to the resolver-facing sample shape. */
 
 import type { TelemetryEvent } from '@/gen/gcs/v1/telemetry_pb';
 
-/**
- * A flat projection of vehicle sensor state.
- *
- * Fields are optional because `TelemetryEvent` is a oneof: a single event
- * carries exactly one family, so a single call to {@link sampleFromEvent}
- * populates only that family's fields. Resolvers that need fields spanning
- * families return `null` until a fold has merged enough partials.
- */
+/** A partial, flat projection of vehicle state in SI units and degrees. */
 export interface TelemetrySample {
   // Attitude — radians
   rollRad?: number | undefined;
@@ -70,16 +50,7 @@ export interface TelemetrySample {
 
   ekfFlags?: number | undefined;
 
-  /**
-   * Vehicle identity and mode state.
-   *
-   * **Not populated by {@link sampleFromEvent}.** HEARTBEAT is not a
-   * `TelemetryEvent` payload — it decodes to `HeartbeatState` and drives the
-   * fleet fold instead. The Tier 4 per-vehicle fold merges those fields in
-   * alongside the sensor partials. They live on this type so a resolver
-   * needing vehicle class has somewhere to read it from; they are never set
-   * from a telemetry event.
-   */
+  /** Identity fields merged from HeartbeatState by the vehicle accumulator. */
   vehicleType?: number | undefined;
   customMode?: number | undefined;
   systemStatus?: number | undefined;
@@ -90,20 +61,7 @@ export interface TelemetrySample {
   receivedAtMs: number;
 }
 
-/**
- * Projects one `TelemetryEvent` into a partial sample.
- *
- * Holds no state and returns only the fields the event's family carries.
- * Passing a single-event partial straight to a resolver commonly yields
- * `null` — that is correct behaviour, not a bug. The Tier 4 fold accumulates:
- *
- * ```ts
- * accumulated = { ...accumulated, ...sampleFromEvent(event, nowMs) };
- * ```
- *
- * `receivedAtMs` is a parameter rather than a `Date.now()` call so the
- * function stays pure and the fold stays testable against a fixed clock.
- */
+/** Projects one event family into a timestamped partial sample. */
 export function sampleFromEvent(
   event: TelemetryEvent,
   receivedAtMs: number,
@@ -186,10 +144,7 @@ export function sampleFromEvent(
       };
 
     default:
-      // Families with no sample projection yet (NAV_CONTROLLER_OUTPUT,
-      // RADIO_STATUS, MISSION_CURRENT, HOME_POSITION, PID_TUNING,
-      // NAMED_VALUE_*, STATUS_TEXT) and the empty oneof. They still carry a
-      // source and a timestamp so freshness tracking sees the traffic.
+      // Unprojected families still contribute source and freshness.
       return {
         sourceMessage: sourceMessageFor(payload.case),
         receivedAtMs,
@@ -208,12 +163,6 @@ function sourceMessageFor(kind: TelemetryEvent['payload']['case']): string {
       return 'MISSION_CURRENT';
     case 'homePosition':
       return 'HOME_POSITION';
-    case 'pidTuning':
-      return 'PID_TUNING';
-    case 'namedValueFloat':
-      return 'NAMED_VALUE_FLOAT';
-    case 'namedValueInt':
-      return 'NAMED_VALUE_INT';
     case 'statusText':
       return 'STATUSTEXT';
     default:

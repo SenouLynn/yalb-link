@@ -1,11 +1,4 @@
-/**
- * Heading resolution with a three-source fallback chain.
- *
- * Preference: `VFR_HUD.heading` → `ATTITUDE.yaw` → `GLOBAL_POSITION_INT.hdg`.
- * The winner is named in `source`, and `isFallback` says whether the primary
- * was available — an operator reading a heading off a degraded source should
- * be able to see that from the value alone.
- */
+/** Heading preference: VFR_HUD → ATTITUDE → GLOBAL_POSITION_INT. */
 
 import { isNum } from './finite';
 import type { TelemetrySample } from './sample';
@@ -29,10 +22,7 @@ export function normaliseDeg(deg: number): number {
 export function resolveHeading(sample: TelemetrySample): HeadingResult | null {
   const { headingDeg, yawRad, hdgCdeg } = sample;
 
-  // VFR_HUD.heading is int16_t on the wire, so it cannot carry the 65535
-  // sentinel — testing for one here tests an input that never occurs. What it
-  // can carry is a negative heading, which ArduPilot does emit, so the real
-  // work on this path is wrapping rather than sentinel rejection.
+  // VFR_HUD is signed and has no unknown sentinel.
   if (isNum(headingDeg)) {
     return {
       headingDeg: normaliseDeg(headingDeg),
@@ -49,9 +39,7 @@ export function resolveHeading(sample: TelemetrySample): HeadingResult | null {
     };
   }
 
-  // GLOBAL_POSITION_INT.hdg is uint16 centidegrees, and this is where
-  // UINT16_MAX-as-unknown actually lives. Reject it rather than reporting
-  // 655.35 degrees.
+  // GLOBAL_POSITION_INT uses UINT16_MAX as unknown.
   if (isNum(hdgCdeg) && hdgCdeg !== UNKNOWN_CDEG) {
     return {
       headingDeg: normaliseDeg(hdgCdeg / 100),

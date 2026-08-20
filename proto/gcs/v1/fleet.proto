@@ -2,89 +2,22 @@ syntax = "proto3";
 
 package gcs.v1;
 
-import "gcs/v1/security.proto";
-import "gcs/v1/types.proto";
 import "gcs/v1/vehicle.proto";
 import "google/protobuf/timestamp.proto";
 
 option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
-// FleetEventType classifies vehicle lifecycle transitions observed by the GCS.
 enum FleetEventType {
   FLEET_EVENT_TYPE_UNSPECIFIED = 0;
-  FLEET_EVENT_TYPE_VEHICLE_DISCOVERED = 1;  // first HEARTBEAT from a new sysid
-  FLEET_EVENT_TYPE_VEHICLE_LOST = 2;        // heartbeat timeout exceeded
-  FLEET_EVENT_TYPE_VEHICLE_RECOVERED = 3;   // heartbeat resumed after timeout
-  FLEET_EVENT_TYPE_HEARTBEAT_UPDATED = 4;   // mode, armed state, or status changed
+  FLEET_EVENT_TYPE_VEHICLE_DISCOVERED = 1;
+  FLEET_EVENT_TYPE_VEHICLE_LOST = 2;
+  FLEET_EVENT_TYPE_VEHICLE_RECOVERED = 3;
+  FLEET_EVENT_TYPE_HEARTBEAT_UPDATED = 4;
 }
 
-// FleetEvent is streamed to all connected clients when fleet state changes.
 message FleetEvent {
   FleetEventType type = 1;
   VehicleId vehicle_id = 2;
-  HeartbeatState heartbeat = 3;      // populated for all event types
+  HeartbeatState heartbeat = 3;
   google.protobuf.Timestamp occurred_at = 4;
-}
-
-// LinkQuality carries transport-layer signal and reliability metrics.
-// Derived from packet sequence gaps and radio status messages (RADIO_STATUS #109).
-message LinkQuality {
-  VehicleId vehicle_id = 1;
-  string link_id = 2;           // opaque backend-assigned identifier
-
-  uint32 rssi = 3;              // received signal strength, 0–254; 255 = unknown
-  uint32 remrssi = 4;           // remote RSSI; same scale
-  uint32 txbuf_pct = 5;         // transmit buffer fill, % (from RADIO_STATUS)
-  uint32 noise = 6;             // background noise level
-  uint32 remnoise = 7;          // remote noise level
-  float rx_drop_rate_pct = 8;   // packet drop rate computed from sequence gaps
-  uint32 errors_comm = 9;       // cumulative communication errors
-  google.protobuf.Timestamp observed_at = 10;
-}
-
-// LinkStatus describes the connection state of a transport link.
-message LinkStatus {
-  string link_id = 1;
-  LinkState state = 2;
-  string uri = 3;               // e.g. "udp://0.0.0.0:14550", "serial:///dev/ttyUSB0:57600"
-  repeated VehicleId vehicles = 4; // vehicles seen on this link
-  google.protobuf.Timestamp updated_at = 5;
-}
-
-// ConnectLinkRequest opens a new transport connection.
-// uri scheme determines the adapter: udp/tcp/serial/meshtastic/wireguard
-// security applies signing, TLS, and WireGuard configuration for this link.
-message ConnectLinkRequest {
-  string uri = 1;
-  LinkSecurityConfig security = 2;
-}
-
-// ConnectLinkResponse returns the assigned link_id on success.
-message ConnectLinkResponse {
-  string link_id = 1;
-  string error = 2; // non-empty on failure
-}
-
-// DisconnectLinkRequest closes an existing transport connection.
-message DisconnectLinkRequest {
-  string link_id = 1;
-}
-
-// DisconnectLinkResponse confirms closure.
-message DisconnectLinkResponse {
-  string link_id = 1;
-}
-
-// WatchFleetRequest subscribes to all fleet lifecycle events.
-// An empty vehicle_ids list subscribes to all vehicles.
-message WatchFleetRequest {
-  repeated VehicleId vehicle_ids = 1;
-}
-
-// ListVehiclesRequest returns the current known fleet from Redis.
-message ListVehiclesRequest {}
-
-// ListVehiclesResponse carries the current vehicle snapshots.
-message ListVehiclesResponse {
-  repeated VehicleSnapshot vehicles = 1;
 }

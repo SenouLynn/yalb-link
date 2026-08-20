@@ -135,7 +135,7 @@ func keysOfStr(m map[uint32]string) []uint32 {
 	return out
 }
 
-// The matrix must claim exactly the family counts the roadmap fixed.
+// The matrix must claim exactly the families implemented by the codec.
 func TestMatrixFamilyCounts(t *testing.T) {
 	t.Parallel()
 

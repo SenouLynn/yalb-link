@@ -26,21 +26,9 @@ const DEG_TO_RAD = Math.PI / 180;
 const STRAIGHT_LINE_YAW_RATE = 1e-4;
 
 /**
- * Projects the vehicle's path forward.
- *
- * `stallSpeedMps` is a parameter (ArduPilot's `ARSPD_FBW_MIN`), not a
- * constant, so Tier 7's parameter read can supply the vehicle's real value
- * without changing this signature.
- *
- * **The stall gate keys on flight regime, not vehicle type.** The floor
- * applies only when airspeed is actually present and below stall; otherwise
- * ground speed is used with no floor at all. Gating on MAV_TYPE instead would
- * blank the predicted track for a VTOL hovering or translating in multicopter
- * mode — the regime where an operator most wants to see one — because a
- * hovering VTOL is a fixed-wing airframe reporting near-zero airspeed.
- *
- * Returns an empty array rather than null when no prediction is possible, so
- * callers can render it directly without a null branch.
+ * Projects a CTRV path. The vehicle-specific stall floor applies only when
+ * airspeed is present; VTOL hover and vehicles without airspeed use ground
+ * velocity. An empty result means the available state cannot support a path.
  */
 export function resolvePredictiveTrajectory(
   sample: TelemetrySample,
@@ -67,14 +55,7 @@ export function resolvePredictiveTrajectory(
   return integrate(heading.headingDeg * DEG_TO_RAD, speed, yawRateRadS);
 }
 
-/**
- * The speed to propagate, or null when the vehicle cannot sustain flight.
- *
- * Airspeed below stall means the aerodynamic model does not hold and any
- * forward projection would be fiction, so the prediction collapses. Absent
- * airspeed is not a stall — it is a vehicle that does not measure airspeed,
- * which is most copters — and ground speed is used unfloored.
- */
+/** Resolves propagation speed, applying the stall floor to measured airspeed. */
 function resolveSpeed(sample: TelemetrySample, stallSpeedMps: number): number | null {
   const { airspeedMps } = sample;
 
@@ -110,8 +91,7 @@ function resolveYawRate(sample: TelemetrySample, speedMps: number): number | nul
   if (isNum(rollRad) && isNum(pitchRad) && isNum(pitchspeedRadS) && isNum(yawspeedRadS)) {
     const cosPitch = Math.cos(pitchRad);
 
-    // The transform has a genuine singularity at ±90° pitch. Rather than
-    // emitting an infinite yaw rate, fall through to the bank approximation.
+    // Fall back at the ±90° pitch singularity.
     if (Math.abs(cosPitch) > 1e-6) {
       const rate =
         (Math.sin(rollRad) * pitchspeedRadS + Math.cos(rollRad) * yawspeedRadS) / cosPitch;
@@ -134,8 +114,7 @@ function resolveYawRate(sample: TelemetrySample, speedMps: number): number | nul
     return Number.isFinite(rate) ? rate : 0;
   }
 
-  // No attitude at all: assume straight-line flight rather than giving up.
-  // Heading and speed alone still support a useful projection.
+  // Heading and speed support a straight-line projection without attitude.
   return 0;
 }
 
@@ -156,8 +135,7 @@ function integrate(headingRad: number, speedMps: number, yawRateRadS: number): E
       continue;
     }
 
-    // Closed-form CTRV arc. Exact, so accuracy does not decay with horizon
-    // length the way Euler steps would.
+    // Closed-form CTRV arc.
     const turned = headingRad + yawRateRadS * t;
     const radius = speedMps / yawRateRadS;
 

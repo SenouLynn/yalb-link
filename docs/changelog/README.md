@@ -1,3 +1,4 @@
 # Changelog
 
-Human-readable log of notable changes per release. Follow [Keep a Changelog](https://keepachangelog.com) conventions.
+Record user-visible release changes here. Development narration belongs in Git
+history. The project has not published a release, so the changelog is empty.

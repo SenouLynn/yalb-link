@@ -8,14 +8,7 @@ import (
 	gcsv1 "yalb.gcs/internal/gen/gcs/v1"
 )
 
-// Decoded is the result of decoding one frame.
-//
-// Exactly one of Telemetry or Transaction is non-nil, or both are nil for a
-// message ID we do not handle. The two envelopes go to different places:
-// telemetry folds into per-vehicle state and fans out to subscribers, while a
-// transaction response correlates against the in-flight request registry and
-// completes a pending RPC. Conflating them leaves the mission and parameter
-// protocols nowhere to land.
+// Decoded contains at most one streaming or transaction envelope.
 type Decoded struct {
 	Telemetry   *gcsv1.TelemetryEvent
 	Transaction *gcsv1.ProtocolEvent
@@ -29,10 +22,7 @@ func (d Decoded) Handled() bool {
 	return d.Telemetry != nil || d.Transaction != nil
 }
 
-// Unit conversion factors. Every one of these is applied exactly once, here,
-// at the proto boundary. The protos carry SI units and degrees; the wire
-// carries E7 degrees, millimetres and cm/s. Nothing downstream — not the fold,
-// not a resolver, not a component — divides by 1e7, 1000 or 100 again.
+// Unit conversions are applied once at the protobuf boundary.
 const (
 	degE7ToDeg  = 1e-7
 	mmToM       = 1e-3
@@ -40,23 +30,9 @@ const (
 	cGToG       = 1e-2 // centi-units to whole units (load, throttle percentages)
 )
 
-// telemetryDecoders maps a MAVLink message ID to its streaming-telemetry
-// converter. Thirteen families, one small function each.
-//
-// A table rather than a type switch: an 18-case switch with a proto
-// construction per arm runs 90-120 lines at cyclomatic complexity ~20 and
-// fails three limits in our own .golangci.yml (funlen 80/50, cyclop 15,
-// gocognit 20). The table also makes the Tier 2 capability matrix mechanically
-// verifiable — TestMatrixCoverage asserts the matrix rows equal these keys, so
-// a decoder without a row fails the build and a row without a decoder fails
-// too.
-// A nil value means the ID is claimed by this codec but has no TelemetryEvent
-// payload — see HEARTBEAT below.
+// telemetryDecoders is the mechanically checked streaming dispatch table.
+// A nil value claims a non-telemetry family such as HEARTBEAT.
 var telemetryDecoders = map[uint32]func(message.Message) *gcsv1.TelemetryEvent{
-	// HEARTBEAT has no variant in the TelemetryEvent oneof: it decodes to
-	// HeartbeatState via DecodeHeartbeat and drives the fleet fold rather than
-	// the telemetry fan-out. The entry is present so the ID is claimed and
-	// appears in the capability matrix; the nil says there is nothing to fold.
 	0:   nil,
 	1:   decodeSysStatus,
 	24:  decodeGpsRaw,
@@ -72,8 +48,7 @@ var telemetryDecoders = map[uint32]func(message.Message) *gcsv1.TelemetryEvent{
 	253: decodeStatusText,
 }
 
-// protocolDecoders maps a MAVLink message ID to its transaction-response
-// converter. Five families.
+// protocolDecoders is the transaction-response dispatch table.
 var protocolDecoders = map[uint32]func(message.Message) *gcsv1.ProtocolEvent{
 	22: decodeParamValue,
 	44: decodeMissionCount,
@@ -82,26 +57,17 @@ var protocolDecoders = map[uint32]func(message.Message) *gcsv1.ProtocolEvent{
 	77: decodeCommandAck,
 }
 
-// Decode converts a frame event into its envelope.
-//
-// Returns a zero Decoded for a message ID we do not handle — silently dropping
-// an unknown ID is correct. Parse errors never reach here: gomavlib emits
-// EventParseError instead of EventFrame, which is why callers must handle that
-// event separately rather than expecting an error from this function.
+// Decode converts a frame event into its envelope; unhandled IDs return zero.
 func Decode(evt *gomavlib.EventFrame) Decoded {
 	msg := evt.Message()
 
 	d := Decoded{
 		SysID:  evt.SystemID(),
 		CompID: evt.ComponentID(),
-		// GetSequenceNumber, not GetSequence.
-		Seq: evt.Frame.GetSequenceNumber(),
+		Seq:    evt.Frame.GetSequenceNumber(),
 	}
 
-	// Vehicle identity lives on the envelope and nowhere else. Telemetry
-	// payload messages carry no vehicle_id: duplicating it per payload doubles
-	// wire cost at telemetry rates and creates two sources of truth that can
-	// disagree. Do not re-add it to the payloads.
+	// Frame identity belongs to the envelope, not individual payloads.
 	id := &gcsv1.VehicleId{
 		SystemId:    uint32(d.SysID),
 		ComponentId: uint32(d.CompID),
@@ -109,7 +75,6 @@ func Decode(evt *gomavlib.EventFrame) Decoded {
 
 	if decode, ok := telemetryDecoders[msg.GetID()]; ok {
 		if decode == nil {
-			// Claimed, but not a telemetry payload.
 			return d
 		}
 

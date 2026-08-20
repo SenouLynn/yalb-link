@@ -3,7 +3,7 @@
   "fields": {},
   "message_id": 0,
   "message_name": "HEARTBEAT",
-  "note": "Frame cut mid-payload, with no following bytes. Behaviour differs from bad_crc and the roadmap's claim: gomavlib's parser is stream-oriented and simply WAITS for the remaining bytes, so no EventParseError is emitted and no counter moves. Verified by execution. The observable contract is only 'no frame surfaces, no panic'. A truncated frame followed by more traffic is the damaging case: the parser consumes the next frame's bytes as this one's remainder, so both are lost.",
+  "note": "Frame cut mid-payload, with no following bytes. Unlike bad_crc, gomavlib's stream-oriented parser waits for the remaining bytes, so no EventParseError is emitted and no counter moves. The observable contract is 'no frame surfaces, no panic'.",
   "seq": 42,
   "sys_id": 1
 }

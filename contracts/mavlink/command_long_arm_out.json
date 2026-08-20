@@ -7,7 +7,7 @@
   },
   "message_id": 76,
   "message_name": "COMMAND_LONG",
-  "note": "param2=21196 would be force-arm; the Tier 8 allowlist rejects it, including via raw_command",
+  "note": "param2=21196 would request force-arm; this encoder does not validate policy",
   "seq": 42,
   "sys_id": 255
 }

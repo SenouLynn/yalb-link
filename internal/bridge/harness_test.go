@@ -21,9 +21,6 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	// Same claim as the codec's: the node and the bridge each own goroutines,
-	// so "none leaked" is the only assertion worth making about them, and it
-	// is only true if every harness tears down in the right order.
 	goleak.VerifyTestMain(m)
 }
 
@@ -55,10 +52,7 @@ func loadFixture(t *testing.T, name string) ([]byte, fixtureMeta) {
 	return raw, meta
 }
 
-// fakeClock is the injected millisecond clock.
-//
-// Atomic rather than mutex-guarded because it is read on the bridge goroutine
-// and advanced from the test goroutine, and the race detector is on.
+// fakeClock is shared by the bridge and test goroutines.
 type fakeClock struct{ ms atomic.Int64 }
 
 func newClock(startMs int64) *fakeClock {
@@ -71,7 +65,7 @@ func newClock(startMs int64) *fakeClock {
 func (c *fakeClock) Now() int64              { return c.ms.Load() }
 func (c *fakeClock) Advance(d time.Duration) { c.ms.Add(int64(d / time.Millisecond)) }
 
-// captureSink records everything the fold emitted, and can fail on demand.
+// captureSink records events and can fail on demand.
 type captureSink struct {
 	err    error
 	events []vehicle.Event
@@ -98,12 +92,7 @@ func (s *captureSink) snapshot() []vehicle.Event {
 	return append([]vehicle.Event(nil), s.events...)
 }
 
-// await polls until pred is satisfied by some captured event, or fails.
-//
-// Polling rather than a channel handshake: the bridge publishes from its own
-// goroutine on its own schedule, and a test that blocks on an exact event
-// count has to know how many events a fixture produces — which couples the
-// test to the fold's internals rather than to the observation it cares about.
+// await polls until one captured event satisfies pred.
 func (s *captureSink) await(t *testing.T, what string, pred func(vehicle.Event) bool) vehicle.Event {
 	t.Helper()
 
@@ -137,16 +126,7 @@ func (s *captureSink) refute(t *testing.T, what string, pred func(vehicle.Event)
 	}
 }
 
-// harness runs a real codec.Node over an in-memory pipe with a Bridge
-// consuming it.
-//
-// The bridge is fed real MAVLink bytes through the real decoder rather than
-// hand-built gomavlib events. Hand-built events would skip framing, CRC_EXTRA
-// validation and dialect population — and, more to the point here, would let
-// the test invent a *gomavlib.Channel, whose label is the source attribution
-// the bridge actually depends on.
-// Field order is pointer-bearing first and sync.Once last, which is what
-// govet's fieldalignment asks for.
+// harness runs real MAVLink bytes through codec.Node and Bridge over net.Pipe.
 type harness struct {
 	conn     net.Conn
 	runErrIn error
@@ -160,10 +140,7 @@ type harness struct {
 	runOnce  sync.Once
 }
 
-// wait returns Run's result, blocking for it once and caching it.
-//
-// Cached because both a test and the cleanup hook may want it, and a second
-// receive on the channel would block forever.
+// wait returns and caches Run's result.
 func (h *harness) wait() error {
 	h.runOnce.Do(func() { h.runErrIn = <-h.runErr })
 
@@ -200,9 +177,7 @@ func newHarnessWithSink(t *testing.T, sink *captureSink) *harness {
 		Sink:   sink,
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
 		Now:    clock.Now,
-		// Far shorter than SweepInterval: the sweep is driven by the injected
-		// clock, so the ticker only decides how soon the test notices, not
-		// what the fold concludes.
+		// The injected clock controls conclusions; this only reduces test latency.
 		Sweep: 5 * time.Millisecond,
 	})
 	if err != nil {
@@ -214,9 +189,7 @@ func newHarnessWithSink(t *testing.T, sink *captureSink) *harness {
 		bridge: b, runErr: make(chan error, 1),
 	}
 
-	// Drain the node's outbound bytes. Load-bearing, not hygiene: net.Pipe is
-	// unbuffered and the node emits a GCS heartbeat every second, so with
-	// nothing reading this side the node's writer wedges and Close deadlocks.
+	// Drain heartbeat writes so the unbuffered pipe cannot block shutdown.
 	drained := make(chan struct{})
 
 	go func() {
@@ -237,9 +210,7 @@ func newHarnessWithSink(t *testing.T, sink *captureSink) *harness {
 	go func() { h.runErr <- b.Run(ctx) }()
 
 	t.Cleanup(func() {
-		// Order matters and mirrors the shutdown sequence in cmd/gcs: cancel
-		// first so Run stops consuming, then close the node so its pump can
-		// return, then close the pipe so the drain goroutine returns.
+		// Stop consumer, producer, then pipe.
 		cancel()
 		_ = h.wait()
 		_ = node.Close()

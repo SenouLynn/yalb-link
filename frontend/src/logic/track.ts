@@ -1,6 +1,4 @@
-/**
- * Flight path recorder — accumulates flown positions as local ENU offsets.
- */
+/** Accumulates flown positions as local ENU offsets. */
 
 import type { TelemetrySample } from './sample';
 import { resolvePosition } from './position';
@@ -19,12 +17,7 @@ export interface TrackOrigin {
   lonDeg: number;
 }
 
-/**
- * Maximum retained points.
- *
- * A ring buffer, not a growing list: at 5 Hz this is 100 seconds of track, and
- * an unbounded array on a long flight is an eventual browser tab crash.
- */
+/** Maximum retained points; 100 seconds at 5 Hz. */
 export const TRACK_CAPACITY = 500;
 
 /** Metres per degree of latitude. Spherical approximation. */
@@ -32,17 +25,7 @@ const METRES_PER_DEG = 111319.49;
 
 const DEG_TO_RAD = Math.PI / 180;
 
-/**
- * Appends the sample's position to the track.
- *
- * Pure: returns a new array and never mutates `prev`. A sample without a
- * usable fix returns `prev` unchanged (by reference), so a caller can use
- * identity to skip a re-render.
- *
- * The equirectangular projection is accurate to well under a metre at the
- * scale a single flight covers, and unlike a full geodesic it costs nothing
- * per telemetry frame.
- */
+/** Appends a local equirectangular point without mutating the prior track. */
 export function accumulateTrack(
   prev: EnuPoint[],
   sample: TelemetrySample,

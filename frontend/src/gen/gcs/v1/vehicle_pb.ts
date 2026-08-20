@@ -4,7 +4,7 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { MavAutopilot, MavProtocolCapability, MavState, MavType } from "./types_pb";
+import type { MavAutopilot, MavState, MavType } from "./types_pb";
 import { file_gcs_v1_types } from "./types_pb";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file gcs/v1/vehicle.proto.
  */
 export const file_gcs_v1_vehicle: GenFile = /*@__PURE__*/
-  fileDesc("ChRnY3MvdjEvdmVoaWNsZS5wcm90bxIGZ2NzLnYxIjQKCVZlaGljbGVJZBIRCglzeXN0ZW1faWQYASABKA0SFAoMY29tcG9uZW50X2lkGAIgASgNItcDCg5IZWFydGJlYXRTdGF0ZRIdCgJpZBgBIAEoCzIRLmdjcy52MS5WZWhpY2xlSWQSHQoEdHlwZRgCIAEoDjIPLmdjcy52MS5NYXZUeXBlEicKCWF1dG9waWxvdBgDIAEoDjIULmdjcy52MS5NYXZBdXRvcGlsb3QSJwoNc3lzdGVtX3N0YXR1cxgEIAEoDjIQLmdjcy52MS5NYXZTdGF0ZRINCgVhcm1lZBgFIAEoCBIcChRtYW51YWxfaW5wdXRfZW5hYmxlZBgGIAEoCBITCgtoaWxfZW5hYmxlZBgHIAEoCBIZChFzdGFiaWxpemVfZW5hYmxlZBgIIAEoCBIWCg5ndWlkZWRfZW5hYmxlZBgJIAEoCBIUCgxhdXRvX2VuYWJsZWQYCiABKAgSFAoMdGVzdF9lbmFibGVkGAsgASgIEhsKE2N1c3RvbV9tb2RlX2VuYWJsZWQYDCABKAgSEwoLY3VzdG9tX21vZGUYDSABKA0SGAoQZmxpZ2h0X21vZGVfbmFtZRgOIAEoCRIXCg9tYXZsaW5rX3ZlcnNpb24YDyABKA0SLwoLb2JzZXJ2ZWRfYXQYECABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIo4ECg9WZWhpY2xlU25hcHNob3QSHQoCaWQYASABKAsyES5nY3MudjEuVmVoaWNsZUlkEikKCWhlYXJ0YmVhdBgCIAEoCzIWLmdjcy52MS5IZWFydGJlYXRTdGF0ZRIUCgxsYXRpdHVkZV9kZWcYAyABKAESFQoNbG9uZ2l0dWRlX2RlZxgEIAEoARIWCg5hbHRpdHVkZV9tc2xfbRgFIAEoAhIbChNhbHRpdHVkZV9yZWxhdGl2ZV9tGAYgASgCEhAKCHJvbGxfcmFkGAcgASgCEhEKCXBpdGNoX3JhZBgIIAEoAhIPCgd5YXdfcmFkGAkgASgCEhQKDGFpcnNwZWVkX21fcxgKIAEoAhIXCg9ncm91bmRzcGVlZF9tX3MYCyABKAISFgoOY2xpbWJfcmF0ZV9tX3MYDCABKAISEwoLaGVhZGluZ19kZWcYDSABKAUSGgoSdm9sdGFnZV9iYXR0ZXJ5X212GA4gASgNEhoKEmN1cnJlbnRfYmF0dGVyeV9jYRgPIAEoBRIdChViYXR0ZXJ5X3JlbWFpbmluZ19wY3QYECABKAUSMwoPbGFzdF91cGRhdGVkX2F0GBEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIxCgxjYXBhYmlsaXRpZXMYEiABKAsyGy5nY3MudjEuVmVoaWNsZUNhcGFiaWxpdGllcyLeAgoTVmVoaWNsZUNhcGFiaWxpdGllcxIdCgJpZBgBIAEoCzIRLmdjcy52MS5WZWhpY2xlSWQSGAoQY2FwYWJpbGl0eV9mbGFncxgCIAEoBBIzCgxjYXBhYmlsaXRpZXMYAyADKA4yHS5nY3MudjEuTWF2UHJvdG9jb2xDYXBhYmlsaXR5EhkKEWZsaWdodF9zd192ZXJzaW9uGAQgASgNEh0KFW1pZGRsZXdhcmVfc3dfdmVyc2lvbhgFIAEoDRIVCg1vc19zd192ZXJzaW9uGAYgASgNEhUKDWJvYXJkX3ZlcnNpb24YByABKA0SEQoJdmVuZG9yX2lkGAggASgNEhIKCnByb2R1Y3RfaWQYCSABKA0SCwoDdWlkGAogASgEEgwKBHVpZDIYCyABKAwSLwoLb2JzZXJ2ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQiRaInlhbGIuZ2NzL2ludGVybmFsL2dlbi9nY3MvdjE7Z2NzdjFiBnByb3RvMw", [file_gcs_v1_types, file_google_protobuf_timestamp]);
+  fileDesc("ChRnY3MvdjEvdmVoaWNsZS5wcm90bxIGZ2NzLnYxIjQKCVZlaGljbGVJZBIRCglzeXN0ZW1faWQYASABKA0SFAoMY29tcG9uZW50X2lkGAIgASgNIsMDCg5IZWFydGJlYXRTdGF0ZRIdCgJpZBgBIAEoCzIRLmdjcy52MS5WZWhpY2xlSWQSHQoEdHlwZRgCIAEoDjIPLmdjcy52MS5NYXZUeXBlEicKCWF1dG9waWxvdBgDIAEoDjIULmdjcy52MS5NYXZBdXRvcGlsb3QSJwoNc3lzdGVtX3N0YXR1cxgEIAEoDjIQLmdjcy52MS5NYXZTdGF0ZRINCgVhcm1lZBgFIAEoCBIcChRtYW51YWxfaW5wdXRfZW5hYmxlZBgGIAEoCBITCgtoaWxfZW5hYmxlZBgHIAEoCBIZChFzdGFiaWxpemVfZW5hYmxlZBgIIAEoCBIWCg5ndWlkZWRfZW5hYmxlZBgJIAEoCBIUCgxhdXRvX2VuYWJsZWQYCiABKAgSFAoMdGVzdF9lbmFibGVkGAsgASgIEhsKE2N1c3RvbV9tb2RlX2VuYWJsZWQYDCABKAgSEwoLY3VzdG9tX21vZGUYDSABKA0SFwoPbWF2bGlua192ZXJzaW9uGA8gASgNEi8KC29ic2VydmVkX2F0GBAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEoECA4QDyLhAwoPVmVoaWNsZVNuYXBzaG90Eh0KAmlkGAEgASgLMhEuZ2NzLnYxLlZlaGljbGVJZBIpCgloZWFydGJlYXQYAiABKAsyFi5nY3MudjEuSGVhcnRiZWF0U3RhdGUSFAoMbGF0aXR1ZGVfZGVnGAMgASgBEhUKDWxvbmdpdHVkZV9kZWcYBCABKAESFgoOYWx0aXR1ZGVfbXNsX20YBSABKAISGwoTYWx0aXR1ZGVfcmVsYXRpdmVfbRgGIAEoAhIQCghyb2xsX3JhZBgHIAEoAhIRCglwaXRjaF9yYWQYCCABKAISDwoHeWF3X3JhZBgJIAEoAhIUCgxhaXJzcGVlZF9tX3MYCiABKAISFwoPZ3JvdW5kc3BlZWRfbV9zGAsgASgCEhYKDmNsaW1iX3JhdGVfbV9zGAwgASgCEhMKC2hlYWRpbmdfZGVnGA0gASgFEhoKEnZvbHRhZ2VfYmF0dGVyeV9tdhgOIAEoDRIaChJjdXJyZW50X2JhdHRlcnlfY2EYDyABKAUSHQoVYmF0dGVyeV9yZW1haW5pbmdfcGN0GBAgASgFEjMKD2xhc3RfdXBkYXRlZF9hdBgRIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBKBAgSEBNCJFoieWFsYi5nY3MvaW50ZXJuYWwvZ2VuL2djcy92MTtnY3N2MWIGcHJvdG8z", [file_gcs_v1_types, file_google_protobuf_timestamp]);
 
 /**
  * VehicleId uniquely identifies a MAVLink node on the network.
@@ -118,38 +118,11 @@ export type HeartbeatState = Message<"gcs.v1.HeartbeatState"> & {
   customModeEnabled: boolean;
 
   /**
-   * HEARTBEAT.custom_mode: firmware-specific flight mode integer. The integer
-   * is always authoritative; the name beside it may be absent.
+   * HEARTBEAT.custom_mode: firmware-specific flight mode integer.
    *
    * @generated from field: uint32 custom_mode = 13;
    */
   customMode: number;
-
-  /**
-   * Human-readable mode name, resolved in three ordered layers (ADR-0007 R1):
-   *
-   *   (a) AVAILABLE_MODES.mode_name (#435) when the vehicle supplies it —
-   *       authoritative, and the only source that also carries
-   *       NOT_USER_SELECTABLE / ADVANCED for UI gating. ArduPilot >= 4.7.0.
-   *   (b) otherwise the generated gomavlib dialect enum — COPTER_MODE,
-   *       PLANE_MODE, ROVER_MODE, SUB_MODE, TRACKER_MODE — selected by
-   *       (autopilot, type) and rendered via its String() method. Never a
-   *       hand-typed table: see the MavType note in types.proto for what a
-   *       retyped integer list costs.
-   *   (c) otherwise **empty**.
-   *
-   * Empty means unknown, not "no mode". Render custom_mode as an integer in that
-   * case. Never fabricate a name — a plausible wrong mode name is worse than a
-   * number, because the operator cannot tell it is wrong.
-   *
-   * This replaces an earlier comment naming a "firmware adapter layer" that was
-   * never built, which left the field permanently empty with no explanation.
-   *
-   * e.g. "GUIDED", "AUTO", "LOITER"; empty = unknown
-   *
-   * @generated from field: string flight_mode_name = 14;
-   */
-  flightModeName: string;
 
   /**
    * @generated from field: uint32 mavlink_version = 15;
@@ -282,14 +255,6 @@ export type VehicleSnapshot = Message<"gcs.v1.VehicleSnapshot"> & {
    * @generated from field: google.protobuf.Timestamp last_updated_at = 17;
    */
   lastUpdatedAt?: Timestamp | undefined;
-
-  /**
-   * Populated from AUTOPILOT_VERSION (#148), requested once at discovery.
-   * Absent until the vehicle answers; see VehicleCapabilities.observed_at.
-   *
-   * @generated from field: gcs.v1.VehicleCapabilities capabilities = 18;
-   */
-  capabilities?: VehicleCapabilities | undefined;
 };
 
 /**
@@ -298,126 +263,4 @@ export type VehicleSnapshot = Message<"gcs.v1.VehicleSnapshot"> & {
  */
 export const VehicleSnapshotSchema: GenMessage<VehicleSnapshot> = /*@__PURE__*/
   messageDesc(file_gcs_v1_vehicle, 2);
-
-/**
- * VehicleCapabilities is the vehicle's own declaration of what it supports,
- * decoded from AUTOPILOT_VERSION (#148). Requested at discovery with
- * MAV_CMD_REQUEST_MESSAGE (512).
- *
- * ADR-0007: this is how firmware variance is absorbed. Optional protocol paths
- * are gated on a bit here, never on a firmware name — an ArduPilot 4.5 vehicle
- * and an ArduPilot 4.7 vehicle differ more, on the things we branch on, than an
- * ArduPilot and a PX4 vehicle do on any single feature. Identity is a proxy for
- * capability that is wrong in both directions.
- *
- * **Absent is not empty.** A VehicleSnapshot with no capabilities message means
- * the vehicle has not answered yet (or does not implement #148), which is
- * distinct from a vehicle that answered with no bits set. Consumers must not
- * treat a missing message as "supports nothing" or as "supports the usual
- * things"; both are guesses. observed_at unset marks the message as never
- * populated.
- *
- * @generated from message gcs.v1.VehicleCapabilities
- */
-export type VehicleCapabilities = Message<"gcs.v1.VehicleCapabilities"> & {
-  /**
-   * @generated from field: gcs.v1.VehicleId id = 1;
-   */
-  id?: VehicleId | undefined;
-
-  /**
-   * AUTOPILOT_VERSION.capabilities, the raw 64-bit bitmask, carried verbatim.
-   * Authoritative. A vehicle may set bits MavProtocolCapability does not yet
-   * mirror, and truncating to the known set would drop them silently.
-   *
-   * @generated from field: uint64 capability_flags = 2;
-   */
-  capabilityFlags: bigint;
-
-  /**
-   * The same bitmask decomposed into the flags we mirror, for consumers that
-   * should not be doing bit arithmetic. Derived from capability_flags by the
-   * codec; if the two ever disagree, capability_flags wins.
-   *
-   * @generated from field: repeated gcs.v1.MavProtocolCapability capabilities = 3;
-   */
-  capabilities: MavProtocolCapability[];
-
-  /**
-   * AUTOPILOT_VERSION.flight_sw_version, packed (major)(minor)(patch)(type)
-   * from MSB to LSB. Carried packed rather than split because the packing is
-   * the wire contract and splitting it here would mean two representations to
-   * keep consistent. This selects the vendored parameter-metadata set — see
-   * ParameterMetadataSet in parameters.proto.
-   *
-   * @generated from field: uint32 flight_sw_version = 4;
-   */
-  flightSwVersion: number;
-
-  /**
-   * @generated from field: uint32 middleware_sw_version = 5;
-   */
-  middlewareSwVersion: number;
-
-  /**
-   * @generated from field: uint32 os_sw_version = 6;
-   */
-  osSwVersion: number;
-
-  /**
-   * AUTOPILOT_VERSION.board_version: low 8 bits are silicon ID, first 16 bits
-   * a board type from the ArduPilot/PX4 bootloader board_types tables.
-   *
-   * @generated from field: uint32 board_version = 7;
-   */
-  boardVersion: number;
-
-  /**
-   * uint16 on the wire
-   *
-   * @generated from field: uint32 vendor_id = 8;
-   */
-  vendorId: number;
-
-  /**
-   * uint16 on the wire
-   *
-   * @generated from field: uint32 product_id = 9;
-   */
-  productId: number;
-
-  /**
-   * Hardware identity. uid2 supersedes uid when non-empty (it is a MAVLink 2
-   * extension field, so older firmware sends only uid). This — not VehicleId —
-   * is the durable key for anything scoped to a physical vehicle: (system_id,
-   * component_id) is transport identity, and sysid is operator-assignable and
-   * reused across airframes. See SettingsScope in auth.proto.
-   *
-   * @generated from field: uint64 uid = 10;
-   */
-  uid: bigint;
-
-  /**
-   * 18 bytes when present; empty when the vehicle sends none
-   *
-   * @generated from field: bytes uid2 = 11;
-   */
-  uid2: Uint8Array;
-
-  /**
-   * When AUTOPILOT_VERSION was received. Unset means never — the request is
-   * outstanding or unanswered, and every capability above is unknown rather
-   * than false.
-   *
-   * @generated from field: google.protobuf.Timestamp observed_at = 12;
-   */
-  observedAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message gcs.v1.VehicleCapabilities.
- * Use `create(VehicleCapabilitiesSchema)` to create a new message.
- */
-export const VehicleCapabilitiesSchema: GenMessage<VehicleCapabilities> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_vehicle, 3);
 

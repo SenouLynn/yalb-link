@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "node --strip-types node_modules/eslint/bin/eslint.js --flag unstable_native_nodejs_ts_config src",
+    "lint": "node --experimental-strip-types node_modules/eslint/bin/eslint.js --flag unstable_native_nodejs_ts_config src",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -15,9 +15,6 @@
   },
   "dependencies": {
     "@bufbuild/protobuf": "^2.14.0",
-    "@connectrpc/connect": "^2.1.2",
-    "@connectrpc/connect-web": "^2.1.2",
-    "@tanstack/react-query": "5.101.4",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

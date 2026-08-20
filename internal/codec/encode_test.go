@@ -7,19 +7,7 @@ import (
 	"github.com/bluenviron/gomavlib/v3/pkg/message"
 )
 
-// Encoder tests assert the message struct an encoder builds, field by field,
-// against the values pymavlink independently encoded into the golden send
-// fixtures.
-//
-// They deliberately do not compare serialised bytes. gomavlib owns framing,
-// sequence numbers and CRC_EXTRA at write time, so byte-comparing our output
-// against pymavlink's would mostly assert that two libraries agree on framing —
-// which is gomavlib's job to get right and not something this codec can affect.
-// What this codec *can* get wrong is a field: a swapped lat/lon, a type_mask
-// with the wrong bit set, a unit left unconverted. That is what is checked.
-//
-// The fixture .json files carry the same values, so a change to one without the
-// other shows up here.
+// Encoder tests compare payload fields with independent pymavlink fixtures.
 
 func TestEncodeSetPositionTargetGlobalInt(t *testing.T) {
 	t.Parallel()
@@ -91,15 +79,6 @@ func TestEncodeCommandLongPassesParamsThrough(t *testing.T) {
 	}
 }
 
-// The codec does not enforce the force-arm ban — and that is the design.
-//
-// This test pins that the encoder is a pure passthrough, so nobody later
-// mistakes an absent check here for the control being in place. Removing
-// SetArmedRequest.force from the proto did not close force-arm: SendCommand
-// accepts any MavCmd plus a raw_command passthrough, so the only enforcement
-// point that covers every route is server-side validation in the Tier 8
-// command registry. A check added here would cover the typed path and miss the
-// raw one, which is worse than no check because it looks like coverage.
 func TestEncodeCommandLongDoesNotPoliceForceArm(t *testing.T) {
 	t.Parallel()
 
@@ -209,11 +188,6 @@ func TestEncodeParamRequestReadByName(t *testing.T) {
 	}
 }
 
-// Every encoder addresses a target and none of them picks a link.
-//
-// The MAVLink target_system field and the physical link are different things.
-// Keeping addressing out of the encoders is what keeps the never-broadcast rule
-// in one place (Node.WriteTo) rather than spread across eleven functions.
 func TestEncodersTargetTheRequestedVehicle(t *testing.T) {
 	t.Parallel()
 
@@ -294,11 +268,6 @@ func TestEncodersTargetTheRequestedVehicle(t *testing.T) {
 	}
 }
 
-// encoderMessages builds one representative message per send family.
-//
-// Keyed by the ID the family is supposed to have, so the assertion below is
-// "the encoder for 86 really does build a SET_POSITION_TARGET_GLOBAL_INT"
-// rather than a restatement of the list.
 func encoderMessages() map[uint32]message.Message {
 	target := Target{SystemID: 1, ComponentID: 1}
 
@@ -318,11 +287,6 @@ func encoderMessages() map[uint32]message.Message {
 	}
 }
 
-// Every declared send family has an encoder that builds that exact message ID.
-//
-// This is what keeps SendFamilies honest: an ID declared with no encoder, or an
-// encoder wired to the wrong message, fails here rather than at the first live
-// SITL write.
 func TestSendFamilyCoverage(t *testing.T) {
 	t.Parallel()
 

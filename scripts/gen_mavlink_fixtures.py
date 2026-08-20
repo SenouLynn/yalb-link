@@ -7,10 +7,8 @@ Run deliberately, never at build time:
     .venv/bin/python scripts/gen_mavlink_fixtures.py
 
 Output lands in contracts/mavlink/ and is committed. The fixtures are the
-primary source, not a fallback: a fixture regenerable from a script in this
-repo is the only kind that satisfies ADR-0001's hermeticity argument. The
-predecessor plan sourced these from a sibling checkout that is not present,
-not pinned and not reachable by URL or SHA.
+primary source, not a fallback: every committed fixture must be regenerable
+from this script and its pinned Python dependencies.
 
 Each family produces a pair:
   <name>.bin   raw frame bytes, exactly as they arrive on the wire
@@ -357,7 +355,7 @@ def gen_transactions():
             "param_id": "ARMING_CHECK", "param_value": 1.0,
             "param_type": 6, "param_count": 1372, "param_index": 142,
         },
-        note="the Tier 7 exit gate reads exactly this parameter off a live ArduCopter",
+        note="representative integer parameter response",
     )
 
     fixture(
@@ -471,7 +469,7 @@ def gen_send():
             param5=0.0, param6=0.0, param7=0.0,
         ),
         fields={"command": 400, "param1": 1.0, "param2": 0.0},
-        note="param2=21196 would be force-arm; the Tier 8 allowlist rejects it, including via raw_command",
+        note="param2=21196 would request force-arm; this encoder does not validate policy",
     )
 
     send_fixture(
@@ -563,7 +561,7 @@ def gen_send():
             target_system=1, target_component=1,
         ),
         fields={"target_system": 1, "target_component": 1},
-        note="protocol wired in Tier 8; deliberately not surfaced in the mission panel until after Tier 10",
+        note="encoder exists; no service or UI calls it",
     )
 
 
@@ -633,8 +631,8 @@ def gen_framing():
         "seq": SEQ,
         "fields": {},
         "note": (
-            "Frame cut mid-payload, with no following bytes. Behaviour differs from "
-            "bad_crc and the roadmap's claim: gomavlib's parser is stream-oriented and "
+            "Frame cut mid-payload, with no following bytes. Unlike bad_crc, "
+            "gomavlib's parser is stream-oriented and "
             "simply WAITS for the remaining bytes, so no EventParseError is emitted and "
             "no counter moves. Verified by execution. The observable contract is only "
             "'no frame surfaces, no panic'. A truncated frame followed by more traffic "

@@ -1,148 +1,67 @@
-# Dev Setup
+# Development setup
 
-Toolchain needed to run the tier gates. Everything installs into `~/go/bin`, which
-Go puts on your PATH — no system package manager, no sudo.
+## Prerequisites
 
-## Required
+- Go 1.25.x
+- Bazelisk (reads `.bazelversion`, currently Bazel 8.7.0)
+- Node.js 22 and Corepack/pnpm
+- buf 1.72.x
+- Docker with Compose v2
+- golangci-lint v2
+
+Verify the checkout with the versions pinned in the executable files rather
+than copying versions from this guide:
 
 ```sh
-# Go 1.25+ — check first; everything else assumes it
 go version
-
-# buf — proto lint, breaking-change detection, codegen
-go install github.com/bufbuild/buf/cmd/buf@latest
-
-# bazelisk — reads .bazelversion and fetches the matching bazel
-go install github.com/bazelbuild/bazelisk@latest
-ln -sf ~/go/bin/bazelisk ~/go/bin/bazel
-
-# golangci-lint v2 — the config uses the v2 schema and v1 will reject it
-go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
-
-# pnpm — pinned in package.json via packageManager
-corepack enable
+bazel version
+pnpm --version
+buf --version
+docker compose version
 ```
 
-Docker is also required from Tier 4 onward — the SITL vehicles, Redis and the
-backend image all live in `docker-compose.yml`. Docker Desktop on macOS, or
-docker + the compose v2 plugin on Linux. See `docs/research/podman-vs-docker.md`
-for why Docker rather than Podman for now.
-
-Verify:
+Install frontend dependencies once:
 
 ```sh
-buf --version              # 1.72+
-bazel version              # 7.4.1, fetched by bazelisk
-golangci-lint --version    # 2.x
+cd frontend
+pnpm install --frozen-lockfile
 ```
 
-## Running the gates
+## Test and build
+
+From the repository root:
 
 ```sh
-make gate-tier-0    # buf lint + buf breaking + contract checks
-make gate-tier-3    # generated stubs compile (Go, TS, and under Bazel)
-make gate-tier-1    # codec + resolver tests          (from Tier 1 onward)
-make gate-tier-2    # capability matrix               (from Tier 2 onward)
-make gate-tier-4    # fold + route table + containers (from Tier 4 onward)
+make test
+make lint-go
+make bazel-test
 ```
 
-`make gate-tier-4` builds the SITL image, which takes 10-20 minutes cold. Skip
-it in the inner loop:
+Useful narrower checks:
 
 ```sh
-make gate-tier-4 SKIP_SITL_BUILD=1
+make check-codec
+make check-matrix
+make check-integration SKIP_SITL_BUILD=1
 ```
 
-CI has no such switch, but it only runs that job on pushes to main.
-
-Two build paths, deliberately:
+## Generate code
 
 ```sh
-make test           # fast local loop — go test + vitest via their own runners
-make bazel-test     # checkpoint signal — same tests, pinned toolchains, both
-                    # languages, nothing depending on what you have installed
+make proto-gen
+make bazel-tidy
 ```
 
-They should never disagree. If they do, trust Bazel.
+Generated Go and TypeScript files are committed. Do not edit them directly.
 
-`make help` lists everything.
-
-## Running the stack
+## Run SITL
 
 ```sh
-docker compose up                      # one SITL vehicle, Redis, backend
-docker compose --profile multi-sitl up # three vehicles on one GCS socket
-docker compose --profile ui up         # adds the Vite dev server on :3000
-docker compose --profile tls up        # adds nginx on :443 (needs certs, below)
+docker compose up
+docker compose --profile multi-sitl up
+docker compose --profile ui up
 ```
 
-The vehicles dial the backend; the backend never dials a vehicle. All three SITL
-instances send to `gcs-backend:14550` inside the compose network and are told
-apart by system ID. The published TCP ports (5760, 5761, 5762) are for attaching
-mavproxy or Mission Planner from the host, and the published UDP 14550 is on the
-*backend*, which is the process that binds it.
-
-Certificates for the `tls` profile are per-developer and not committed:
-
-```sh
-mkdir -p docker/nginx/certs
-openssl req -x509 -newkey rsa:2048 -nodes -days 365 \
-  -keyout docker/nginx/certs/server.key \
-  -out docker/nginx/certs/server.crt \
-  -subj "/CN=localhost"
-```
-
-## Regenerating protos
-
-```sh
-make proto-gen      # buf generate; output is committed
-make bazel-tidy     # go mod tidy -> gazelle -> bazel mod tidy
-```
-
-Run `make bazel-tidy` after adding a Go dependency or a new package. The order is
-not arbitrary: `go.mod` is upstream of everything, gazelle writes BUILD files from
-the source tree, and `bazel mod tidy` syncs `MODULE.bazel`'s `use_repo` list to
-whatever those BUILD files now reference. Running them out of order produces a
-`use_repo` list that does not match the BUILD files, and the error message points
-at the lockfile rather than at the cause.
-
-## Air-gapped / offline codegen
-
-`buf generate` fetches remote plugins from the BSR. Build does not — generated files
-are committed. For an air-gapped machine, install the plugins locally and switch
-`remote:` to `local:` in `proto/buf.gen.yaml`:
-
-```sh
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
-npm install -g @bufbuild/protoc-gen-es
-```
-
-## Gotchas
-
-**`buf breaking` must run from the repo root.** The `.git` input resolves relative to
-the working directory, so `cd proto && buf breaking --against '.git#...'` looks for
-`proto/.git` and fails. And without `subdir=proto` the imports do not resolve in the
-compared ref. `make proto-breaking` has the correct invocation; use it rather than
-retyping.
-
-**`bazel build //frontend:typecheck` does not typecheck anything.** `ts_project` runs
-tsc in a separate action whose outputs live in the `typecheck` output group; building
-the default outputs succeeds with type errors in the tree. The real target is
-`//frontend:typecheck_typecheck_test`, which `bazel test //...` picks up.
-
-**Toolchain versions are coupled — bump them as a batch.** rules_go ↔ Go SDK ↔
-gazelle, and aspect_rules_js ↔ Bazel version. rules_go 0.52.0 passes
-`GOEXPERIMENT=coverageredesign`, removed in Go 1.25, so the stdlib build fails with an
-error that names neither rules_go nor the SDK. aspect_rules_js 3.x declares
-`bazel_compatibility = [">=7.6.0"]`. Read ADR-0006 before attempting an upgrade, and
-check a ruleset's `bazel_compatibility` on the BCR before adding it.
-
-**`docker compose up` fails with "port is already allocated".** Something else on
-the host holds 8080, 5760 or 14550 — often another compose project. Find it with
-`lsof -nP -iTCP:8080 -sTCP:LISTEN`, or publish elsewhere with a
-`docker-compose.override.yml`, which compose reads automatically and git ignores.
-
-**Do not put build outputs under `node_modules/`.** Bazel materialises that tree from
-`pnpm-lock.yaml` and cannot also accept outputs into it — this is why
-`tsBuildInfoFile` lives at `frontend/tsconfig.app.tsbuildinfo`.
+The default stack starts Copter SITL and the backend. SITL sends MAVLink
+to `gcs-backend:14550`; the backend publishes UDP 14550 for host-side tools.
+The UI profile currently starts the Vite scaffold, not a working flight UI.

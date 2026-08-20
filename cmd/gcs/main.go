@@ -1,9 +1,4 @@
-// Package main is the entry point for the gcs backend server.
-//
-// It owns exactly three things: reading the environment, assembling the
-// bridge, and coordinating shutdown. Every decision about what a frame means
-// belongs below this file — the pipeline is codec -> fold -> sink, and none of
-// those layers knows this file exists.
+// Package main assembles and runs the GCS backend.
 package main
 
 import (
@@ -25,18 +20,14 @@ import (
 	"yalb.gcs/internal/codec"
 )
 
-// httpAddr is where the health endpoint and, from Tier 6, the Connect services
-// are served.
+// httpAddr is where the health endpoint is served.
 const httpAddr = ":8080"
 
 // shutdownGrace bounds how long the HTTP server is given to finish in-flight
 // requests once the process has been told to stop.
 const shutdownGrace = 5 * time.Second
 
-// envLogLevel switches the logger to debug, which is where per-frame telemetry
-// lines live. Default is info: three SITL instances produce a few hundred
-// telemetry events a second, and at debug the fleet events they contextualise
-// are unreadable.
+// envLogLevel controls structured log verbosity.
 const envLogLevel = "GCS_LOG_LEVEL"
 
 func main() {
@@ -51,24 +42,18 @@ func main() {
 }
 
 func run(log *slog.Logger) error {
-	// NotifyContext, not a bare signal channel: it makes cancellation the one
-	// shutdown mechanism, so the HTTP server and the bridge stop for the same
-	// reason and in a defined order rather than racing a global.
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	bind := codec.ResolveBind(os.LookupEnv(codec.EnvUDPBind))
-	if warning := codec.PostureWarning(bind, os.Getenv(codec.EnvSigningKey)); warning != "" {
+	if warning := codec.PostureWarning(bind); warning != "" {
 		log.Warn(warning)
 	}
 
 	group, ctx := errgroup.WithContext(ctx)
 
 	if bind == "" {
-		// Explicitly empty is "no socket", not "default socket" — see
-		// codec.ResolveBind. Serving health without a bridge is a valid
-		// configuration for a container being smoke-tested, and it is worth a
-		// line so nobody debugs a silent fleet for ten minutes.
+		// An explicitly empty bind disables MAVLink while retaining health checks.
 		log.Warn("MAVLink socket disabled", "reason", codec.EnvUDPBind+" set to empty")
 	} else if err := startBridge(ctx, group, log, bind); err != nil {
 		return err
@@ -85,12 +70,6 @@ func run(log *slog.Logger) error {
 
 // startBridge opens the MAVLink socket and runs the receive pipeline on it.
 func startBridge(ctx context.Context, group *errgroup.Group, log *slog.Logger, bind string) error {
-	// The Tier 5 plan put a hand-written internal/transport package here,
-	// wrapping a net.PacketConn behind typed channels. There is no seam for
-	// it: gomavlib owns its socket through an EndpointConf and takes an
-	// endpoint, not a byte stream, so a PacketConn underneath it would mean
-	// reimplementing framing. codec.FrameSource is the transport port that
-	// plan was reaching for, and it already exists.
 	node, err := codec.NewNode([]gomavlib.EndpointConf{
 		gomavlib.EndpointUDPServer{Address: bind},
 	})
@@ -114,9 +93,7 @@ func startBridge(ctx context.Context, group *errgroup.Group, log *slog.Logger, b
 	)
 
 	group.Go(func() error {
-		// Close on the way out rather than deferring in run(): the node owns
-		// goroutines, and closing it before Run has returned would tear the
-		// event channel out from under the loop reading it.
+		// The bridge must stop consuming before its node closes.
 		defer func() {
 			if err := node.Close(); err != nil {
 				log.Error("closing MAVLink node", "err", err)
@@ -133,11 +110,7 @@ func startBridge(ctx context.Context, group *errgroup.Group, log *slog.Logger, b
 func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger) {
 	mux := http.NewServeMux()
 
-	// Still a liveness probe, not a readiness one: it reports that the process
-	// is up, and says nothing about Redis or the SITL link. Tier 5 Chapter 6
-	// replaces it with the real thing once there is a Redis client to ping and
-	// a link state to report; until then a green /healthz that claimed to
-	// check those would be worse than one that visibly does not.
+	// This is liveness only; it does not assert a vehicle link.
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -151,7 +124,6 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger) {
 	group.Go(func() error {
 		log.Info("http listening", "addr", httpAddr)
 
-		// ErrServerClosed is what a successful Shutdown looks like from here.
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			return fmt.Errorf("gcs: http server on %s: %w", httpAddr, err)
 		}
@@ -162,9 +134,7 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger) {
 	group.Go(func() error {
 		<-ctx.Done()
 
-		// A fresh context: the one that just fired is already cancelled, and
-		// passing it would make Shutdown abandon in-flight requests instantly
-		// rather than giving them the grace period.
+		// Shutdown gets its own bounded context after process cancellation.
 		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownGrace)
 		defer cancel()
 

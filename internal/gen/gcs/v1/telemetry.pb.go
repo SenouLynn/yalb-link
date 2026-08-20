@@ -22,97 +22,6 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// TelemetryPayloadType names each variant of the TelemetryEvent oneof.
-// Used by StreamTelemetryRequest to filter a subscription server-side.
-// Values correspond 1:1 to the oneof field numbers in TelemetryEvent.
-type TelemetryPayloadType int32
-
-const (
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_UNSPECIFIED           TelemetryPayloadType = 0
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_ATTITUDE              TelemetryPayloadType = 1
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_GLOBAL_POSITION       TelemetryPayloadType = 2
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_GPS_RAW               TelemetryPayloadType = 3
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_VFR_HUD               TelemetryPayloadType = 4
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_NAV_CONTROLLER_OUTPUT TelemetryPayloadType = 5
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_SYSTEM_STATUS         TelemetryPayloadType = 6
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_BATTERY_STATUS        TelemetryPayloadType = 7
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_RADIO_STATUS          TelemetryPayloadType = 8
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_EKF_STATUS_REPORT     TelemetryPayloadType = 9
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_MISSION_CURRENT       TelemetryPayloadType = 10
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_HOME_POSITION         TelemetryPayloadType = 11
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_PID_TUNING            TelemetryPayloadType = 12
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_FLOAT     TelemetryPayloadType = 13
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_INT       TelemetryPayloadType = 14
-	TelemetryPayloadType_TELEMETRY_PAYLOAD_TYPE_STATUS_TEXT           TelemetryPayloadType = 15
-)
-
-// Enum value maps for TelemetryPayloadType.
-var (
-	TelemetryPayloadType_name = map[int32]string{
-		0:  "TELEMETRY_PAYLOAD_TYPE_UNSPECIFIED",
-		1:  "TELEMETRY_PAYLOAD_TYPE_ATTITUDE",
-		2:  "TELEMETRY_PAYLOAD_TYPE_GLOBAL_POSITION",
-		3:  "TELEMETRY_PAYLOAD_TYPE_GPS_RAW",
-		4:  "TELEMETRY_PAYLOAD_TYPE_VFR_HUD",
-		5:  "TELEMETRY_PAYLOAD_TYPE_NAV_CONTROLLER_OUTPUT",
-		6:  "TELEMETRY_PAYLOAD_TYPE_SYSTEM_STATUS",
-		7:  "TELEMETRY_PAYLOAD_TYPE_BATTERY_STATUS",
-		8:  "TELEMETRY_PAYLOAD_TYPE_RADIO_STATUS",
-		9:  "TELEMETRY_PAYLOAD_TYPE_EKF_STATUS_REPORT",
-		10: "TELEMETRY_PAYLOAD_TYPE_MISSION_CURRENT",
-		11: "TELEMETRY_PAYLOAD_TYPE_HOME_POSITION",
-		12: "TELEMETRY_PAYLOAD_TYPE_PID_TUNING",
-		13: "TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_FLOAT",
-		14: "TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_INT",
-		15: "TELEMETRY_PAYLOAD_TYPE_STATUS_TEXT",
-	}
-	TelemetryPayloadType_value = map[string]int32{
-		"TELEMETRY_PAYLOAD_TYPE_UNSPECIFIED":           0,
-		"TELEMETRY_PAYLOAD_TYPE_ATTITUDE":              1,
-		"TELEMETRY_PAYLOAD_TYPE_GLOBAL_POSITION":       2,
-		"TELEMETRY_PAYLOAD_TYPE_GPS_RAW":               3,
-		"TELEMETRY_PAYLOAD_TYPE_VFR_HUD":               4,
-		"TELEMETRY_PAYLOAD_TYPE_NAV_CONTROLLER_OUTPUT": 5,
-		"TELEMETRY_PAYLOAD_TYPE_SYSTEM_STATUS":         6,
-		"TELEMETRY_PAYLOAD_TYPE_BATTERY_STATUS":        7,
-		"TELEMETRY_PAYLOAD_TYPE_RADIO_STATUS":          8,
-		"TELEMETRY_PAYLOAD_TYPE_EKF_STATUS_REPORT":     9,
-		"TELEMETRY_PAYLOAD_TYPE_MISSION_CURRENT":       10,
-		"TELEMETRY_PAYLOAD_TYPE_HOME_POSITION":         11,
-		"TELEMETRY_PAYLOAD_TYPE_PID_TUNING":            12,
-		"TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_FLOAT":     13,
-		"TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_INT":       14,
-		"TELEMETRY_PAYLOAD_TYPE_STATUS_TEXT":           15,
-	}
-)
-
-func (x TelemetryPayloadType) Enum() *TelemetryPayloadType {
-	p := new(TelemetryPayloadType)
-	*p = x
-	return p
-}
-
-func (x TelemetryPayloadType) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (TelemetryPayloadType) Descriptor() protoreflect.EnumDescriptor {
-	return file_gcs_v1_telemetry_proto_enumTypes[0].Descriptor()
-}
-
-func (TelemetryPayloadType) Type() protoreflect.EnumType {
-	return &file_gcs_v1_telemetry_proto_enumTypes[0]
-}
-
-func (x TelemetryPayloadType) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use TelemetryPayloadType.Descriptor instead.
-func (TelemetryPayloadType) EnumDescriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{0}
-}
-
 // Attitude mirrors ATTITUDE (#30).
 // Angular orientation and body rates in the NED frame.
 type Attitude struct {
@@ -335,14 +244,8 @@ func (x *GlobalPosition) GetObservedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// GpsRaw mirrors GPS_RAW_INT (#24).
-// Raw GPS sensor data before fusion. Use GlobalPosition for fused output.
-//
-// Altitude datum warning: alt_msl_m is above mean sea level. GlobalPosition
-// carries both alt_msl_m and alt_relative_m (above home). A resolver that falls
-// back from GlobalPosition to GpsRaw must not silently substitute MSL for
-// relative altitude — the two differ by field elevation. Carry the reference
-// frame alongside the value.
+// GpsRaw mirrors unfused GPS_RAW_INT (#24). alt_msl_m is always MSL, never
+// altitude relative to home.
 type GpsRaw struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	TimeUsec          uint64                 `protobuf:"varint,1,opt,name=time_usec,json=timeUsec,proto3" json:"time_usec,omitempty"` // µs since UNIX epoch or system boot
@@ -592,10 +495,7 @@ type VfrHud struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	AirspeedMS    float32                `protobuf:"fixed32,1,opt,name=airspeed_m_s,json=airspeedMS,proto3" json:"airspeed_m_s,omitempty"`          // current indicated airspeed, m/s
 	GroundspeedMS float32                `protobuf:"fixed32,2,opt,name=groundspeed_m_s,json=groundspeedMS,proto3" json:"groundspeed_m_s,omitempty"` // current ground speed, m/s
-	// Current heading, degrees. int16_t on the wire (MAVLink documents 0–360);
-	// ArduPilot may report negative values, so consumers must normalise with
-	// ((h % 360) + 360) % 360. There is no unknown sentinel on this field —
-	// UINT16_MAX applies to GlobalPosition.hdg_cdeg and GpsRaw.cog_cdeg, not here.
+	// Signed wire heading; consumers normalise to 0–359.
 	HeadingDeg    int32                  `protobuf:"varint,3,opt,name=heading_deg,json=headingDeg,proto3" json:"heading_deg,omitempty"`
 	ThrottlePct   uint32                 `protobuf:"varint,4,opt,name=throttle_pct,json=throttlePct,proto3" json:"throttle_pct,omitempty"` // throttle setting, % (0–100)
 	AltMslM       float32                `protobuf:"fixed32,5,opt,name=alt_msl_m,json=altMslM,proto3" json:"alt_msl_m,omitempty"`          // current altitude MSL, m
@@ -684,147 +584,6 @@ func (x *VfrHud) GetObservedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// NamedValueFloat mirrors NAMED_VALUE_FLOAT (#252).
-// ArduPilot uses these for real-time custom telemetry: PID internals, tuning
-// variables, and any arbitrary float the firmware wants to expose.
-// name is a null-terminated ASCII key, max 10 chars.
-type NamedValueFloat struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TimeBootMs    uint32                 `protobuf:"varint,1,opt,name=time_boot_ms,json=timeBootMs,proto3" json:"time_boot_ms,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Value         float32                `protobuf:"fixed32,3,opt,name=value,proto3" json:"value,omitempty"`
-	ObservedAt    *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=observed_at,json=observedAt,proto3" json:"observed_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *NamedValueFloat) Reset() {
-	*x = NamedValueFloat{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *NamedValueFloat) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NamedValueFloat) ProtoMessage() {}
-
-func (x *NamedValueFloat) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NamedValueFloat.ProtoReflect.Descriptor instead.
-func (*NamedValueFloat) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *NamedValueFloat) GetTimeBootMs() uint32 {
-	if x != nil {
-		return x.TimeBootMs
-	}
-	return 0
-}
-
-func (x *NamedValueFloat) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *NamedValueFloat) GetValue() float32 {
-	if x != nil {
-		return x.Value
-	}
-	return 0
-}
-
-func (x *NamedValueFloat) GetObservedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ObservedAt
-	}
-	return nil
-}
-
-// NamedValueInt mirrors NAMED_VALUE_INT (#251).
-type NamedValueInt struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	TimeBootMs    uint32                 `protobuf:"varint,1,opt,name=time_boot_ms,json=timeBootMs,proto3" json:"time_boot_ms,omitempty"`
-	Name          string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Value         int32                  `protobuf:"varint,3,opt,name=value,proto3" json:"value,omitempty"`
-	ObservedAt    *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=observed_at,json=observedAt,proto3" json:"observed_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *NamedValueInt) Reset() {
-	*x = NamedValueInt{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *NamedValueInt) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*NamedValueInt) ProtoMessage() {}
-
-func (x *NamedValueInt) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use NamedValueInt.ProtoReflect.Descriptor instead.
-func (*NamedValueInt) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *NamedValueInt) GetTimeBootMs() uint32 {
-	if x != nil {
-		return x.TimeBootMs
-	}
-	return 0
-}
-
-func (x *NamedValueInt) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *NamedValueInt) GetValue() int32 {
-	if x != nil {
-		return x.Value
-	}
-	return 0
-}
-
-func (x *NamedValueInt) GetObservedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ObservedAt
-	}
-	return nil
-}
-
 // StatusText mirrors STATUSTEXT (#253).
 // Autopilot log messages — arm/disarm events, calibration feedback, warnings.
 // Chunked messages (id > 0, chunk_seq > 0) must be reassembled before display.
@@ -841,7 +600,7 @@ type StatusText struct {
 
 func (x *StatusText) Reset() {
 	*x = StatusText{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[7]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -853,7 +612,7 @@ func (x *StatusText) String() string {
 func (*StatusText) ProtoMessage() {}
 
 func (x *StatusText) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[7]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -866,7 +625,7 @@ func (x *StatusText) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StatusText.ProtoReflect.Descriptor instead.
 func (*StatusText) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{7}
+	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *StatusText) GetSeverity() MavSeverity {
@@ -924,7 +683,7 @@ type NavControllerOutput struct {
 
 func (x *NavControllerOutput) Reset() {
 	*x = NavControllerOutput{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[8]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -936,7 +695,7 @@ func (x *NavControllerOutput) String() string {
 func (*NavControllerOutput) ProtoMessage() {}
 
 func (x *NavControllerOutput) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[8]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -949,7 +708,7 @@ func (x *NavControllerOutput) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NavControllerOutput.ProtoReflect.Descriptor instead.
 func (*NavControllerOutput) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{8}
+	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *NavControllerOutput) GetNavRollDeg() float32 {
@@ -1031,7 +790,7 @@ type MissionCurrent struct {
 
 func (x *MissionCurrent) Reset() {
 	*x = MissionCurrent{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[9]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1043,7 +802,7 @@ func (x *MissionCurrent) String() string {
 func (*MissionCurrent) ProtoMessage() {}
 
 func (x *MissionCurrent) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[9]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1056,7 +815,7 @@ func (x *MissionCurrent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use MissionCurrent.ProtoReflect.Descriptor instead.
 func (*MissionCurrent) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{9}
+	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *MissionCurrent) GetSeq() uint32 {
@@ -1123,7 +882,7 @@ type HomePosition struct {
 
 func (x *HomePosition) Reset() {
 	*x = HomePosition{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[10]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1135,7 +894,7 @@ func (x *HomePosition) String() string {
 func (*HomePosition) ProtoMessage() {}
 
 func (x *HomePosition) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[10]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1148,7 +907,7 @@ func (x *HomePosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HomePosition.ProtoReflect.Descriptor instead.
 func (*HomePosition) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{10}
+	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *HomePosition) GetLatDeg() float64 {
@@ -1256,127 +1015,6 @@ func (x *HomePosition) GetObservedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// PidTuning mirrors PID_TUNING (#194, ArduPilot dialect).
-// Real-time PID controller state for the specified axis.
-// Enable with parameter GCS_PID_MASK or MAV_CMD_SET_MESSAGE_INTERVAL.
-// Disable when not actively tuning — the stream is high frequency and
-// consumes significant radio bandwidth.
-type PidTuning struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Axis          PidTuningAxis          `protobuf:"varint,1,opt,name=axis,proto3,enum=gcs.v1.PidTuningAxis" json:"axis,omitempty"`
-	Desired       float32                `protobuf:"fixed32,2,opt,name=desired,proto3" json:"desired,omitempty"`          // desired rate (units: deg/s for angle axes, m/s² for ACCZ)
-	Achieved      float32                `protobuf:"fixed32,3,opt,name=achieved,proto3" json:"achieved,omitempty"`        // achieved rate
-	Ff            float32                `protobuf:"fixed32,4,opt,name=ff,proto3" json:"ff,omitempty"`                    // feed-forward contribution
-	P             float32                `protobuf:"fixed32,5,opt,name=p,proto3" json:"p,omitempty"`                      // proportional term output
-	I             float32                `protobuf:"fixed32,6,opt,name=i,proto3" json:"i,omitempty"`                      // integral term output
-	D             float32                `protobuf:"fixed32,7,opt,name=d,proto3" json:"d,omitempty"`                      // derivative term output
-	SRate         float32                `protobuf:"fixed32,8,opt,name=s_rate,json=sRate,proto3" json:"s_rate,omitempty"` // slew rate limit applied (MAVLink 2 extension)
-	PdMod         float32                `protobuf:"fixed32,9,opt,name=pd_mod,json=pdMod,proto3" json:"pd_mod,omitempty"` // P/D modifier from notch filter (MAVLink 2 extension)
-	ObservedAt    *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=observed_at,json=observedAt,proto3" json:"observed_at,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PidTuning) Reset() {
-	*x = PidTuning{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[11]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PidTuning) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PidTuning) ProtoMessage() {}
-
-func (x *PidTuning) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[11]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PidTuning.ProtoReflect.Descriptor instead.
-func (*PidTuning) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{11}
-}
-
-func (x *PidTuning) GetAxis() PidTuningAxis {
-	if x != nil {
-		return x.Axis
-	}
-	return PidTuningAxis_PID_TUNING_AXIS_UNSPECIFIED
-}
-
-func (x *PidTuning) GetDesired() float32 {
-	if x != nil {
-		return x.Desired
-	}
-	return 0
-}
-
-func (x *PidTuning) GetAchieved() float32 {
-	if x != nil {
-		return x.Achieved
-	}
-	return 0
-}
-
-func (x *PidTuning) GetFf() float32 {
-	if x != nil {
-		return x.Ff
-	}
-	return 0
-}
-
-func (x *PidTuning) GetP() float32 {
-	if x != nil {
-		return x.P
-	}
-	return 0
-}
-
-func (x *PidTuning) GetI() float32 {
-	if x != nil {
-		return x.I
-	}
-	return 0
-}
-
-func (x *PidTuning) GetD() float32 {
-	if x != nil {
-		return x.D
-	}
-	return 0
-}
-
-func (x *PidTuning) GetSRate() float32 {
-	if x != nil {
-		return x.SRate
-	}
-	return 0
-}
-
-func (x *PidTuning) GetPdMod() float32 {
-	if x != nil {
-		return x.PdMod
-	}
-	return 0
-}
-
-func (x *PidTuning) GetObservedAt() *timestamppb.Timestamp {
-	if x != nil {
-		return x.ObservedAt
-	}
-	return nil
-}
-
 // BatteryStatus mirrors BATTERY_STATUS (#147).
 // Preferred over the battery fields in SYS_STATUS on firmware that supports it;
 // carries per-cell voltages, richer charge state, and multi-battery support.
@@ -1399,7 +1037,7 @@ type BatteryStatus struct {
 
 func (x *BatteryStatus) Reset() {
 	*x = BatteryStatus{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[12]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1411,7 +1049,7 @@ func (x *BatteryStatus) String() string {
 func (*BatteryStatus) ProtoMessage() {}
 
 func (x *BatteryStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[12]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1424,7 +1062,7 @@ func (x *BatteryStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use BatteryStatus.ProtoReflect.Descriptor instead.
 func (*BatteryStatus) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{12}
+	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *BatteryStatus) GetId() uint32 {
@@ -1517,7 +1155,7 @@ type RadioStatus struct {
 
 func (x *RadioStatus) Reset() {
 	*x = RadioStatus{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[13]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1529,7 +1167,7 @@ func (x *RadioStatus) String() string {
 func (*RadioStatus) ProtoMessage() {}
 
 func (x *RadioStatus) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[13]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1542,7 +1180,7 @@ func (x *RadioStatus) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RadioStatus.ProtoReflect.Descriptor instead.
 func (*RadioStatus) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{13}
+	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *RadioStatus) GetRssi() uint32 {
@@ -1602,21 +1240,6 @@ func (x *RadioStatus) GetObservedAt() *timestamppb.Timestamp {
 }
 
 // EkfStatusReport mirrors EKF_STATUS_REPORT (#193, ArduPilot dialect).
-// Extended Kalman Filter health. Inspect flags before arming and during flight.
-//
-// flags bitmask (EKF_STATUS_FLAGS):
-//
-//	1    EKF_ATTITUDE             attitude estimate good
-//	2    EKF_VELOCITY_HORIZ       horizontal velocity good
-//	4    EKF_VELOCITY_VERT        vertical velocity good
-//	8    EKF_POS_HORIZ_REL        horizontal position (relative) good
-//	16   EKF_POS_HORIZ_ABS        horizontal position (absolute) good
-//	32   EKF_POS_VERT_ABS         vertical position (absolute) good
-//	64   EKF_POS_VERT_AGL         terrain altitude good
-//	128  EKF_CONST_POS_MODE       EKF in constant position mode (GPS denied)
-//	256  EKF_PRED_POS_HORIZ_REL   predicted horiz pos (relative) good
-//	512  EKF_PRED_POS_HORIZ_ABS   predicted horiz pos (absolute) good
-//	1024 EKF_UNINITIALIZED        filter not yet initialised — do not fly
 type EkfStatusReport struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	Flags              uint32                 `protobuf:"varint,1,opt,name=flags,proto3" json:"flags,omitempty"` // EKF_STATUS_FLAGS bitmask
@@ -1633,7 +1256,7 @@ type EkfStatusReport struct {
 
 func (x *EkfStatusReport) Reset() {
 	*x = EkfStatusReport{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[14]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1645,7 +1268,7 @@ func (x *EkfStatusReport) String() string {
 func (*EkfStatusReport) ProtoMessage() {}
 
 func (x *EkfStatusReport) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[14]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1658,7 +1281,7 @@ func (x *EkfStatusReport) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EkfStatusReport.ProtoReflect.Descriptor instead.
 func (*EkfStatusReport) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{14}
+	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *EkfStatusReport) GetFlags() uint32 {
@@ -1717,20 +1340,8 @@ func (x *EkfStatusReport) GetObservedAt() *timestamppb.Timestamp {
 	return nil
 }
 
-// TelemetryEvent is the envelope type for all streamed telemetry.
-// The Connect TelemetryService streams these to subscribed clients.
-// Exactly one payload field is set per message.
-//
-// Vehicle identity lives here and nowhere else. Payload messages deliberately
-// carry no vehicle_id: duplicating it per payload doubles the wire cost at
-// telemetry rates and creates two sources of truth that can disagree. The codec
-// reads (system_id, component_id) from the MAVLink frame header once and sets
-// it on the envelope.
-//
-// This envelope carries streaming telemetry only. MAVLink transaction responses
-// (PARAM_VALUE, MISSION_COUNT, MISSION_ITEM_INT, MISSION_ACK, COMMAND_ACK) are
-// not telemetry — they correlate against an in-flight request registry and are
-// carried by ProtocolEvent in protocol.proto.
+// TelemetryEvent carries one streaming payload and its frame-header identity.
+// Transaction responses use ProtocolEvent.
 type TelemetryEvent struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	VehicleId *VehicleId             `protobuf:"bytes,1,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"`
@@ -1747,9 +1358,6 @@ type TelemetryEvent struct {
 	//	*TelemetryEvent_EkfStatusReport
 	//	*TelemetryEvent_MissionCurrent
 	//	*TelemetryEvent_HomePosition
-	//	*TelemetryEvent_PidTuning
-	//	*TelemetryEvent_NamedValueFloat
-	//	*TelemetryEvent_NamedValueInt
 	//	*TelemetryEvent_StatusText
 	Payload       isTelemetryEvent_Payload `protobuf_oneof:"payload"`
 	unknownFields protoimpl.UnknownFields
@@ -1758,7 +1366,7 @@ type TelemetryEvent struct {
 
 func (x *TelemetryEvent) Reset() {
 	*x = TelemetryEvent{}
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[15]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1770,7 +1378,7 @@ func (x *TelemetryEvent) String() string {
 func (*TelemetryEvent) ProtoMessage() {}
 
 func (x *TelemetryEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_telemetry_proto_msgTypes[15]
+	mi := &file_gcs_v1_telemetry_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1783,7 +1391,7 @@ func (x *TelemetryEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TelemetryEvent.ProtoReflect.Descriptor instead.
 func (*TelemetryEvent) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{15}
+	return file_gcs_v1_telemetry_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *TelemetryEvent) GetVehicleId() *VehicleId {
@@ -1899,33 +1507,6 @@ func (x *TelemetryEvent) GetHomePosition() *HomePosition {
 	return nil
 }
 
-func (x *TelemetryEvent) GetPidTuning() *PidTuning {
-	if x != nil {
-		if x, ok := x.Payload.(*TelemetryEvent_PidTuning); ok {
-			return x.PidTuning
-		}
-	}
-	return nil
-}
-
-func (x *TelemetryEvent) GetNamedValueFloat() *NamedValueFloat {
-	if x != nil {
-		if x, ok := x.Payload.(*TelemetryEvent_NamedValueFloat); ok {
-			return x.NamedValueFloat
-		}
-	}
-	return nil
-}
-
-func (x *TelemetryEvent) GetNamedValueInt() *NamedValueInt {
-	if x != nil {
-		if x, ok := x.Payload.(*TelemetryEvent_NamedValueInt); ok {
-			return x.NamedValueInt
-		}
-	}
-	return nil
-}
-
 func (x *TelemetryEvent) GetStatusText() *StatusText {
 	if x != nil {
 		if x, ok := x.Payload.(*TelemetryEvent_StatusText); ok {
@@ -1986,19 +1567,6 @@ type TelemetryEvent_HomePosition struct {
 	HomePosition *HomePosition `protobuf:"bytes,12,opt,name=home_position,json=homePosition,proto3,oneof"`
 }
 
-type TelemetryEvent_PidTuning struct {
-	// Tuning and diagnostics
-	PidTuning *PidTuning `protobuf:"bytes,13,opt,name=pid_tuning,json=pidTuning,proto3,oneof"`
-}
-
-type TelemetryEvent_NamedValueFloat struct {
-	NamedValueFloat *NamedValueFloat `protobuf:"bytes,14,opt,name=named_value_float,json=namedValueFloat,proto3,oneof"`
-}
-
-type TelemetryEvent_NamedValueInt struct {
-	NamedValueInt *NamedValueInt `protobuf:"bytes,15,opt,name=named_value_int,json=namedValueInt,proto3,oneof"`
-}
-
 type TelemetryEvent_StatusText struct {
 	// Autopilot log messages
 	StatusText *StatusText `protobuf:"bytes,16,opt,name=status_text,json=statusText,proto3,oneof"`
@@ -2025,12 +1593,6 @@ func (*TelemetryEvent_EkfStatusReport) isTelemetryEvent_Payload() {}
 func (*TelemetryEvent_MissionCurrent) isTelemetryEvent_Payload() {}
 
 func (*TelemetryEvent_HomePosition) isTelemetryEvent_Payload() {}
-
-func (*TelemetryEvent_PidTuning) isTelemetryEvent_Payload() {}
-
-func (*TelemetryEvent_NamedValueFloat) isTelemetryEvent_Payload() {}
-
-func (*TelemetryEvent_NamedValueInt) isTelemetryEvent_Payload() {}
 
 func (*TelemetryEvent_StatusText) isTelemetryEvent_Payload() {}
 
@@ -2103,20 +1665,6 @@ const file_gcs_v1_telemetry_proto_rawDesc = "" +
 	"\talt_msl_m\x18\x05 \x01(\x02R\aaltMslM\x12\x1a\n" +
 	"\tclimb_m_s\x18\x06 \x01(\x02R\aclimbMS\x12;\n" +
 	"\vobserved_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"observedAt\"\x9a\x01\n" +
-	"\x0fNamedValueFloat\x12 \n" +
-	"\ftime_boot_ms\x18\x01 \x01(\rR\n" +
-	"timeBootMs\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
-	"\x05value\x18\x03 \x01(\x02R\x05value\x12;\n" +
-	"\vobserved_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"observedAt\"\x98\x01\n" +
-	"\rNamedValueInt\x12 \n" +
-	"\ftime_boot_ms\x18\x01 \x01(\rR\n" +
-	"timeBootMs\x12\x12\n" +
-	"\x04name\x18\x02 \x01(\tR\x04name\x12\x14\n" +
-	"\x05value\x18\x03 \x01(\x05R\x05value\x12;\n" +
-	"\vobserved_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"observedAt\"\xbb\x01\n" +
 	"\n" +
 	"StatusText\x12/\n" +
@@ -2165,19 +1713,6 @@ const file_gcs_v1_telemetry_proto_rawDesc = "" +
 	"approach_z\x18\r \x01(\x02R\tapproachZ\x12\x1b\n" +
 	"\ttime_usec\x18\x0e \x01(\x04R\btimeUsec\x12;\n" +
 	"\vobserved_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"observedAt\"\x91\x02\n" +
-	"\tPidTuning\x12)\n" +
-	"\x04axis\x18\x01 \x01(\x0e2\x15.gcs.v1.PidTuningAxisR\x04axis\x12\x18\n" +
-	"\adesired\x18\x02 \x01(\x02R\adesired\x12\x1a\n" +
-	"\bachieved\x18\x03 \x01(\x02R\bachieved\x12\x0e\n" +
-	"\x02ff\x18\x04 \x01(\x02R\x02ff\x12\f\n" +
-	"\x01p\x18\x05 \x01(\x02R\x01p\x12\f\n" +
-	"\x01i\x18\x06 \x01(\x02R\x01i\x12\f\n" +
-	"\x01d\x18\a \x01(\x02R\x01d\x12\x15\n" +
-	"\x06s_rate\x18\b \x01(\x02R\x05sRate\x12\x15\n" +
-	"\x06pd_mod\x18\t \x01(\x02R\x05pdMod\x12;\n" +
-	"\vobserved_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"observedAt\"\xdf\x03\n" +
 	"\rBatteryStatus\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\rR\x02id\x12)\n" +
@@ -2211,7 +1746,7 @@ const file_gcs_v1_telemetry_proto_rawDesc = "" +
 	"\x14terrain_alt_variance\x18\x06 \x01(\x02R\x12terrainAltVariance\x12+\n" +
 	"\x11airspeed_variance\x18\a \x01(\x02R\x10airspeedVariance\x12;\n" +
 	"\vobserved_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"observedAt\"\xda\a\n" +
+	"observedAt\"\xb0\x06\n" +
 	"\x0eTelemetryEvent\x120\n" +
 	"\n" +
 	"vehicle_id\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\tvehicleId\x12.\n" +
@@ -2226,32 +1761,10 @@ const file_gcs_v1_telemetry_proto_rawDesc = "" +
 	"\x11ekf_status_report\x18\n" +
 	" \x01(\v2\x17.gcs.v1.EkfStatusReportH\x00R\x0fekfStatusReport\x12A\n" +
 	"\x0fmission_current\x18\v \x01(\v2\x16.gcs.v1.MissionCurrentH\x00R\x0emissionCurrent\x12;\n" +
-	"\rhome_position\x18\f \x01(\v2\x14.gcs.v1.HomePositionH\x00R\fhomePosition\x122\n" +
-	"\n" +
-	"pid_tuning\x18\r \x01(\v2\x11.gcs.v1.PidTuningH\x00R\tpidTuning\x12E\n" +
-	"\x11named_value_float\x18\x0e \x01(\v2\x17.gcs.v1.NamedValueFloatH\x00R\x0fnamedValueFloat\x12?\n" +
-	"\x0fnamed_value_int\x18\x0f \x01(\v2\x15.gcs.v1.NamedValueIntH\x00R\rnamedValueInt\x125\n" +
+	"\rhome_position\x18\f \x01(\v2\x14.gcs.v1.HomePositionH\x00R\fhomePosition\x125\n" +
 	"\vstatus_text\x18\x10 \x01(\v2\x12.gcs.v1.StatusTextH\x00R\n" +
 	"statusTextB\t\n" +
-	"\apayload*\xb4\x05\n" +
-	"\x14TelemetryPayloadType\x12&\n" +
-	"\"TELEMETRY_PAYLOAD_TYPE_UNSPECIFIED\x10\x00\x12#\n" +
-	"\x1fTELEMETRY_PAYLOAD_TYPE_ATTITUDE\x10\x01\x12*\n" +
-	"&TELEMETRY_PAYLOAD_TYPE_GLOBAL_POSITION\x10\x02\x12\"\n" +
-	"\x1eTELEMETRY_PAYLOAD_TYPE_GPS_RAW\x10\x03\x12\"\n" +
-	"\x1eTELEMETRY_PAYLOAD_TYPE_VFR_HUD\x10\x04\x120\n" +
-	",TELEMETRY_PAYLOAD_TYPE_NAV_CONTROLLER_OUTPUT\x10\x05\x12(\n" +
-	"$TELEMETRY_PAYLOAD_TYPE_SYSTEM_STATUS\x10\x06\x12)\n" +
-	"%TELEMETRY_PAYLOAD_TYPE_BATTERY_STATUS\x10\a\x12'\n" +
-	"#TELEMETRY_PAYLOAD_TYPE_RADIO_STATUS\x10\b\x12,\n" +
-	"(TELEMETRY_PAYLOAD_TYPE_EKF_STATUS_REPORT\x10\t\x12*\n" +
-	"&TELEMETRY_PAYLOAD_TYPE_MISSION_CURRENT\x10\n" +
-	"\x12(\n" +
-	"$TELEMETRY_PAYLOAD_TYPE_HOME_POSITION\x10\v\x12%\n" +
-	"!TELEMETRY_PAYLOAD_TYPE_PID_TUNING\x10\f\x12,\n" +
-	"(TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_FLOAT\x10\r\x12*\n" +
-	"&TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_INT\x10\x0e\x12&\n" +
-	"\"TELEMETRY_PAYLOAD_TYPE_STATUS_TEXT\x10\x0fB$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
+	"\apayloadJ\x04\b\r\x10\x0eJ\x04\b\x0e\x10\x0fJ\x04\b\x0f\x10\x10B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
 
 var (
 	file_gcs_v1_telemetry_proto_rawDescOnce sync.Once
@@ -2265,76 +1778,63 @@ func file_gcs_v1_telemetry_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_telemetry_proto_rawDescData
 }
 
-var file_gcs_v1_telemetry_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_gcs_v1_telemetry_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_gcs_v1_telemetry_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_gcs_v1_telemetry_proto_goTypes = []any{
-	(TelemetryPayloadType)(0),     // 0: gcs.v1.TelemetryPayloadType
-	(*Attitude)(nil),              // 1: gcs.v1.Attitude
-	(*GlobalPosition)(nil),        // 2: gcs.v1.GlobalPosition
-	(*GpsRaw)(nil),                // 3: gcs.v1.GpsRaw
-	(*SystemStatus)(nil),          // 4: gcs.v1.SystemStatus
-	(*VfrHud)(nil),                // 5: gcs.v1.VfrHud
-	(*NamedValueFloat)(nil),       // 6: gcs.v1.NamedValueFloat
-	(*NamedValueInt)(nil),         // 7: gcs.v1.NamedValueInt
-	(*StatusText)(nil),            // 8: gcs.v1.StatusText
-	(*NavControllerOutput)(nil),   // 9: gcs.v1.NavControllerOutput
-	(*MissionCurrent)(nil),        // 10: gcs.v1.MissionCurrent
-	(*HomePosition)(nil),          // 11: gcs.v1.HomePosition
-	(*PidTuning)(nil),             // 12: gcs.v1.PidTuning
-	(*BatteryStatus)(nil),         // 13: gcs.v1.BatteryStatus
-	(*RadioStatus)(nil),           // 14: gcs.v1.RadioStatus
-	(*EkfStatusReport)(nil),       // 15: gcs.v1.EkfStatusReport
-	(*TelemetryEvent)(nil),        // 16: gcs.v1.TelemetryEvent
-	(*timestamppb.Timestamp)(nil), // 17: google.protobuf.Timestamp
-	(GpsFixType)(0),               // 18: gcs.v1.GpsFixType
-	(MavSeverity)(0),              // 19: gcs.v1.MavSeverity
-	(MissionState)(0),             // 20: gcs.v1.MissionState
-	(PidTuningAxis)(0),            // 21: gcs.v1.PidTuningAxis
-	(MavBatteryChargeState)(0),    // 22: gcs.v1.MavBatteryChargeState
-	(*VehicleId)(nil),             // 23: gcs.v1.VehicleId
+	(*Attitude)(nil),              // 0: gcs.v1.Attitude
+	(*GlobalPosition)(nil),        // 1: gcs.v1.GlobalPosition
+	(*GpsRaw)(nil),                // 2: gcs.v1.GpsRaw
+	(*SystemStatus)(nil),          // 3: gcs.v1.SystemStatus
+	(*VfrHud)(nil),                // 4: gcs.v1.VfrHud
+	(*StatusText)(nil),            // 5: gcs.v1.StatusText
+	(*NavControllerOutput)(nil),   // 6: gcs.v1.NavControllerOutput
+	(*MissionCurrent)(nil),        // 7: gcs.v1.MissionCurrent
+	(*HomePosition)(nil),          // 8: gcs.v1.HomePosition
+	(*BatteryStatus)(nil),         // 9: gcs.v1.BatteryStatus
+	(*RadioStatus)(nil),           // 10: gcs.v1.RadioStatus
+	(*EkfStatusReport)(nil),       // 11: gcs.v1.EkfStatusReport
+	(*TelemetryEvent)(nil),        // 12: gcs.v1.TelemetryEvent
+	(*timestamppb.Timestamp)(nil), // 13: google.protobuf.Timestamp
+	(GpsFixType)(0),               // 14: gcs.v1.GpsFixType
+	(MavSeverity)(0),              // 15: gcs.v1.MavSeverity
+	(MissionState)(0),             // 16: gcs.v1.MissionState
+	(MavBatteryChargeState)(0),    // 17: gcs.v1.MavBatteryChargeState
+	(*VehicleId)(nil),             // 18: gcs.v1.VehicleId
 }
 var file_gcs_v1_telemetry_proto_depIdxs = []int32{
-	17, // 0: gcs.v1.Attitude.observed_at:type_name -> google.protobuf.Timestamp
-	17, // 1: gcs.v1.GlobalPosition.observed_at:type_name -> google.protobuf.Timestamp
-	18, // 2: gcs.v1.GpsRaw.fix_type:type_name -> gcs.v1.GpsFixType
-	17, // 3: gcs.v1.GpsRaw.observed_at:type_name -> google.protobuf.Timestamp
-	17, // 4: gcs.v1.SystemStatus.observed_at:type_name -> google.protobuf.Timestamp
-	17, // 5: gcs.v1.VfrHud.observed_at:type_name -> google.protobuf.Timestamp
-	17, // 6: gcs.v1.NamedValueFloat.observed_at:type_name -> google.protobuf.Timestamp
-	17, // 7: gcs.v1.NamedValueInt.observed_at:type_name -> google.protobuf.Timestamp
-	19, // 8: gcs.v1.StatusText.severity:type_name -> gcs.v1.MavSeverity
-	17, // 9: gcs.v1.StatusText.observed_at:type_name -> google.protobuf.Timestamp
-	17, // 10: gcs.v1.NavControllerOutput.observed_at:type_name -> google.protobuf.Timestamp
-	20, // 11: gcs.v1.MissionCurrent.mission_state:type_name -> gcs.v1.MissionState
-	17, // 12: gcs.v1.MissionCurrent.observed_at:type_name -> google.protobuf.Timestamp
-	17, // 13: gcs.v1.HomePosition.observed_at:type_name -> google.protobuf.Timestamp
-	21, // 14: gcs.v1.PidTuning.axis:type_name -> gcs.v1.PidTuningAxis
-	17, // 15: gcs.v1.PidTuning.observed_at:type_name -> google.protobuf.Timestamp
-	22, // 16: gcs.v1.BatteryStatus.charge_state:type_name -> gcs.v1.MavBatteryChargeState
-	17, // 17: gcs.v1.BatteryStatus.observed_at:type_name -> google.protobuf.Timestamp
-	17, // 18: gcs.v1.RadioStatus.observed_at:type_name -> google.protobuf.Timestamp
-	17, // 19: gcs.v1.EkfStatusReport.observed_at:type_name -> google.protobuf.Timestamp
-	23, // 20: gcs.v1.TelemetryEvent.vehicle_id:type_name -> gcs.v1.VehicleId
-	1,  // 21: gcs.v1.TelemetryEvent.attitude:type_name -> gcs.v1.Attitude
-	2,  // 22: gcs.v1.TelemetryEvent.global_position:type_name -> gcs.v1.GlobalPosition
-	3,  // 23: gcs.v1.TelemetryEvent.gps_raw:type_name -> gcs.v1.GpsRaw
-	5,  // 24: gcs.v1.TelemetryEvent.vfr_hud:type_name -> gcs.v1.VfrHud
-	9,  // 25: gcs.v1.TelemetryEvent.nav_controller_output:type_name -> gcs.v1.NavControllerOutput
-	4,  // 26: gcs.v1.TelemetryEvent.system_status:type_name -> gcs.v1.SystemStatus
-	13, // 27: gcs.v1.TelemetryEvent.battery_status:type_name -> gcs.v1.BatteryStatus
-	14, // 28: gcs.v1.TelemetryEvent.radio_status:type_name -> gcs.v1.RadioStatus
-	15, // 29: gcs.v1.TelemetryEvent.ekf_status_report:type_name -> gcs.v1.EkfStatusReport
-	10, // 30: gcs.v1.TelemetryEvent.mission_current:type_name -> gcs.v1.MissionCurrent
-	11, // 31: gcs.v1.TelemetryEvent.home_position:type_name -> gcs.v1.HomePosition
-	12, // 32: gcs.v1.TelemetryEvent.pid_tuning:type_name -> gcs.v1.PidTuning
-	6,  // 33: gcs.v1.TelemetryEvent.named_value_float:type_name -> gcs.v1.NamedValueFloat
-	7,  // 34: gcs.v1.TelemetryEvent.named_value_int:type_name -> gcs.v1.NamedValueInt
-	8,  // 35: gcs.v1.TelemetryEvent.status_text:type_name -> gcs.v1.StatusText
-	36, // [36:36] is the sub-list for method output_type
-	36, // [36:36] is the sub-list for method input_type
-	36, // [36:36] is the sub-list for extension type_name
-	36, // [36:36] is the sub-list for extension extendee
-	0,  // [0:36] is the sub-list for field type_name
+	13, // 0: gcs.v1.Attitude.observed_at:type_name -> google.protobuf.Timestamp
+	13, // 1: gcs.v1.GlobalPosition.observed_at:type_name -> google.protobuf.Timestamp
+	14, // 2: gcs.v1.GpsRaw.fix_type:type_name -> gcs.v1.GpsFixType
+	13, // 3: gcs.v1.GpsRaw.observed_at:type_name -> google.protobuf.Timestamp
+	13, // 4: gcs.v1.SystemStatus.observed_at:type_name -> google.protobuf.Timestamp
+	13, // 5: gcs.v1.VfrHud.observed_at:type_name -> google.protobuf.Timestamp
+	15, // 6: gcs.v1.StatusText.severity:type_name -> gcs.v1.MavSeverity
+	13, // 7: gcs.v1.StatusText.observed_at:type_name -> google.protobuf.Timestamp
+	13, // 8: gcs.v1.NavControllerOutput.observed_at:type_name -> google.protobuf.Timestamp
+	16, // 9: gcs.v1.MissionCurrent.mission_state:type_name -> gcs.v1.MissionState
+	13, // 10: gcs.v1.MissionCurrent.observed_at:type_name -> google.protobuf.Timestamp
+	13, // 11: gcs.v1.HomePosition.observed_at:type_name -> google.protobuf.Timestamp
+	17, // 12: gcs.v1.BatteryStatus.charge_state:type_name -> gcs.v1.MavBatteryChargeState
+	13, // 13: gcs.v1.BatteryStatus.observed_at:type_name -> google.protobuf.Timestamp
+	13, // 14: gcs.v1.RadioStatus.observed_at:type_name -> google.protobuf.Timestamp
+	13, // 15: gcs.v1.EkfStatusReport.observed_at:type_name -> google.protobuf.Timestamp
+	18, // 16: gcs.v1.TelemetryEvent.vehicle_id:type_name -> gcs.v1.VehicleId
+	0,  // 17: gcs.v1.TelemetryEvent.attitude:type_name -> gcs.v1.Attitude
+	1,  // 18: gcs.v1.TelemetryEvent.global_position:type_name -> gcs.v1.GlobalPosition
+	2,  // 19: gcs.v1.TelemetryEvent.gps_raw:type_name -> gcs.v1.GpsRaw
+	4,  // 20: gcs.v1.TelemetryEvent.vfr_hud:type_name -> gcs.v1.VfrHud
+	6,  // 21: gcs.v1.TelemetryEvent.nav_controller_output:type_name -> gcs.v1.NavControllerOutput
+	3,  // 22: gcs.v1.TelemetryEvent.system_status:type_name -> gcs.v1.SystemStatus
+	9,  // 23: gcs.v1.TelemetryEvent.battery_status:type_name -> gcs.v1.BatteryStatus
+	10, // 24: gcs.v1.TelemetryEvent.radio_status:type_name -> gcs.v1.RadioStatus
+	11, // 25: gcs.v1.TelemetryEvent.ekf_status_report:type_name -> gcs.v1.EkfStatusReport
+	7,  // 26: gcs.v1.TelemetryEvent.mission_current:type_name -> gcs.v1.MissionCurrent
+	8,  // 27: gcs.v1.TelemetryEvent.home_position:type_name -> gcs.v1.HomePosition
+	5,  // 28: gcs.v1.TelemetryEvent.status_text:type_name -> gcs.v1.StatusText
+	29, // [29:29] is the sub-list for method output_type
+	29, // [29:29] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_gcs_v1_telemetry_proto_init() }
@@ -2344,7 +1844,7 @@ func file_gcs_v1_telemetry_proto_init() {
 	}
 	file_gcs_v1_types_proto_init()
 	file_gcs_v1_vehicle_proto_init()
-	file_gcs_v1_telemetry_proto_msgTypes[15].OneofWrappers = []any{
+	file_gcs_v1_telemetry_proto_msgTypes[12].OneofWrappers = []any{
 		(*TelemetryEvent_Attitude)(nil),
 		(*TelemetryEvent_GlobalPosition)(nil),
 		(*TelemetryEvent_GpsRaw)(nil),
@@ -2356,9 +1856,6 @@ func file_gcs_v1_telemetry_proto_init() {
 		(*TelemetryEvent_EkfStatusReport)(nil),
 		(*TelemetryEvent_MissionCurrent)(nil),
 		(*TelemetryEvent_HomePosition)(nil),
-		(*TelemetryEvent_PidTuning)(nil),
-		(*TelemetryEvent_NamedValueFloat)(nil),
-		(*TelemetryEvent_NamedValueInt)(nil),
 		(*TelemetryEvent_StatusText)(nil),
 	}
 	type x struct{}
@@ -2366,14 +1863,13 @@ func file_gcs_v1_telemetry_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_telemetry_proto_rawDesc), len(file_gcs_v1_telemetry_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   16,
+			NumEnums:      0,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_gcs_v1_telemetry_proto_goTypes,
 		DependencyIndexes: file_gcs_v1_telemetry_proto_depIdxs,
-		EnumInfos:         file_gcs_v1_telemetry_proto_enumTypes,
 		MessageInfos:      file_gcs_v1_telemetry_proto_msgTypes,
 	}.Build()
 	File_gcs_v1_telemetry_proto = out.File

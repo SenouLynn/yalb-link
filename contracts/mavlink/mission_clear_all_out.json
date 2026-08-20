@@ -6,7 +6,7 @@
   },
   "message_id": 45,
   "message_name": "MISSION_CLEAR_ALL",
-  "note": "protocol wired in Tier 8; deliberately not surfaced in the mission panel until after Tier 10",
+  "note": "encoder exists; no service or UI calls it",
   "seq": 42,
   "sys_id": 255
 }

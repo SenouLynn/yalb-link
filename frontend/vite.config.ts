@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      // Generated Connect clients import as '@/gen/gcs/v1/...'.
+      // Generated protobuf types import as '@/gen/gcs/v1/...'.
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
@@ -17,17 +17,6 @@ export default defineConfig({
     host: true,
     port: 3000,
     strictPort: true,
-    proxy: {
-      // Connect calls go to /api/<package>.<Service>/<Method>; the prefix is
-      // stripped here so the backend can mount its handlers at the root. The
-      // target is the compose service name when the container sets it, and
-      // localhost for a developer running `pnpm dev` against `go run`.
-      '/api': {
-        target: process.env['VITE_API_TARGET'] ?? 'http://localhost:8080',
-        changeOrigin: true,
-        rewrite: (path: string) => path.replace(/^\/api/, ''),
-      },
-    },
   },
   test: {
     // Domain resolvers are pure functions — no DOM, no jsdom cost.

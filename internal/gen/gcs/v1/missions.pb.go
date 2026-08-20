@@ -21,26 +21,21 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// MissionItem mirrors MISSION_ITEM_INT (#73).
-// lat/lon are normalised from degE7 (int32) to degrees (double).
-// For local frames, x/y are in metres and carried as double for consistency.
-// z is always in metres regardless of frame.
-// param1–4 semantics depend on command; see MAVLink common.xml MAV_CMD entries.
+// Inbound MAVLink mission transaction payloads currently decoded by the codec.
 type MissionItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	VehicleId     *VehicleId             `protobuf:"bytes,1,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"`
-	Seq           uint32                 `protobuf:"varint,2,opt,name=seq,proto3" json:"seq,omitempty"` // 0-based waypoint sequence number
+	Seq           uint32                 `protobuf:"varint,2,opt,name=seq,proto3" json:"seq,omitempty"`
 	Frame         MavFrame               `protobuf:"varint,3,opt,name=frame,proto3,enum=gcs.v1.MavFrame" json:"frame,omitempty"`
 	Command       MavCmd                 `protobuf:"varint,4,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
-	Current       bool                   `protobuf:"varint,5,opt,name=current,proto3" json:"current,omitempty"`           // true if this is the active waypoint
-	Autocontinue  bool                   `protobuf:"varint,6,opt,name=autocontinue,proto3" json:"autocontinue,omitempty"` // proceed to next item on completion
+	Current       bool                   `protobuf:"varint,5,opt,name=current,proto3" json:"current,omitempty"`
+	Autocontinue  bool                   `protobuf:"varint,6,opt,name=autocontinue,proto3" json:"autocontinue,omitempty"`
 	Param1        float32                `protobuf:"fixed32,7,opt,name=param1,proto3" json:"param1,omitempty"`
 	Param2        float32                `protobuf:"fixed32,8,opt,name=param2,proto3" json:"param2,omitempty"`
 	Param3        float32                `protobuf:"fixed32,9,opt,name=param3,proto3" json:"param3,omitempty"`
-	Param4        float32                `protobuf:"fixed32,10,opt,name=param4,proto3" json:"param4,omitempty"` // yaw, radians; NaN = not used
-	X             float64                `protobuf:"fixed64,11,opt,name=x,proto3" json:"x,omitempty"`           // latitude (degrees) or local x (metres)
-	Y             float64                `protobuf:"fixed64,12,opt,name=y,proto3" json:"y,omitempty"`           // longitude (degrees) or local y (metres)
-	Z             float32                `protobuf:"fixed32,13,opt,name=z,proto3" json:"z,omitempty"`           // altitude or local z, metres
+	Param4        float32                `protobuf:"fixed32,10,opt,name=param4,proto3" json:"param4,omitempty"`
+	X             float64                `protobuf:"fixed64,11,opt,name=x,proto3" json:"x,omitempty"` // latitude in degrees, or local x in metres
+	Y             float64                `protobuf:"fixed64,12,opt,name=y,proto3" json:"y,omitempty"` // longitude in degrees, or local y in metres
+	Z             float32                `protobuf:"fixed32,13,opt,name=z,proto3" json:"z,omitempty"` // altitude or local z in metres
 	MissionType   MavMissionType         `protobuf:"varint,14,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -74,13 +69,6 @@ func (x *MissionItem) ProtoReflect() protoreflect.Message {
 // Deprecated: Use MissionItem.ProtoReflect.Descriptor instead.
 func (*MissionItem) Descriptor() ([]byte, []int) {
 	return file_gcs_v1_missions_proto_rawDescGZIP(), []int{0}
-}
-
-func (x *MissionItem) GetVehicleId() *VehicleId {
-	if x != nil {
-		return x.VehicleId
-	}
-	return nil
 }
 
 func (x *MissionItem) GetSeq() uint32 {
@@ -174,13 +162,9 @@ func (x *MissionItem) GetMissionType() MavMissionType {
 	return MavMissionType_MAV_MISSION_TYPE_MISSION
 }
 
-// MissionCount mirrors MISSION_COUNT (#44).
-// Sent by the vehicle to open a download, and by the GCS to open an upload.
-// Carried as a ProtocolEvent payload on the inbound path; identity lives on
-// the ProtocolEvent envelope.
 type MissionCount struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Count         uint32                 `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"` // number of items in the mission
+	Count         uint32                 `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
 	MissionType   MavMissionType         `protobuf:"varint,2,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -230,11 +214,8 @@ func (x *MissionCount) GetMissionType() MavMissionType {
 	return MavMissionType_MAV_MISSION_TYPE_MISSION
 }
 
-// MissionAck mirrors MISSION_ACK (#47).
-// Returned by the vehicle at the end of an upload, download, or clear operation.
 type MissionAck struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	VehicleId     *VehicleId             `protobuf:"bytes,1,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"`
 	Result        MavMissionResult       `protobuf:"varint,2,opt,name=result,proto3,enum=gcs.v1.MavMissionResult" json:"result,omitempty"`
 	MissionType   MavMissionType         `protobuf:"varint,3,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -271,13 +252,6 @@ func (*MissionAck) Descriptor() ([]byte, []int) {
 	return file_gcs_v1_missions_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *MissionAck) GetVehicleId() *VehicleId {
-	if x != nil {
-		return x.VehicleId
-	}
-	return nil
-}
-
 func (x *MissionAck) GetResult() MavMissionResult {
 	if x != nil {
 		return x.Result
@@ -292,244 +266,12 @@ func (x *MissionAck) GetMissionType() MavMissionType {
 	return MavMissionType_MAV_MISSION_TYPE_MISSION
 }
 
-// DownloadMissionRequest triggers MISSION_REQUEST_LIST followed by
-// sequential MISSION_REQUEST_INT for each item.
-type DownloadMissionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	MissionType   MavMissionType         `protobuf:"varint,2,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *DownloadMissionRequest) Reset() {
-	*x = DownloadMissionRequest{}
-	mi := &file_gcs_v1_missions_proto_msgTypes[3]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *DownloadMissionRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*DownloadMissionRequest) ProtoMessage() {}
-
-func (x *DownloadMissionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_missions_proto_msgTypes[3]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use DownloadMissionRequest.ProtoReflect.Descriptor instead.
-func (*DownloadMissionRequest) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_missions_proto_rawDescGZIP(), []int{3}
-}
-
-func (x *DownloadMissionRequest) GetTarget() *VehicleId {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *DownloadMissionRequest) GetMissionType() MavMissionType {
-	if x != nil {
-		return x.MissionType
-	}
-	return MavMissionType_MAV_MISSION_TYPE_MISSION
-}
-
-// ClearMissionRequest sends MISSION_CLEAR_ALL to the vehicle.
-type ClearMissionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	MissionType   MavMissionType         `protobuf:"varint,2,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *ClearMissionRequest) Reset() {
-	*x = ClearMissionRequest{}
-	mi := &file_gcs_v1_missions_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *ClearMissionRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*ClearMissionRequest) ProtoMessage() {}
-
-func (x *ClearMissionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_missions_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use ClearMissionRequest.ProtoReflect.Descriptor instead.
-func (*ClearMissionRequest) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_missions_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *ClearMissionRequest) GetTarget() *VehicleId {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *ClearMissionRequest) GetMissionType() MavMissionType {
-	if x != nil {
-		return x.MissionType
-	}
-	return MavMissionType_MAV_MISSION_TYPE_MISSION
-}
-
-// SetCurrentItemRequest sends MISSION_SET_CURRENT to activate a waypoint.
-type SetCurrentItemRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	Seq           uint32                 `protobuf:"varint,2,opt,name=seq,proto3" json:"seq,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *SetCurrentItemRequest) Reset() {
-	*x = SetCurrentItemRequest{}
-	mi := &file_gcs_v1_missions_proto_msgTypes[5]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *SetCurrentItemRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*SetCurrentItemRequest) ProtoMessage() {}
-
-func (x *SetCurrentItemRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_missions_proto_msgTypes[5]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use SetCurrentItemRequest.ProtoReflect.Descriptor instead.
-func (*SetCurrentItemRequest) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_missions_proto_rawDescGZIP(), []int{5}
-}
-
-func (x *SetCurrentItemRequest) GetTarget() *VehicleId {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *SetCurrentItemRequest) GetSeq() uint32 {
-	if x != nil {
-		return x.Seq
-	}
-	return 0
-}
-
-// UploadMissionRequest carries a complete mission for upload in one unary call.
-//
-// This is deliberately not a client-streaming RPC. @connectrpc/connect-web
-// supports unary and server-streaming only; client and bidirectional streaming
-// are unavailable to browser clients, so a streaming upload would be uncallable
-// from the frontend. Missions are bounded (hundreds of items at most), so a
-// single request costs nothing.
-//
-// The backend performs the MAVLink handshake (MISSION_COUNT → MISSION_REQUEST_INT
-// × N → MISSION_ITEM_INT × N → MISSION_ACK) and returns the vehicle's final ack.
-type UploadMissionRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Target        *VehicleId             `protobuf:"bytes,1,opt,name=target,proto3" json:"target,omitempty"`
-	MissionType   MavMissionType         `protobuf:"varint,2,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
-	Items         []*MissionItem         `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *UploadMissionRequest) Reset() {
-	*x = UploadMissionRequest{}
-	mi := &file_gcs_v1_missions_proto_msgTypes[6]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *UploadMissionRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*UploadMissionRequest) ProtoMessage() {}
-
-func (x *UploadMissionRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_missions_proto_msgTypes[6]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use UploadMissionRequest.ProtoReflect.Descriptor instead.
-func (*UploadMissionRequest) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_missions_proto_rawDescGZIP(), []int{6}
-}
-
-func (x *UploadMissionRequest) GetTarget() *VehicleId {
-	if x != nil {
-		return x.Target
-	}
-	return nil
-}
-
-func (x *UploadMissionRequest) GetMissionType() MavMissionType {
-	if x != nil {
-		return x.MissionType
-	}
-	return MavMissionType_MAV_MISSION_TYPE_MISSION
-}
-
-func (x *UploadMissionRequest) GetItems() []*MissionItem {
-	if x != nil {
-		return x.Items
-	}
-	return nil
-}
-
 var File_gcs_v1_missions_proto protoreflect.FileDescriptor
 
 const file_gcs_v1_missions_proto_rawDesc = "" +
 	"\n" +
-	"\x15gcs/v1/missions.proto\x12\x06gcs.v1\x1a\x12gcs/v1/types.proto\x1a\x14gcs/v1/vehicle.proto\"\xa6\x03\n" +
-	"\vMissionItem\x120\n" +
-	"\n" +
-	"vehicle_id\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\tvehicleId\x12\x10\n" +
+	"\x15gcs/v1/missions.proto\x12\x06gcs.v1\x1a\x12gcs/v1/types.proto\"\xfa\x02\n" +
+	"\vMissionItem\x12\x10\n" +
 	"\x03seq\x18\x02 \x01(\rR\x03seq\x12&\n" +
 	"\x05frame\x18\x03 \x01(\x0e2\x10.gcs.v1.MavFrameR\x05frame\x12(\n" +
 	"\acommand\x18\x04 \x01(\x0e2\x0e.gcs.v1.MavCmdR\acommand\x12\x18\n" +
@@ -543,29 +285,14 @@ const file_gcs_v1_missions_proto_rawDesc = "" +
 	"\x01x\x18\v \x01(\x01R\x01x\x12\f\n" +
 	"\x01y\x18\f \x01(\x01R\x01y\x12\f\n" +
 	"\x01z\x18\r \x01(\x02R\x01z\x129\n" +
-	"\fmission_type\x18\x0e \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\"_\n" +
+	"\fmission_type\x18\x0e \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionTypeJ\x04\b\x01\x10\x02\"_\n" +
 	"\fMissionCount\x12\x14\n" +
 	"\x05count\x18\x01 \x01(\rR\x05count\x129\n" +
-	"\fmission_type\x18\x02 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\"\xab\x01\n" +
+	"\fmission_type\x18\x02 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\"\x7f\n" +
 	"\n" +
 	"MissionAck\x120\n" +
-	"\n" +
-	"vehicle_id\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\tvehicleId\x120\n" +
 	"\x06result\x18\x02 \x01(\x0e2\x18.gcs.v1.MavMissionResultR\x06result\x129\n" +
-	"\fmission_type\x18\x03 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\"~\n" +
-	"\x16DownloadMissionRequest\x12)\n" +
-	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x129\n" +
-	"\fmission_type\x18\x02 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\"{\n" +
-	"\x13ClearMissionRequest\x12)\n" +
-	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x129\n" +
-	"\fmission_type\x18\x02 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\"T\n" +
-	"\x15SetCurrentItemRequest\x12)\n" +
-	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x12\x10\n" +
-	"\x03seq\x18\x02 \x01(\rR\x03seq\"\xa7\x01\n" +
-	"\x14UploadMissionRequest\x12)\n" +
-	"\x06target\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\x06target\x129\n" +
-	"\fmission_type\x18\x02 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\x12)\n" +
-	"\x05items\x18\x03 \x03(\v2\x13.gcs.v1.MissionItemR\x05itemsB$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
+	"\fmission_type\x18\x03 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionTypeJ\x04\b\x01\x10\x02B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
 
 var (
 	file_gcs_v1_missions_proto_rawDescOnce sync.Once
@@ -579,43 +306,28 @@ func file_gcs_v1_missions_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_missions_proto_rawDescData
 }
 
-var file_gcs_v1_missions_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_gcs_v1_missions_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_gcs_v1_missions_proto_goTypes = []any{
-	(*MissionItem)(nil),            // 0: gcs.v1.MissionItem
-	(*MissionCount)(nil),           // 1: gcs.v1.MissionCount
-	(*MissionAck)(nil),             // 2: gcs.v1.MissionAck
-	(*DownloadMissionRequest)(nil), // 3: gcs.v1.DownloadMissionRequest
-	(*ClearMissionRequest)(nil),    // 4: gcs.v1.ClearMissionRequest
-	(*SetCurrentItemRequest)(nil),  // 5: gcs.v1.SetCurrentItemRequest
-	(*UploadMissionRequest)(nil),   // 6: gcs.v1.UploadMissionRequest
-	(*VehicleId)(nil),              // 7: gcs.v1.VehicleId
-	(MavFrame)(0),                  // 8: gcs.v1.MavFrame
-	(MavCmd)(0),                    // 9: gcs.v1.MavCmd
-	(MavMissionType)(0),            // 10: gcs.v1.MavMissionType
-	(MavMissionResult)(0),          // 11: gcs.v1.MavMissionResult
+	(*MissionItem)(nil),   // 0: gcs.v1.MissionItem
+	(*MissionCount)(nil),  // 1: gcs.v1.MissionCount
+	(*MissionAck)(nil),    // 2: gcs.v1.MissionAck
+	(MavFrame)(0),         // 3: gcs.v1.MavFrame
+	(MavCmd)(0),           // 4: gcs.v1.MavCmd
+	(MavMissionType)(0),   // 5: gcs.v1.MavMissionType
+	(MavMissionResult)(0), // 6: gcs.v1.MavMissionResult
 }
 var file_gcs_v1_missions_proto_depIdxs = []int32{
-	7,  // 0: gcs.v1.MissionItem.vehicle_id:type_name -> gcs.v1.VehicleId
-	8,  // 1: gcs.v1.MissionItem.frame:type_name -> gcs.v1.MavFrame
-	9,  // 2: gcs.v1.MissionItem.command:type_name -> gcs.v1.MavCmd
-	10, // 3: gcs.v1.MissionItem.mission_type:type_name -> gcs.v1.MavMissionType
-	10, // 4: gcs.v1.MissionCount.mission_type:type_name -> gcs.v1.MavMissionType
-	7,  // 5: gcs.v1.MissionAck.vehicle_id:type_name -> gcs.v1.VehicleId
-	11, // 6: gcs.v1.MissionAck.result:type_name -> gcs.v1.MavMissionResult
-	10, // 7: gcs.v1.MissionAck.mission_type:type_name -> gcs.v1.MavMissionType
-	7,  // 8: gcs.v1.DownloadMissionRequest.target:type_name -> gcs.v1.VehicleId
-	10, // 9: gcs.v1.DownloadMissionRequest.mission_type:type_name -> gcs.v1.MavMissionType
-	7,  // 10: gcs.v1.ClearMissionRequest.target:type_name -> gcs.v1.VehicleId
-	10, // 11: gcs.v1.ClearMissionRequest.mission_type:type_name -> gcs.v1.MavMissionType
-	7,  // 12: gcs.v1.SetCurrentItemRequest.target:type_name -> gcs.v1.VehicleId
-	7,  // 13: gcs.v1.UploadMissionRequest.target:type_name -> gcs.v1.VehicleId
-	10, // 14: gcs.v1.UploadMissionRequest.mission_type:type_name -> gcs.v1.MavMissionType
-	0,  // 15: gcs.v1.UploadMissionRequest.items:type_name -> gcs.v1.MissionItem
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	3, // 0: gcs.v1.MissionItem.frame:type_name -> gcs.v1.MavFrame
+	4, // 1: gcs.v1.MissionItem.command:type_name -> gcs.v1.MavCmd
+	5, // 2: gcs.v1.MissionItem.mission_type:type_name -> gcs.v1.MavMissionType
+	5, // 3: gcs.v1.MissionCount.mission_type:type_name -> gcs.v1.MavMissionType
+	6, // 4: gcs.v1.MissionAck.result:type_name -> gcs.v1.MavMissionResult
+	5, // 5: gcs.v1.MissionAck.mission_type:type_name -> gcs.v1.MavMissionType
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_gcs_v1_missions_proto_init() }
@@ -624,14 +336,13 @@ func file_gcs_v1_missions_proto_init() {
 		return
 	}
 	file_gcs_v1_types_proto_init()
-	file_gcs_v1_vehicle_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_missions_proto_rawDesc), len(file_gcs_v1_missions_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   7,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

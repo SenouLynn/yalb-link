@@ -2,9 +2,9 @@
 // @generated from file gcs/v1/telemetry.proto (package gcs.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
-import type { GpsFixType, MavBatteryChargeState, MavSeverity, MissionState, PidTuningAxis } from "./types_pb";
+import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GpsFixType, MavBatteryChargeState, MavSeverity, MissionState } from "./types_pb";
 import { file_gcs_v1_types } from "./types_pb";
 import type { VehicleId } from "./vehicle_pb";
 import { file_gcs_v1_vehicle } from "./vehicle_pb";
@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file gcs/v1/telemetry.proto.
  */
 export const file_gcs_v1_telemetry: GenFile = /*@__PURE__*/
-  fileDesc("ChZnY3MvdjEvdGVsZW1ldHJ5LnByb3RvEgZnY3MudjEi0gEKCEF0dGl0dWRlEhQKDHRpbWVfYm9vdF9tcxgBIAEoDRIQCghyb2xsX3JhZBgCIAEoAhIRCglwaXRjaF9yYWQYAyABKAISDwoHeWF3X3JhZBgEIAEoAhIXCg9yb2xsc3BlZWRfcmFkX3MYBSABKAISGAoQcGl0Y2hzcGVlZF9yYWRfcxgGIAEoAhIWCg55YXdzcGVlZF9yYWRfcxgHIAEoAhIvCgtvYnNlcnZlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAi5gEKDkdsb2JhbFBvc2l0aW9uEhQKDHRpbWVfYm9vdF9tcxgBIAEoDRIPCgdsYXRfZGVnGAIgASgBEg8KB2xvbl9kZWcYAyABKAESEQoJYWx0X21zbF9tGAQgASgCEhYKDmFsdF9yZWxhdGl2ZV9tGAUgASgCEg4KBnZ4X21fcxgGIAEoAhIOCgZ2eV9tX3MYByABKAISDgoGdnpfbV9zGAggASgCEhAKCGhkZ19jZGVnGAkgASgNEi8KC29ic2VydmVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKBAgoGR3BzUmF3EhEKCXRpbWVfdXNlYxgBIAEoBBIkCghmaXhfdHlwZRgCIAEoDjISLmdjcy52MS5HcHNGaXhUeXBlEg8KB2xhdF9kZWcYAyABKAESDwoHbG9uX2RlZxgEIAEoARIRCglhbHRfbXNsX20YBSABKAISCwoDZXBoGAYgASgNEgsKA2VwdhgHIAEoDRIQCgh2ZWxfY21fcxgIIAEoDRIQCghjb2dfY2RlZxgJIAEoDRIaChJzYXRlbGxpdGVzX3Zpc2libGUYCiABKA0SLwoLb2JzZXJ2ZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIqcCCgxTeXN0ZW1TdGF0dXMSFwoPc2Vuc29yc19wcmVzZW50GAEgASgNEhcKD3NlbnNvcnNfZW5hYmxlZBgCIAEoDRIWCg5zZW5zb3JzX2hlYWx0aBgDIAEoDRISCgpsb2FkX2RfcGN0GAQgASgNEhoKEnZvbHRhZ2VfYmF0dGVyeV9tdhgFIAEoDRIaChJjdXJyZW50X2JhdHRlcnlfY2EYBiABKAUSHQoVYmF0dGVyeV9yZW1haW5pbmdfcGN0GAcgASgFEhwKFGRyb3BfcmF0ZV9jb21tX2NfcGN0GAggASgNEhMKC2Vycm9yc19jb21tGAkgASgNEi8KC29ic2VydmVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK5AQoGVmZySHVkEhQKDGFpcnNwZWVkX21fcxgBIAEoAhIXCg9ncm91bmRzcGVlZF9tX3MYAiABKAISEwoLaGVhZGluZ19kZWcYAyABKAUSFAoMdGhyb3R0bGVfcGN0GAQgASgNEhEKCWFsdF9tc2xfbRgFIAEoAhIRCgljbGltYl9tX3MYBiABKAISLwoLb2JzZXJ2ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wInUKD05hbWVkVmFsdWVGbG9hdBIUCgx0aW1lX2Jvb3RfbXMYASABKA0SDAoEbmFtZRgCIAEoCRINCgV2YWx1ZRgDIAEoAhIvCgtvYnNlcnZlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAicwoNTmFtZWRWYWx1ZUludBIUCgx0aW1lX2Jvb3RfbXMYASABKA0SDAoEbmFtZRgCIAEoCRINCgV2YWx1ZRgDIAEoBRIvCgtvYnNlcnZlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAikQEKClN0YXR1c1RleHQSJQoIc2V2ZXJpdHkYASABKA4yEy5nY3MudjEuTWF2U2V2ZXJpdHkSDAoEdGV4dBgCIAEoCRIKCgJpZBgDIAEoDRIRCgljaHVua19zZXEYBCABKA0SLwoLb2JzZXJ2ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIoACChNOYXZDb250cm9sbGVyT3V0cHV0EhQKDG5hdl9yb2xsX2RlZxgBIAEoAhIVCg1uYXZfcGl0Y2hfZGVnGAIgASgCEhcKD25hdl9iZWFyaW5nX2RlZxgDIAEoBRIaChJ0YXJnZXRfYmVhcmluZ19kZWcYBCABKAUSEQoJd3BfZGlzdF9tGAUgASgNEhMKC2FsdF9lcnJvcl9tGAYgASgCEhYKDmFzcGRfZXJyb3JfbV9zGAcgASgCEhYKDnh0cmFja19lcnJvcl9tGAggASgCEi8KC29ic2VydmVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKgAQoOTWlzc2lvbkN1cnJlbnQSCwoDc2VxGAEgASgNEg0KBXRvdGFsGAIgASgNEisKDW1pc3Npb25fc3RhdGUYAyABKA4yFC5nY3MudjEuTWlzc2lvblN0YXRlEhQKDG1pc3Npb25fbW9kZRgEIAEoDRIvCgtvYnNlcnZlZF9hdBgFIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAisAIKDEhvbWVQb3NpdGlvbhIPCgdsYXRfZGVnGAEgASgBEg8KB2xvbl9kZWcYAiABKAESEQoJYWx0X21zbF9tGAMgASgCEhEKCWxvY2FsX3hfbRgEIAEoAhIRCglsb2NhbF95X20YBSABKAISEQoJbG9jYWxfel9tGAYgASgCEgsKA3FfdxgHIAEoAhILCgNxX3gYCCABKAISCwoDcV95GAkgASgCEgsKA3FfehgKIAEoAhISCgphcHByb2FjaF94GAsgASgCEhIKCmFwcHJvYWNoX3kYDCABKAISEgoKYXBwcm9hY2hfehgNIAEoAhIRCgl0aW1lX3VzZWMYDiABKAQSLwoLb2JzZXJ2ZWRfYXQYDyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wItEBCglQaWRUdW5pbmcSIwoEYXhpcxgBIAEoDjIVLmdjcy52MS5QaWRUdW5pbmdBeGlzEg8KB2Rlc2lyZWQYAiABKAISEAoIYWNoaWV2ZWQYAyABKAISCgoCZmYYBCABKAISCQoBcBgFIAEoAhIJCgFpGAYgASgCEgkKAWQYByABKAISDgoGc19yYXRlGAggASgCEg4KBnBkX21vZBgJIAEoAhIvCgtvYnNlcnZlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAixAIKDUJhdHRlcnlTdGF0dXMSCgoCaWQYASABKA0SGAoQdGVtcGVyYXR1cmVfY2RlZxgCIAEoBRIYChBjZWxsX3ZvbHRhZ2VzX212GAMgAygNEhoKEmN1cnJlbnRfYmF0dGVyeV9jYRgEIAEoBRIcChRjdXJyZW50X2NvbnN1bWVkX21haBgFIAEoBRIaChJlbmVyZ3lfY29uc3VtZWRfaGoYBiABKAUSHQoVYmF0dGVyeV9yZW1haW5pbmdfcGN0GAcgASgFEhgKEHRpbWVfcmVtYWluaW5nX3MYCCABKAUSMwoMY2hhcmdlX3N0YXRlGAkgASgOMh0uZ2NzLnYxLk1hdkJhdHRlcnlDaGFyZ2VTdGF0ZRIvCgtvYnNlcnZlZF9hdBgKIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAisgEKC1JhZGlvU3RhdHVzEgwKBHJzc2kYASABKA0SDwoHcmVtcnNzaRgCIAEoDRIRCgl0eGJ1Zl9wY3QYAyABKA0SDQoFbm9pc2UYBCABKA0SEAoIcmVtbm9pc2UYBSABKA0SEAoIcnhlcnJvcnMYBiABKA0SDQoFZml4ZWQYByABKA0SLwoLb2JzZXJ2ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIvYBCg9Fa2ZTdGF0dXNSZXBvcnQSDQoFZmxhZ3MYASABKA0SGQoRdmVsb2NpdHlfdmFyaWFuY2UYAiABKAISGgoScG9zX2hvcml6X3ZhcmlhbmNlGAMgASgCEhkKEXBvc192ZXJ0X3ZhcmlhbmNlGAQgASgCEhgKEGNvbXBhc3NfdmFyaWFuY2UYBSABKAISHAoUdGVycmFpbl9hbHRfdmFyaWFuY2UYBiABKAISGQoRYWlyc3BlZWRfdmFyaWFuY2UYByABKAISLwoLb2JzZXJ2ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIoAGCg5UZWxlbWV0cnlFdmVudBIlCgp2ZWhpY2xlX2lkGAEgASgLMhEuZ2NzLnYxLlZlaGljbGVJZBIkCghhdHRpdHVkZRgCIAEoCzIQLmdjcy52MS5BdHRpdHVkZUgAEjEKD2dsb2JhbF9wb3NpdGlvbhgDIAEoCzIWLmdjcy52MS5HbG9iYWxQb3NpdGlvbkgAEiEKB2dwc19yYXcYBCABKAsyDi5nY3MudjEuR3BzUmF3SAASIQoHdmZyX2h1ZBgFIAEoCzIOLmdjcy52MS5WZnJIdWRIABI8ChVuYXZfY29udHJvbGxlcl9vdXRwdXQYBiABKAsyGy5nY3MudjEuTmF2Q29udHJvbGxlck91dHB1dEgAEi0KDXN5c3RlbV9zdGF0dXMYByABKAsyFC5nY3MudjEuU3lzdGVtU3RhdHVzSAASLwoOYmF0dGVyeV9zdGF0dXMYCCABKAsyFS5nY3MudjEuQmF0dGVyeVN0YXR1c0gAEisKDHJhZGlvX3N0YXR1cxgJIAEoCzITLmdjcy52MS5SYWRpb1N0YXR1c0gAEjQKEWVrZl9zdGF0dXNfcmVwb3J0GAogASgLMhcuZ2NzLnYxLkVrZlN0YXR1c1JlcG9ydEgAEjEKD21pc3Npb25fY3VycmVudBgLIAEoCzIWLmdjcy52MS5NaXNzaW9uQ3VycmVudEgAEi0KDWhvbWVfcG9zaXRpb24YDCABKAsyFC5nY3MudjEuSG9tZVBvc2l0aW9uSAASJwoKcGlkX3R1bmluZxgNIAEoCzIRLmdjcy52MS5QaWRUdW5pbmdIABI0ChFuYW1lZF92YWx1ZV9mbG9hdBgOIAEoCzIXLmdjcy52MS5OYW1lZFZhbHVlRmxvYXRIABIwCg9uYW1lZF92YWx1ZV9pbnQYDyABKAsyFS5nY3MudjEuTmFtZWRWYWx1ZUludEgAEikKC3N0YXR1c190ZXh0GBAgASgLMhIuZ2NzLnYxLlN0YXR1c1RleHRIAEIJCgdwYXlsb2FkKrQFChRUZWxlbWV0cnlQYXlsb2FkVHlwZRImCiJURUxFTUVUUllfUEFZTE9BRF9UWVBFX1VOU1BFQ0lGSUVEEAASIwofVEVMRU1FVFJZX1BBWUxPQURfVFlQRV9BVFRJVFVERRABEioKJlRFTEVNRVRSWV9QQVlMT0FEX1RZUEVfR0xPQkFMX1BPU0lUSU9OEAISIgoeVEVMRU1FVFJZX1BBWUxPQURfVFlQRV9HUFNfUkFXEAMSIgoeVEVMRU1FVFJZX1BBWUxPQURfVFlQRV9WRlJfSFVEEAQSMAosVEVMRU1FVFJZX1BBWUxPQURfVFlQRV9OQVZfQ09OVFJPTExFUl9PVVRQVVQQBRIoCiRURUxFTUVUUllfUEFZTE9BRF9UWVBFX1NZU1RFTV9TVEFUVVMQBhIpCiVURUxFTUVUUllfUEFZTE9BRF9UWVBFX0JBVFRFUllfU1RBVFVTEAcSJwojVEVMRU1FVFJZX1BBWUxPQURfVFlQRV9SQURJT19TVEFUVVMQCBIsCihURUxFTUVUUllfUEFZTE9BRF9UWVBFX0VLRl9TVEFUVVNfUkVQT1JUEAkSKgomVEVMRU1FVFJZX1BBWUxPQURfVFlQRV9NSVNTSU9OX0NVUlJFTlQQChIoCiRURUxFTUVUUllfUEFZTE9BRF9UWVBFX0hPTUVfUE9TSVRJT04QCxIlCiFURUxFTUVUUllfUEFZTE9BRF9UWVBFX1BJRF9UVU5JTkcQDBIsCihURUxFTUVUUllfUEFZTE9BRF9UWVBFX05BTUVEX1ZBTFVFX0ZMT0FUEA0SKgomVEVMRU1FVFJZX1BBWUxPQURfVFlQRV9OQU1FRF9WQUxVRV9JTlQQDhImCiJURUxFTUVUUllfUEFZTE9BRF9UWVBFX1NUQVRVU19URVhUEA9CJFoieWFsYi5nY3MvaW50ZXJuYWwvZ2VuL2djcy92MTtnY3N2MWIGcHJvdG8z", [file_gcs_v1_types, file_gcs_v1_vehicle, file_google_protobuf_timestamp]);
+  fileDesc("ChZnY3MvdjEvdGVsZW1ldHJ5LnByb3RvEgZnY3MudjEi0gEKCEF0dGl0dWRlEhQKDHRpbWVfYm9vdF9tcxgBIAEoDRIQCghyb2xsX3JhZBgCIAEoAhIRCglwaXRjaF9yYWQYAyABKAISDwoHeWF3X3JhZBgEIAEoAhIXCg9yb2xsc3BlZWRfcmFkX3MYBSABKAISGAoQcGl0Y2hzcGVlZF9yYWRfcxgGIAEoAhIWCg55YXdzcGVlZF9yYWRfcxgHIAEoAhIvCgtvYnNlcnZlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAi5gEKDkdsb2JhbFBvc2l0aW9uEhQKDHRpbWVfYm9vdF9tcxgBIAEoDRIPCgdsYXRfZGVnGAIgASgBEg8KB2xvbl9kZWcYAyABKAESEQoJYWx0X21zbF9tGAQgASgCEhYKDmFsdF9yZWxhdGl2ZV9tGAUgASgCEg4KBnZ4X21fcxgGIAEoAhIOCgZ2eV9tX3MYByABKAISDgoGdnpfbV9zGAggASgCEhAKCGhkZ19jZGVnGAkgASgNEi8KC29ic2VydmVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKBAgoGR3BzUmF3EhEKCXRpbWVfdXNlYxgBIAEoBBIkCghmaXhfdHlwZRgCIAEoDjISLmdjcy52MS5HcHNGaXhUeXBlEg8KB2xhdF9kZWcYAyABKAESDwoHbG9uX2RlZxgEIAEoARIRCglhbHRfbXNsX20YBSABKAISCwoDZXBoGAYgASgNEgsKA2VwdhgHIAEoDRIQCgh2ZWxfY21fcxgIIAEoDRIQCghjb2dfY2RlZxgJIAEoDRIaChJzYXRlbGxpdGVzX3Zpc2libGUYCiABKA0SLwoLb2JzZXJ2ZWRfYXQYCyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIqcCCgxTeXN0ZW1TdGF0dXMSFwoPc2Vuc29yc19wcmVzZW50GAEgASgNEhcKD3NlbnNvcnNfZW5hYmxlZBgCIAEoDRIWCg5zZW5zb3JzX2hlYWx0aBgDIAEoDRISCgpsb2FkX2RfcGN0GAQgASgNEhoKEnZvbHRhZ2VfYmF0dGVyeV9tdhgFIAEoDRIaChJjdXJyZW50X2JhdHRlcnlfY2EYBiABKAUSHQoVYmF0dGVyeV9yZW1haW5pbmdfcGN0GAcgASgFEhwKFGRyb3BfcmF0ZV9jb21tX2NfcGN0GAggASgNEhMKC2Vycm9yc19jb21tGAkgASgNEi8KC29ic2VydmVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCK5AQoGVmZySHVkEhQKDGFpcnNwZWVkX21fcxgBIAEoAhIXCg9ncm91bmRzcGVlZF9tX3MYAiABKAISEwoLaGVhZGluZ19kZWcYAyABKAUSFAoMdGhyb3R0bGVfcGN0GAQgASgNEhEKCWFsdF9tc2xfbRgFIAEoAhIRCgljbGltYl9tX3MYBiABKAISLwoLb2JzZXJ2ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIpEBCgpTdGF0dXNUZXh0EiUKCHNldmVyaXR5GAEgASgOMhMuZ2NzLnYxLk1hdlNldmVyaXR5EgwKBHRleHQYAiABKAkSCgoCaWQYAyABKA0SEQoJY2h1bmtfc2VxGAQgASgNEi8KC29ic2VydmVkX2F0GAUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKAAgoTTmF2Q29udHJvbGxlck91dHB1dBIUCgxuYXZfcm9sbF9kZWcYASABKAISFQoNbmF2X3BpdGNoX2RlZxgCIAEoAhIXCg9uYXZfYmVhcmluZ19kZWcYAyABKAUSGgoSdGFyZ2V0X2JlYXJpbmdfZGVnGAQgASgFEhEKCXdwX2Rpc3RfbRgFIAEoDRITCgthbHRfZXJyb3JfbRgGIAEoAhIWCg5hc3BkX2Vycm9yX21fcxgHIAEoAhIWCg54dHJhY2tfZXJyb3JfbRgIIAEoAhIvCgtvYnNlcnZlZF9hdBgJIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAioAEKDk1pc3Npb25DdXJyZW50EgsKA3NlcRgBIAEoDRINCgV0b3RhbBgCIAEoDRIrCg1taXNzaW9uX3N0YXRlGAMgASgOMhQuZ2NzLnYxLk1pc3Npb25TdGF0ZRIUCgxtaXNzaW9uX21vZGUYBCABKA0SLwoLb2JzZXJ2ZWRfYXQYBSABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wIrACCgxIb21lUG9zaXRpb24SDwoHbGF0X2RlZxgBIAEoARIPCgdsb25fZGVnGAIgASgBEhEKCWFsdF9tc2xfbRgDIAEoAhIRCglsb2NhbF94X20YBCABKAISEQoJbG9jYWxfeV9tGAUgASgCEhEKCWxvY2FsX3pfbRgGIAEoAhILCgNxX3cYByABKAISCwoDcV94GAggASgCEgsKA3FfeRgJIAEoAhILCgNxX3oYCiABKAISEgoKYXBwcm9hY2hfeBgLIAEoAhISCgphcHByb2FjaF95GAwgASgCEhIKCmFwcHJvYWNoX3oYDSABKAISEQoJdGltZV91c2VjGA4gASgEEi8KC29ic2VydmVkX2F0GA8gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLEAgoNQmF0dGVyeVN0YXR1cxIKCgJpZBgBIAEoDRIYChB0ZW1wZXJhdHVyZV9jZGVnGAIgASgFEhgKEGNlbGxfdm9sdGFnZXNfbXYYAyADKA0SGgoSY3VycmVudF9iYXR0ZXJ5X2NhGAQgASgFEhwKFGN1cnJlbnRfY29uc3VtZWRfbWFoGAUgASgFEhoKEmVuZXJneV9jb25zdW1lZF9oahgGIAEoBRIdChViYXR0ZXJ5X3JlbWFpbmluZ19wY3QYByABKAUSGAoQdGltZV9yZW1haW5pbmdfcxgIIAEoBRIzCgxjaGFyZ2Vfc3RhdGUYCSABKA4yHS5nY3MudjEuTWF2QmF0dGVyeUNoYXJnZVN0YXRlEi8KC29ic2VydmVkX2F0GAogASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCKyAQoLUmFkaW9TdGF0dXMSDAoEcnNzaRgBIAEoDRIPCgdyZW1yc3NpGAIgASgNEhEKCXR4YnVmX3BjdBgDIAEoDRINCgVub2lzZRgEIAEoDRIQCghyZW1ub2lzZRgFIAEoDRIQCghyeGVycm9ycxgGIAEoDRINCgVmaXhlZBgHIAEoDRIvCgtvYnNlcnZlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAi9gEKD0VrZlN0YXR1c1JlcG9ydBINCgVmbGFncxgBIAEoDRIZChF2ZWxvY2l0eV92YXJpYW5jZRgCIAEoAhIaChJwb3NfaG9yaXpfdmFyaWFuY2UYAyABKAISGQoRcG9zX3ZlcnRfdmFyaWFuY2UYBCABKAISGAoQY29tcGFzc192YXJpYW5jZRgFIAEoAhIcChR0ZXJyYWluX2FsdF92YXJpYW5jZRgGIAEoAhIZChFhaXJzcGVlZF92YXJpYW5jZRgHIAEoAhIvCgtvYnNlcnZlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAigQUKDlRlbGVtZXRyeUV2ZW50EiUKCnZlaGljbGVfaWQYASABKAsyES5nY3MudjEuVmVoaWNsZUlkEiQKCGF0dGl0dWRlGAIgASgLMhAuZ2NzLnYxLkF0dGl0dWRlSAASMQoPZ2xvYmFsX3Bvc2l0aW9uGAMgASgLMhYuZ2NzLnYxLkdsb2JhbFBvc2l0aW9uSAASIQoHZ3BzX3JhdxgEIAEoCzIOLmdjcy52MS5HcHNSYXdIABIhCgd2ZnJfaHVkGAUgASgLMg4uZ2NzLnYxLlZmckh1ZEgAEjwKFW5hdl9jb250cm9sbGVyX291dHB1dBgGIAEoCzIbLmdjcy52MS5OYXZDb250cm9sbGVyT3V0cHV0SAASLQoNc3lzdGVtX3N0YXR1cxgHIAEoCzIULmdjcy52MS5TeXN0ZW1TdGF0dXNIABIvCg5iYXR0ZXJ5X3N0YXR1cxgIIAEoCzIVLmdjcy52MS5CYXR0ZXJ5U3RhdHVzSAASKwoMcmFkaW9fc3RhdHVzGAkgASgLMhMuZ2NzLnYxLlJhZGlvU3RhdHVzSAASNAoRZWtmX3N0YXR1c19yZXBvcnQYCiABKAsyFy5nY3MudjEuRWtmU3RhdHVzUmVwb3J0SAASMQoPbWlzc2lvbl9jdXJyZW50GAsgASgLMhYuZ2NzLnYxLk1pc3Npb25DdXJyZW50SAASLQoNaG9tZV9wb3NpdGlvbhgMIAEoCzIULmdjcy52MS5Ib21lUG9zaXRpb25IABIpCgtzdGF0dXNfdGV4dBgQIAEoCzISLmdjcy52MS5TdGF0dXNUZXh0SABCCQoHcGF5bG9hZEoECA0QDkoECA4QD0oECA8QEEIkWiJ5YWxiLmdjcy9pbnRlcm5hbC9nZW4vZ2NzL3YxO2djc3YxYgZwcm90bzM", [file_gcs_v1_types, file_gcs_v1_vehicle, file_google_protobuf_timestamp]);
 
 /**
  * Attitude mirrors ATTITUDE (#30).
@@ -168,14 +168,8 @@ export const GlobalPositionSchema: GenMessage<GlobalPosition> = /*@__PURE__*/
   messageDesc(file_gcs_v1_telemetry, 1);
 
 /**
- * GpsRaw mirrors GPS_RAW_INT (#24).
- * Raw GPS sensor data before fusion. Use GlobalPosition for fused output.
- *
- * Altitude datum warning: alt_msl_m is above mean sea level. GlobalPosition
- * carries both alt_msl_m and alt_relative_m (above home). A resolver that falls
- * back from GlobalPosition to GpsRaw must not silently substitute MSL for
- * relative altitude — the two differ by field elevation. Carry the reference
- * frame alongside the value.
+ * GpsRaw mirrors unfused GPS_RAW_INT (#24). alt_msl_m is always MSL, never
+ * altitude relative to home.
  *
  * @generated from message gcs.v1.GpsRaw
  */
@@ -360,10 +354,7 @@ export type VfrHud = Message<"gcs.v1.VfrHud"> & {
   groundspeedMS: number;
 
   /**
-   * Current heading, degrees. int16_t on the wire (MAVLink documents 0–360);
-   * ArduPilot may report negative values, so consumers must normalise with
-   * ((h % 360) + 360) % 360. There is no unknown sentinel on this field —
-   * UINT16_MAX applies to GlobalPosition.hdg_cdeg and GpsRaw.cog_cdeg, not here.
+   * Signed wire heading; consumers normalise to 0–359.
    *
    * @generated from field: int32 heading_deg = 3;
    */
@@ -402,77 +393,6 @@ export type VfrHud = Message<"gcs.v1.VfrHud"> & {
  */
 export const VfrHudSchema: GenMessage<VfrHud> = /*@__PURE__*/
   messageDesc(file_gcs_v1_telemetry, 4);
-
-/**
- * NamedValueFloat mirrors NAMED_VALUE_FLOAT (#252).
- * ArduPilot uses these for real-time custom telemetry: PID internals, tuning
- * variables, and any arbitrary float the firmware wants to expose.
- * name is a null-terminated ASCII key, max 10 chars.
- *
- * @generated from message gcs.v1.NamedValueFloat
- */
-export type NamedValueFloat = Message<"gcs.v1.NamedValueFloat"> & {
-  /**
-   * @generated from field: uint32 time_boot_ms = 1;
-   */
-  timeBootMs: number;
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name: string;
-
-  /**
-   * @generated from field: float value = 3;
-   */
-  value: number;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp observed_at = 4;
-   */
-  observedAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message gcs.v1.NamedValueFloat.
- * Use `create(NamedValueFloatSchema)` to create a new message.
- */
-export const NamedValueFloatSchema: GenMessage<NamedValueFloat> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 5);
-
-/**
- * NamedValueInt mirrors NAMED_VALUE_INT (#251).
- *
- * @generated from message gcs.v1.NamedValueInt
- */
-export type NamedValueInt = Message<"gcs.v1.NamedValueInt"> & {
-  /**
-   * @generated from field: uint32 time_boot_ms = 1;
-   */
-  timeBootMs: number;
-
-  /**
-   * @generated from field: string name = 2;
-   */
-  name: string;
-
-  /**
-   * @generated from field: int32 value = 3;
-   */
-  value: number;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp observed_at = 4;
-   */
-  observedAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message gcs.v1.NamedValueInt.
- * Use `create(NamedValueIntSchema)` to create a new message.
- */
-export const NamedValueIntSchema: GenMessage<NamedValueInt> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 6);
 
 /**
  * StatusText mirrors STATUSTEXT (#253).
@@ -519,7 +439,7 @@ export type StatusText = Message<"gcs.v1.StatusText"> & {
  * Use `create(StatusTextSchema)` to create a new message.
  */
 export const StatusTextSchema: GenMessage<StatusText> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 7);
+  messageDesc(file_gcs_v1_telemetry, 5);
 
 /**
  * NavControllerOutput mirrors NAV_CONTROLLER_OUTPUT (#62).
@@ -596,7 +516,7 @@ export type NavControllerOutput = Message<"gcs.v1.NavControllerOutput"> & {
  * Use `create(NavControllerOutputSchema)` to create a new message.
  */
 export const NavControllerOutputSchema: GenMessage<NavControllerOutput> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 8);
+  messageDesc(file_gcs_v1_telemetry, 6);
 
 /**
  * MissionCurrent mirrors MISSION_CURRENT (#42).
@@ -643,7 +563,7 @@ export type MissionCurrent = Message<"gcs.v1.MissionCurrent"> & {
  * Use `create(MissionCurrentSchema)` to create a new message.
  */
 export const MissionCurrentSchema: GenMessage<MissionCurrent> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 9);
+  messageDesc(file_gcs_v1_telemetry, 7);
 
 /**
  * HomePosition mirrors HOME_POSITION (#242).
@@ -742,91 +662,7 @@ export type HomePosition = Message<"gcs.v1.HomePosition"> & {
  * Use `create(HomePositionSchema)` to create a new message.
  */
 export const HomePositionSchema: GenMessage<HomePosition> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 10);
-
-/**
- * PidTuning mirrors PID_TUNING (#194, ArduPilot dialect).
- * Real-time PID controller state for the specified axis.
- * Enable with parameter GCS_PID_MASK or MAV_CMD_SET_MESSAGE_INTERVAL.
- * Disable when not actively tuning — the stream is high frequency and
- * consumes significant radio bandwidth.
- *
- * @generated from message gcs.v1.PidTuning
- */
-export type PidTuning = Message<"gcs.v1.PidTuning"> & {
-  /**
-   * @generated from field: gcs.v1.PidTuningAxis axis = 1;
-   */
-  axis: PidTuningAxis;
-
-  /**
-   * desired rate (units: deg/s for angle axes, m/s² for ACCZ)
-   *
-   * @generated from field: float desired = 2;
-   */
-  desired: number;
-
-  /**
-   * achieved rate
-   *
-   * @generated from field: float achieved = 3;
-   */
-  achieved: number;
-
-  /**
-   * feed-forward contribution
-   *
-   * @generated from field: float ff = 4;
-   */
-  ff: number;
-
-  /**
-   * proportional term output
-   *
-   * @generated from field: float p = 5;
-   */
-  p: number;
-
-  /**
-   * integral term output
-   *
-   * @generated from field: float i = 6;
-   */
-  i: number;
-
-  /**
-   * derivative term output
-   *
-   * @generated from field: float d = 7;
-   */
-  d: number;
-
-  /**
-   * slew rate limit applied (MAVLink 2 extension)
-   *
-   * @generated from field: float s_rate = 8;
-   */
-  sRate: number;
-
-  /**
-   * P/D modifier from notch filter (MAVLink 2 extension)
-   *
-   * @generated from field: float pd_mod = 9;
-   */
-  pdMod: number;
-
-  /**
-   * @generated from field: google.protobuf.Timestamp observed_at = 10;
-   */
-  observedAt?: Timestamp | undefined;
-};
-
-/**
- * Describes the message gcs.v1.PidTuning.
- * Use `create(PidTuningSchema)` to create a new message.
- */
-export const PidTuningSchema: GenMessage<PidTuning> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 11);
+  messageDesc(file_gcs_v1_telemetry, 8);
 
 /**
  * BatteryStatus mirrors BATTERY_STATUS (#147).
@@ -909,7 +745,7 @@ export type BatteryStatus = Message<"gcs.v1.BatteryStatus"> & {
  * Use `create(BatteryStatusSchema)` to create a new message.
  */
 export const BatteryStatusSchema: GenMessage<BatteryStatus> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 12);
+  messageDesc(file_gcs_v1_telemetry, 9);
 
 /**
  * RadioStatus mirrors RADIO_STATUS (#109).
@@ -980,24 +816,10 @@ export type RadioStatus = Message<"gcs.v1.RadioStatus"> & {
  * Use `create(RadioStatusSchema)` to create a new message.
  */
 export const RadioStatusSchema: GenMessage<RadioStatus> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 13);
+  messageDesc(file_gcs_v1_telemetry, 10);
 
 /**
  * EkfStatusReport mirrors EKF_STATUS_REPORT (#193, ArduPilot dialect).
- * Extended Kalman Filter health. Inspect flags before arming and during flight.
- *
- * flags bitmask (EKF_STATUS_FLAGS):
- *   1    EKF_ATTITUDE             attitude estimate good
- *   2    EKF_VELOCITY_HORIZ       horizontal velocity good
- *   4    EKF_VELOCITY_VERT        vertical velocity good
- *   8    EKF_POS_HORIZ_REL        horizontal position (relative) good
- *   16   EKF_POS_HORIZ_ABS        horizontal position (absolute) good
- *   32   EKF_POS_VERT_ABS         vertical position (absolute) good
- *   64   EKF_POS_VERT_AGL         terrain altitude good
- *   128  EKF_CONST_POS_MODE       EKF in constant position mode (GPS denied)
- *   256  EKF_PRED_POS_HORIZ_REL   predicted horiz pos (relative) good
- *   512  EKF_PRED_POS_HORIZ_ABS   predicted horiz pos (absolute) good
- *   1024 EKF_UNINITIALIZED        filter not yet initialised — do not fly
  *
  * @generated from message gcs.v1.EkfStatusReport
  */
@@ -1052,23 +874,11 @@ export type EkfStatusReport = Message<"gcs.v1.EkfStatusReport"> & {
  * Use `create(EkfStatusReportSchema)` to create a new message.
  */
 export const EkfStatusReportSchema: GenMessage<EkfStatusReport> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 14);
+  messageDesc(file_gcs_v1_telemetry, 11);
 
 /**
- * TelemetryEvent is the envelope type for all streamed telemetry.
- * The Connect TelemetryService streams these to subscribed clients.
- * Exactly one payload field is set per message.
- *
- * Vehicle identity lives here and nowhere else. Payload messages deliberately
- * carry no vehicle_id: duplicating it per payload doubles the wire cost at
- * telemetry rates and creates two sources of truth that can disagree. The codec
- * reads (system_id, component_id) from the MAVLink frame header once and sets
- * it on the envelope.
- *
- * This envelope carries streaming telemetry only. MAVLink transaction responses
- * (PARAM_VALUE, MISSION_COUNT, MISSION_ITEM_INT, MISSION_ACK, COMMAND_ACK) are
- * not telemetry — they correlate against an in-flight request registry and are
- * carried by ProtocolEvent in protocol.proto.
+ * TelemetryEvent carries one streaming payload and its frame-header identity.
+ * Transaction responses use ProtocolEvent.
  *
  * @generated from message gcs.v1.TelemetryEvent
  */
@@ -1155,26 +965,6 @@ export type TelemetryEvent = Message<"gcs.v1.TelemetryEvent"> & {
     case: "homePosition";
   } | {
     /**
-     * Tuning and diagnostics
-     *
-     * @generated from field: gcs.v1.PidTuning pid_tuning = 13;
-     */
-    value: PidTuning;
-    case: "pidTuning";
-  } | {
-    /**
-     * @generated from field: gcs.v1.NamedValueFloat named_value_float = 14;
-     */
-    value: NamedValueFloat;
-    case: "namedValueFloat";
-  } | {
-    /**
-     * @generated from field: gcs.v1.NamedValueInt named_value_int = 15;
-     */
-    value: NamedValueInt;
-    case: "namedValueInt";
-  } | {
-    /**
      * Autopilot log messages
      *
      * @generated from field: gcs.v1.StatusText status_text = 16;
@@ -1189,100 +979,5 @@ export type TelemetryEvent = Message<"gcs.v1.TelemetryEvent"> & {
  * Use `create(TelemetryEventSchema)` to create a new message.
  */
 export const TelemetryEventSchema: GenMessage<TelemetryEvent> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_telemetry, 15);
-
-/**
- * TelemetryPayloadType names each variant of the TelemetryEvent oneof.
- * Used by StreamTelemetryRequest to filter a subscription server-side.
- * Values correspond 1:1 to the oneof field numbers in TelemetryEvent.
- *
- * @generated from enum gcs.v1.TelemetryPayloadType
- */
-export enum TelemetryPayloadType {
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_ATTITUDE = 1;
-   */
-  ATTITUDE = 1,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_GLOBAL_POSITION = 2;
-   */
-  GLOBAL_POSITION = 2,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_GPS_RAW = 3;
-   */
-  GPS_RAW = 3,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_VFR_HUD = 4;
-   */
-  VFR_HUD = 4,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_NAV_CONTROLLER_OUTPUT = 5;
-   */
-  NAV_CONTROLLER_OUTPUT = 5,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_SYSTEM_STATUS = 6;
-   */
-  SYSTEM_STATUS = 6,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_BATTERY_STATUS = 7;
-   */
-  BATTERY_STATUS = 7,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_RADIO_STATUS = 8;
-   */
-  RADIO_STATUS = 8,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_EKF_STATUS_REPORT = 9;
-   */
-  EKF_STATUS_REPORT = 9,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_MISSION_CURRENT = 10;
-   */
-  MISSION_CURRENT = 10,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_HOME_POSITION = 11;
-   */
-  HOME_POSITION = 11,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_PID_TUNING = 12;
-   */
-  PID_TUNING = 12,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_FLOAT = 13;
-   */
-  NAMED_VALUE_FLOAT = 13,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_NAMED_VALUE_INT = 14;
-   */
-  NAMED_VALUE_INT = 14,
-
-  /**
-   * @generated from enum value: TELEMETRY_PAYLOAD_TYPE_STATUS_TEXT = 15;
-   */
-  STATUS_TEXT = 15,
-}
-
-/**
- * Describes the enum gcs.v1.TelemetryPayloadType.
- */
-export const TelemetryPayloadTypeSchema: GenEnum<TelemetryPayloadType> = /*@__PURE__*/
-  enumDesc(file_gcs_v1_telemetry, 0);
+  messageDesc(file_gcs_v1_telemetry, 12);
 
