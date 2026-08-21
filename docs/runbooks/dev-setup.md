@@ -160,3 +160,8 @@ The start request may instead carry `{"name":"test flight"}` as JSON. The
 backend flushes every event accepted before stop returns. The SQLite store
 persists fleet and telemetry protobuf events; protocol events and local
 warnings remain outside recording scope.
+
+Initial safety defaults cap one recording at 200,000 events, 256 MiB of
+protobuf payloads, or 30 minutes. Database and lifecycle operations time out
+after five seconds, and store shutdown after ten seconds. These are tunable
+`recording.Config` defaults; aggregate database cleanup is not yet implemented.

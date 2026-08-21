@@ -20,7 +20,9 @@ type ReplayEvent struct {
 
 // Replay loads and decodes all persisted events for one recording.
 func (s *Store) Replay(ctx context.Context, recordingID int64) ([]ReplayEvent, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT seq, kind, occurred_at, payload
+	opCtx, cancel := s.operationContext(ctx)
+	defer cancel()
+	rows, err := s.db.QueryContext(opCtx, `SELECT seq, kind, occurred_at, payload
 		FROM recording_events WHERE recording_id = ? ORDER BY seq`, recordingID)
 	if err != nil {
 		return nil, fmt.Errorf("recording: replay query: %w", err)

@@ -64,6 +64,48 @@ func TestLimitClosesAtCommittedBatchBoundary(t *testing.T) {
 	}
 }
 
+func TestSizeLimitClosesAtCommittedBatchBoundary(t *testing.T) {
+	clock := time.Unix(1_700_000_000, 0).UTC()
+	store := newTestStore(t, func(cfg *Config) {
+		cfg.Now = func() time.Time { return clock }
+		cfg.BatchSize = 100
+		cfg.MaxBytes = 1
+	})
+	started, err := store.StartRecording(context.Background(), "byte bounded")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := (&Recorder{Store: store}).Publish(context.Background(), deterministicEvents(clock)[0]); err != nil {
+		t.Fatal(err)
+	}
+
+	stopped, err := store.StopRecording(context.Background())
+	if err != nil {
+		t.Fatalf("StopRecording() error = %v", err)
+	}
+	if stopped.ID != started.ID || stopped.Status != "limit_reached" || stopped.StopReason != "size_limit" {
+		t.Fatalf("stopped = %+v", stopped)
+	}
+}
+
+func TestDurationLimitDoesNotRequireAnotherEvent(t *testing.T) {
+	durationElapsed := make(chan time.Time, 1)
+	store := newTestStore(t, func(cfg *Config) {
+		cfg.After = func(time.Duration) <-chan time.Time { return durationElapsed }
+	})
+	started, err := store.StartRecording(context.Background(), "idle flight")
+	if err != nil {
+		t.Fatal(err)
+	}
+	durationElapsed <- time.Now()
+
+	waitFor(t, func() bool {
+		listed, listErr := store.ListRecordings(context.Background())
+		return listErr == nil && len(listed) == 1 && listed[0].ID == started.ID &&
+			listed[0].Status == "limit_reached" && listed[0].StopReason == "duration_limit"
+	})
+}
+
 func TestPublishNeverBlocksWhenQueueIsFull(t *testing.T) {
 	store := &Store{items: make(chan writerItem, 1), log: discardLogger()}
 	store.current = &activeRecording{id: 1}
@@ -123,5 +165,54 @@ func TestOpenMarksInterruptedRecordingAsError(t *testing.T) {
 	}
 	if len(listed) != 1 || listed[0].Status != "error" || listed[0].StopReason != "process_restart" {
 		t.Fatalf("recovered recording = %+v", listed)
+	}
+}
+
+func TestStopReturnsWhenWriterQueueCannotAcceptControl(t *testing.T) {
+	store := stalledStore(20 * time.Millisecond)
+	store.current = &activeRecording{id: 1}
+	store.items <- writerItem{record: &writeRecord{recordingID: 1}}
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := store.StopRecording(context.Background())
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("StopRecording() error = %v, want deadline exceeded", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("StopRecording did not honor its internal deadline")
+	}
+	if store.current == nil {
+		t.Error("active recording was not restored after the control command failed to enqueue")
+	}
+}
+
+func TestCloseReturnsWhenWriterQueueCannotAcceptControl(t *testing.T) {
+	store := stalledStore(20 * time.Millisecond)
+	store.items <- writerItem{record: &writeRecord{recordingID: 1}}
+
+	done := make(chan error, 1)
+	go func() { done <- store.Close() }()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("Close() error = %v, want deadline exceeded", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("Close did not honor its shutdown deadline")
+	}
+}
+
+func stalledStore(timeout time.Duration) *Store {
+	lifecycle := make(chan struct{}, 1)
+	lifecycle <- struct{}{}
+	return &Store{
+		items: make(chan writerItem, 1), lifecycle: lifecycle,
+		operationTimeout: timeout, shutdownTimeout: timeout,
+		log: discardLogger(), now: time.Now,
 	}
 }
