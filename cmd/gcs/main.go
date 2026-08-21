@@ -19,6 +19,7 @@ import (
 
 	"yalb.gcs/internal/bridge"
 	"yalb.gcs/internal/codec"
+	"yalb.gcs/internal/recording"
 	"yalb.gcs/internal/routes"
 	"yalb.gcs/internal/stream"
 )
@@ -55,6 +56,24 @@ func run(log *slog.Logger) error {
 
 	group, ctx := errgroup.WithContext(ctx)
 
+	var store *recording.Store
+	if recording.ResolveEnabled(os.LookupEnv(recording.EnvEnabled)) {
+		path := recording.ResolveDBPath(os.LookupEnv(recording.EnvDBPath))
+		var err error
+		store, err = recording.Open(recording.Config{Path: path, Log: log})
+		if err != nil {
+			return fmt.Errorf("gcs: opening recording store: %w", err)
+		}
+		defer func() {
+			if err := store.Close(); err != nil {
+				log.Error("closing recording store", "err", err)
+			}
+		}()
+		log.Info("flight recording enabled", "path", path)
+	} else {
+		log.Info("flight recording disabled", "env", recording.EnvEnabled)
+	}
+
 	// The hub outlives any single browser and exists even without a MAVLink
 	// socket, so the UI can connect and correctly show an empty fleet rather
 	// than failing to load.
@@ -64,11 +83,11 @@ func run(log *slog.Logger) error {
 	if bind == "" {
 		// An explicitly empty bind disables MAVLink while retaining health checks.
 		log.Warn("MAVLink socket disabled", "reason", codec.EnvUDPBind+" set to empty")
-	} else if err := startBridge(ctx, group, log, bind, hub); err != nil {
+	} else if err := startBridge(ctx, group, log, bind, hub, store); err != nil {
 		return err
 	}
 
-	serveHTTP(ctx, group, log, hub)
+	serveHTTP(ctx, group, log, hub, store)
 
 	if err := group.Wait(); err != nil {
 		return fmt.Errorf("gcs: backend stopped: %w", err)
@@ -84,6 +103,7 @@ func startBridge(
 	log *slog.Logger,
 	bind string,
 	hub *stream.Hub,
+	store *recording.Store,
 ) error {
 	node, err := codec.NewNode([]gomavlib.EndpointConf{
 		gomavlib.EndpointUDPServer{Address: bind},
@@ -97,17 +117,22 @@ func startBridge(
 	// learned them from.
 	table := routes.NewTable()
 
+	sinks := bridge.MultiSink{
+		bridge.LogSink{Log: log},
+		&bridge.RateRequester{Source: node, Routes: table, Log: log},
+		hub,
+	}
+	if store != nil {
+		sinks = append(sinks, &recording.Recorder{Store: store})
+	}
+
 	br, err := bridge.New(bridge.Config{
 		Source: node,
 		Routes: table,
 		// Order matters: the discovery is logged, then acted on, then
 		// published, so the log explains any request a browser sees the
 		// results of.
-		Sink: bridge.MultiSink{
-			bridge.LogSink{Log: log},
-			&bridge.RateRequester{Source: node, Routes: table, Log: log},
-			hub,
-		},
+		Sink:   sinks,
 		Logger: log,
 	})
 	if err != nil {
@@ -137,7 +162,7 @@ func startBridge(
 
 // serveHTTP runs the health and event servers and shuts them down with the
 // context.
-func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub *stream.Hub) {
+func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub *stream.Hub, store *recording.Store) {
 	mux := http.NewServeMux()
 
 	// This is liveness only; it does not assert a vehicle link.
@@ -146,6 +171,11 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub
 	})
 
 	mux.HandleFunc("GET "+stream.Path, stream.Handler(hub, log))
+	if store != nil {
+		mux.HandleFunc("POST /api/recordings/start", recording.StartHandler(store))
+		mux.HandleFunc("POST /api/recordings/stop", recording.StopHandler(store))
+		mux.HandleFunc("GET /api/recordings", recording.ListHandler(store))
+	}
 
 	srv := &http.Server{
 		Addr:              httpAddr,

@@ -143,3 +143,20 @@ reconnecting gets a fresh bootstrap.
 Vite proxies `/api` to the backend, so the browser only ever uses a relative
 URL and the backend needs no CORS configuration. Outside Compose the proxy
 targets `http://localhost:8080`; set `GCS_BACKEND_URL` to point it elsewhere.
+
+## Record one local flight
+
+Recording is disabled by default. Start the backend with a writable SQLite
+path, then use the lifecycle endpoints around a SITL flight:
+
+```sh
+GCS_RECORDING_ENABLED=true GCS_RECORDING_DB_PATH=./recordings.db go run ./cmd/gcs
+curl -X POST http://localhost:8080/api/recordings/start
+curl -X POST http://localhost:8080/api/recordings/stop
+curl http://localhost:8080/api/recordings
+```
+
+The start request may instead carry `{"name":"test flight"}` as JSON. The
+backend flushes every event accepted before stop returns. The SQLite store
+persists fleet and telemetry protobuf events; protocol events and local
+warnings remain outside recording scope.

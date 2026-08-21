@@ -15,6 +15,7 @@ go_library(
     deps = [
         "//internal/bridge",
         "//internal/codec",
+        "//internal/recording",
         "//internal/routes",
         "//internal/stream",
         "@com_github_bluenviron_gomavlib_v3//:gomavlib",

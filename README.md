@@ -10,7 +10,8 @@ The working path runs end to end:
 
 ```text
 SITL -> MAVLink UDP -> codec -> per-vehicle fold -> event hub
-     -> SSE (/api/events) -> React flight display
+                                               |-> SSE -> React flight display
+                                               \-> bounded SQLite recording
 ```
 
 The repository currently has:
@@ -23,6 +24,8 @@ The repository currently has:
 - deterministic vehicle discovery, loss, recovery, freshness, and route-table tests;
 - an in-memory event hub and a `GET /api/events` server-sent-event stream that
   bootstraps each browser from retained state;
+- opt-in, bounded SQLite recording with explicit start/stop lifecycle and
+  deterministic Go replay after a backend restart;
 - a fleet-aware React flight display — artificial horizon, heading tape,
   altitude with its datum, speed, climb, power, link health, and a live
   MapLibre position/track map — that also
@@ -32,8 +35,9 @@ The repository currently has:
 - Docker Compose definitions for Copter and Plane SITL;
 - native Go/TypeScript tests and a Bazel checkpoint build.
 
-It is **read-only observation**. It does not yet have persistence, a command or
-mission surface, authentication, or MAVLink signing.
+It is **read-only observation**. Persisted recordings currently have a Go replay
+API but no historical-map UI or HTTP replay endpoint. The project does not yet
+have a command or mission surface, authentication, or MAVLink signing.
 
 No project license has been selected or committed.
 

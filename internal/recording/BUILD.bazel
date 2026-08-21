@@ -1,0 +1,47 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "recording",
+    srcs = [
+        "config.go",
+        "http.go",
+        "recorder.go",
+        "recording.go",
+        "replay.go",
+        "schema.go",
+        "writer.go",
+    ],
+    embedsrcs = ["migrations/0001_init.sql"],
+    importpath = "yalb.gcs/internal/recording",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/bridge",
+        "//internal/gen/gcs/v1:gcs",
+        "//internal/vehicle",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//types/known/timestamppb",
+        "@org_modernc_sqlite//:sqlite",
+    ],
+)
+
+go_test(
+    name = "recording_test",
+    srcs = [
+        "config_test.go",
+        "durability_test.go",
+        "http_test.go",
+        "main_test.go",
+        "recording_test.go",
+        "test_helpers_test.go",
+        "writer_test.go",
+    ],
+    embed = [":recording"],
+    deps = [
+        "//internal/gen/gcs/v1:gcs",
+        "//internal/vehicle",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//types/known/timestamppb",
+        "@org_uber_go_goleak//:goleak",
+    ],
+)
