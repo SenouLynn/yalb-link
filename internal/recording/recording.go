@@ -31,6 +31,17 @@ const (
 	DefaultOperationTimeout = 5 * time.Second
 	// DefaultShutdownTimeout bounds Store.Close, including writer drain.
 	DefaultShutdownTimeout = 10 * time.Second
+	// DefaultPageSize is how many events one replay request returns unasked.
+	DefaultPageSize = 2000
+	// MaxPageSize caps one replay request, so a client cannot ask the server to
+	// decode and hold an entire 200,000-event recording in a single response.
+	MaxPageSize = 10000
+)
+
+// The persisted event kinds, matching the migration's CHECK constraint.
+const (
+	KindFleet     = "fleet"
+	KindTelemetry = "telemetry"
 )
 
 var (
@@ -40,6 +51,8 @@ var (
 	ErrNoRecording = errors.New("recording: no recording is active")
 	// ErrClosed means the store can no longer accept lifecycle operations.
 	ErrClosed = errors.New("recording: store is closed")
+	// ErrRecordingNotFound means no recording exists with the requested id.
+	ErrRecordingNotFound = errors.New("recording: no such recording")
 )
 
 // Config controls a local SQLite recording store.
@@ -382,6 +395,19 @@ func (s *Store) ListRecordings(ctx context.Context) ([]Recording, error) {
 		return nil, fmt.Errorf("recording: iterating list: %w", err)
 	}
 	return out, nil
+}
+
+// GetRecording returns one recording's lifecycle metadata.
+func (s *Store) GetRecording(ctx context.Context, id int64) (Recording, error) {
+	opCtx, cancel := s.operationContext(ctx)
+	defer cancel()
+
+	rec, err := s.recording(opCtx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return Recording{}, fmt.Errorf("%w: %d", ErrRecordingNotFound, id)
+	}
+
+	return rec, err
 }
 
 func (s *Store) recording(ctx context.Context, id int64) (Recording, error) {

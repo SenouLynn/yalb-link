@@ -3,6 +3,7 @@
 import { FleetEventType } from '@/gen/gcs/v1/fleet_pb';
 import { GpsFixType } from '@/gen/gcs/v1/types_pb';
 import { isFamilyFresh, type VehicleView } from '@/fleet/state';
+import type { StreamSource } from '@/stream/select';
 
 import { NO_VALUE } from './format';
 
@@ -11,8 +12,8 @@ export interface StatusBarProps {
   nowMs: number;
   /** Whether the browser currently holds the backend stream. */
   connected: boolean;
-  /** Whether this page is replaying fixtures instead of a live vehicle. */
-  mock: boolean;
+  /** Where this page's data comes from. Never inferred from the data itself. */
+  source: StreamSource;
 }
 
 /**
@@ -23,7 +24,7 @@ export interface StatusBarProps {
  * not be reported as lost, and a lost aircraft on a healthy connection must
  * not look fine.
  */
-export function StatusBar({ view, nowMs, connected, mock }: StatusBarProps) {
+export function StatusBar({ view, nowMs, connected, source }: StatusBarProps) {
   const heartbeat = view.heartbeat;
   const lost = view.lifecycle === FleetEventType.VEHICLE_LOST;
 
@@ -58,16 +59,38 @@ export function StatusBar({ view, nowMs, connected, mock }: StatusBarProps) {
         tone={lost ? 'caution' : 'active'}
       />
 
-      <Chip
-        label="Source"
-        value={mock ? 'MOCK' : connected ? 'LIVE' : 'DISCONNECTED'}
-        tone={mock ? 'caution' : connected ? 'active' : 'caution'}
-      />
+      <Chip label="Source" value={sourceLabel(source, connected)} tone={sourceTone(source, connected)} />
     </div>
   );
 }
 
 type Tone = 'active' | 'caution' | 'dead';
+
+/**
+ * What the display is showing, named plainly.
+ *
+ * Fixtures and recordings are both marked amber rather than green. Neither is
+ * a flying aircraft, and an operator glancing at the chip has to be able to
+ * tell that without reading the URL.
+ */
+function sourceLabel(source: StreamSource, connected: boolean): string {
+  switch (source) {
+    case 'mock':
+      return 'MOCK';
+    case 'replay':
+      return 'REPLAY';
+    default:
+      return connected ? 'LIVE' : 'DISCONNECTED';
+  }
+}
+
+function sourceTone(source: StreamSource, connected: boolean): Tone {
+  if (source !== 'live') {
+    return 'caution';
+  }
+
+  return connected ? 'active' : 'caution';
+}
 
 function Chip({ label, value, tone }: { label: string; value: string; tone: Tone }) {
   return (

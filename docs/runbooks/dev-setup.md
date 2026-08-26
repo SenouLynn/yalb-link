@@ -165,3 +165,30 @@ Initial safety defaults cap one recording at 200,000 events, 256 MiB of
 protobuf payloads, or 30 minutes. Database and lifecycle operations time out
 after five seconds, and store shutdown after ten seconds. These are tunable
 `recording.Config` defaults; aggregate database cleanup is not yet implemented.
+
+## Replay a recorded flight
+
+Recordings are served as pages of protobuf-JSON events, cursored by sequence
+number:
+
+```sh
+curl -s 'http://localhost:8080/api/recordings/1/events?limit=5' | jq .
+```
+
+Each page carries the recording's lifecycle metadata, its events, and
+`next_seq` — the `from_seq` that continues it, or `null` at the end of what is
+available. An active recording serves its committed prefix, so a recording can
+be checked without stopping it.
+
+To watch one, open the display with the recording selected:
+
+```sh
+open 'http://localhost:3000/?source=replay&recording=1'
+```
+
+`?source=replay` with no `recording` lists what is on the backend instead. The
+Source chip reads `REPLAY` in amber for as long as the page is showing history.
+
+Restarting the backend between recording and replay is the check worth running:
+it is what distinguishes durable storage from a buffer that happened to still
+be in memory.

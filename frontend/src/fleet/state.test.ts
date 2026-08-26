@@ -510,3 +510,53 @@ describe('isActive', () => {
     expect(isActive(lostView)).toBe(false);
   });
 });
+
+describe('reset', () => {
+  const reset: StreamEvent = { kind: 'reset', receivedAtMs: T0 };
+
+  function withReset(state: FleetState): FleetState {
+    return fleetReducer(state, { type: 'stream', event: reset });
+  }
+
+  it('clears every vehicle and its accumulated track', () => {
+    const state = reduce(
+      fleetEvent(FleetEventType.VEHICLE_DISCOVERED, 1, 1),
+      attitude(1, 1, 0.5),
+      fleetEvent(FleetEventType.VEHICLE_DISCOVERED, 2, 1),
+    );
+    expect(state.order).toHaveLength(2);
+
+    const cleared = withReset(state);
+
+    expect(cleared.vehicles).toEqual({});
+    expect(cleared.order).toEqual([]);
+  });
+
+  it('keeps the transport connected: a rewind is not a disconnection', () => {
+    const state = reduce(fleetEvent(FleetEventType.VEHICLE_DISCOVERED, 1, 1));
+
+    expect(withReset({ ...state, connected: true }).connected).toBe(true);
+  });
+
+  it("keeps the operator's explicit vehicle choice", () => {
+    let state = reduce(
+      fleetEvent(FleetEventType.VEHICLE_DISCOVERED, 1, 1),
+      fleetEvent(FleetEventType.VEHICLE_DISCOVERED, 2, 1),
+    );
+    state = fleetReducer(state, { type: 'select', key: vehicleKey(2, 1) });
+    expect(state.selectionPinned).toBe(true);
+
+    // Rewinding a replay must not also change which aircraft is on screen.
+    const cleared = withReset(state);
+
+    expect(cleared.selected).toBe(vehicleKey(2, 1));
+    expect(cleared.selectionPinned).toBe(true);
+  });
+
+  it('drops an automatic selection so it is picked again from what arrives', () => {
+    const state = reduce(fleetEvent(FleetEventType.VEHICLE_DISCOVERED, 1, 1));
+    expect(state.selectionPinned).toBe(false);
+
+    expect(withReset(state).selected).toBeNull();
+  });
+});

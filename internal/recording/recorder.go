@@ -68,13 +68,13 @@ func persistable(event vehicle.Event) (string, proto.Message, time.Time, error) 
 		if timestamp == nil || !timestamp.IsValid() {
 			return "", nil, time.Time{}, errors.New("recording: fleet event has an invalid occurred_at timestamp")
 		}
-		return "fleet", event.Fleet, timestamp.AsTime().UTC(), nil
+		return KindFleet, event.Fleet, timestamp.AsTime().UTC(), nil
 	case event.Telemetry != nil:
 		timestamp, err := telemetryTimestamp(event.Telemetry)
 		if err != nil {
 			return "", nil, time.Time{}, err
 		}
-		return "telemetry", event.Telemetry, timestamp, nil
+		return KindTelemetry, event.Telemetry, timestamp, nil
 	default:
 		return "", nil, time.Time{}, nil
 	}

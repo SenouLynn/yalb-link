@@ -12,6 +12,8 @@ The working path runs end to end:
 SITL -> MAVLink UDP -> codec -> per-vehicle fold -> event hub
                                                |-> SSE -> React flight display
                                                \-> bounded SQLite recording
+                                                        |
+                                             paged JSON replay -> same display
 ```
 
 The repository currently has:
@@ -25,21 +27,29 @@ The repository currently has:
 - an in-memory event hub and a `GET /api/events` server-sent-event stream that
   bootstraps each browser from retained state;
 - opt-in, bounded SQLite recording with explicit start/stop lifecycle and
-  deterministic Go replay after a backend restart;
+  deterministic replay after a backend restart, served as paged JSON from
+  `GET /api/recordings/{id}/events`;
 - a fleet-aware React flight display — artificial horizon, heading tape,
   altitude with its datum, speed, climb, power, link health, and a live
   MapLibre position/track map — that also
-  runs from deterministic fixtures at `?source=mock`;
+  runs from deterministic fixtures at `?source=mock` and replays a recorded
+  flight at `?source=replay&recording=<id>`, with pause, scrub, and speed;
 - pure TypeScript attitude, heading, position, battery, track, freshness, and
   trajectory logic;
 - Docker Compose definitions for Copter and Plane SITL;
 - native Go/TypeScript tests and a Bazel checkpoint build.
 
-It is **read-only observation**. Persisted recordings currently have a Go replay
-API but no historical-map UI or HTTP replay endpoint. The project does not yet
-have a command or mission surface, authentication, or MAVLink signing.
+It is **read-only observation**. The project does not yet have a command or
+mission surface, authentication, or MAVLink signing. Recordings accumulate
+without an aggregate retention policy: nothing yet deletes or compacts them.
 
 No project license has been selected or committed.
+
+### Next demonstrable outcome
+
+Aggregate recording retention — deleting a recording, and bounding total
+database age and size. ADR 0002 bounds one recording; nothing yet bounds the
+file they all share, so a long-running backend fills its disk.
 
 ### What the display refuses to do
 
@@ -59,7 +69,8 @@ docker compose --profile ui up   # SITL, backend, and the flight display
 ```
 
 Then open <http://localhost:3000>, or
-<http://localhost:3000/?source=mock> to run the display with no backend.
+<http://localhost:3000/?source=mock> to run the display with no backend, or
+<http://localhost:3000/?source=replay> to pick a recorded flight.
 
 See [docs/runbooks/dev-setup.md](docs/runbooks/dev-setup.md) for prerequisites
 and [docs/README.md](docs/README.md) for the documentation policy.

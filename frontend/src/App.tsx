@@ -1,7 +1,7 @@
 import { useEffect, useReducer, useState } from 'react';
 
 import { fleetReducer, initialFleetState, type VehicleKey } from '@/fleet/state';
-import { isMockSource, selectStream } from '@/stream/select';
+import { selectStream } from '@/stream/select';
 import { FlightDisplay } from '@/ui/FlightDisplay';
 
 /**
@@ -22,8 +22,7 @@ export default function App() {
 
   // The stream is built once per page: rebuilding it would drop the SSE
   // connection and force a fresh bootstrap on every render.
-  const [stream] = useState(() => selectStream(search));
-  const [mock] = useState(() => isMockSource(search));
+  const [{ stream, source, replay }] = useState(() => selectStream(search));
 
   useEffect(() => stream.start((event) => {
     dispatch({ type: 'stream', event });
@@ -31,17 +30,22 @@ export default function App() {
 
   useEffect(() => {
     const handle = globalThis.setInterval(() => {
-      setNowMs(Date.now());
+      // A source that owns a clock supplies it. Replay does, because its
+      // telemetry is stamped with the time of the flight that produced it and
+      // would read as hours stale against the wall clock.
+      setNowMs(stream.now?.() ?? Date.now());
     }, FRESHNESS_TICK_MS);
 
     return () => {
       globalThis.clearInterval(handle);
     };
-  }, []);
+  }, [stream]);
 
   const select = (key: VehicleKey) => {
     dispatch({ type: 'select', key });
   };
 
-  return <FlightDisplay fleet={fleet} nowMs={nowMs} mock={mock} onSelect={select} />;
+  return (
+    <FlightDisplay fleet={fleet} nowMs={nowMs} source={source} replay={replay} onSelect={select} />
+  );
 }

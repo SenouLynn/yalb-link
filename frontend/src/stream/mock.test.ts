@@ -75,7 +75,7 @@ describe('MockEventSource', () => {
     stop();
 
     for (const event of events) {
-      if (event.kind === 'connection') continue;
+      if (event.kind === 'connection' || event.kind === 'reset') continue;
 
       expect(event.event.vehicleId?.systemId).toBe(MOCK_SYS_ID);
       expect(event.event.vehicleId?.componentId).toBe(MOCK_COMP_ID);

@@ -154,6 +154,17 @@ function applyStreamEvent(state: FleetState, event: StreamEvent): FleetState {
     case 'telemetry':
       return withVehicle(state, applyTelemetry(event.event, event.receivedAtMs));
 
+    case 'reset':
+      // Everything accumulated is discarded, but an operator's explicit choice
+      // of vehicle is theirs and survives: a replay rewinding to its start
+      // should not also change which aircraft they were watching.
+      return {
+        ...initialFleetState,
+        connected: state.connected,
+        selected: state.selectionPinned ? state.selected : null,
+        selectionPinned: state.selectionPinned,
+      };
+
     default:
       return state;
   }

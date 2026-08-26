@@ -20,10 +20,28 @@ type ReplayEvent struct {
 
 // Replay loads and decodes all persisted events for one recording.
 func (s *Store) Replay(ctx context.Context, recordingID int64) ([]ReplayEvent, error) {
+	return s.ReplayFrom(ctx, recordingID, 0, 0)
+}
+
+// ReplayFrom loads one page of persisted events starting at fromSeq inclusive.
+//
+// A limit of zero or less is unbounded. Paging is by sequence number rather
+// than by offset because sequence numbers are dense, immutable, and already the
+// recording's ordering key: an offset would shift under a writer still
+// committing batches for an active recording.
+func (s *Store) ReplayFrom(ctx context.Context, recordingID, fromSeq int64, limit int) ([]ReplayEvent, error) {
 	opCtx, cancel := s.operationContext(ctx)
 	defer cancel()
+
+	// SQLite reads a negative LIMIT as unbounded, so one query serves both.
+	bound := -1
+	if limit > 0 {
+		bound = limit
+	}
+
 	rows, err := s.db.QueryContext(opCtx, `SELECT seq, kind, occurred_at, payload
-		FROM recording_events WHERE recording_id = ? ORDER BY seq`, recordingID)
+		FROM recording_events WHERE recording_id = ? AND seq >= ? ORDER BY seq LIMIT ?`,
+		recordingID, fromSeq, bound)
 	if err != nil {
 		return nil, fmt.Errorf("recording: replay query: %w", err)
 	}
@@ -40,12 +58,12 @@ func (s *Store) Replay(ctx context.Context, recordingID int64) ([]ReplayEvent, e
 		}
 		event.OccurredAt = time.UnixMilli(occurred).UTC()
 		switch kind {
-		case "fleet":
+		case KindFleet:
 			event.Fleet = &gcsv1.FleetEvent{}
 			if err := proto.Unmarshal(payload, event.Fleet); err != nil {
 				return nil, fmt.Errorf("recording: decoding fleet seq %d: %w", event.Seq, err)
 			}
-		case "telemetry":
+		case KindTelemetry:
 			event.Telemetry = &gcsv1.TelemetryEvent{}
 			if err := proto.Unmarshal(payload, event.Telemetry); err != nil {
 				return nil, fmt.Errorf("recording: decoding telemetry seq %d: %w", event.Seq, err)

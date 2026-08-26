@@ -175,6 +175,7 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub
 		mux.HandleFunc("POST /api/recordings/start", recording.StartHandler(store))
 		mux.HandleFunc("POST /api/recordings/stop", recording.StopHandler(store))
 		mux.HandleFunc("GET /api/recordings", recording.ListHandler(store))
+		mux.HandleFunc(recording.EventsPattern, recording.ReplayEventsHandler(store))
 	}
 
 	srv := &http.Server{

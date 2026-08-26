@@ -2,12 +2,15 @@
 
 import type { FleetState, VehicleKey } from '@/fleet/state';
 import { MapPanel } from '@/map/MapPanel';
+import type { ReplayEventSource } from '@/stream/replay';
+import type { StreamSource } from '@/stream/select';
 
 import { AttitudeIndicator } from './AttitudeIndicator';
 import { HeadingIndicator } from './HeadingIndicator';
 import { NO_VALUE, num, signed } from './format';
 import { hasDisplayValue, readFlight } from './readings';
 import { Readout } from './Readout';
+import { ReplayControls } from './ReplayControls';
 import { StatusBar } from './StatusBar';
 import { VehicleSelector } from './VehicleSelector';
 
@@ -15,15 +18,25 @@ export interface FlightDisplayProps {
   fleet: FleetState;
   /** Injected clock; freshness is measured against it. */
   nowMs: number;
-  mock: boolean;
+  /** Where the data comes from. Drives what the display claims it is showing. */
+  source: StreamSource;
+  /** The running replay, when this page is one. */
+  replay?: ReplayEventSource | null;
   onSelect: (key: VehicleKey) => void;
 }
 
-export function FlightDisplay({ fleet, nowMs, mock, onSelect }: FlightDisplayProps) {
+export function FlightDisplay({
+  fleet,
+  nowMs,
+  source,
+  replay = null,
+  onSelect,
+}: FlightDisplayProps) {
   const view = fleet.selected === null ? undefined : fleet.vehicles[fleet.selected];
+  const controls = source === 'replay' ? <ReplayControls source={replay} /> : null;
 
   if (view === undefined) {
-    return <EmptyFleet connected={fleet.connected} mock={mock} />;
+    return <EmptyFleet connected={fleet.connected} source={source} controls={controls} />;
   }
 
   const readings = readFlight(view, nowMs);
@@ -35,7 +48,9 @@ export function FlightDisplay({ fleet, nowMs, mock, onSelect }: FlightDisplayPro
 
   return (
     <div className="display">
-      <StatusBar view={view} nowMs={nowMs} connected={fleet.connected} mock={mock} />
+      <StatusBar view={view} nowMs={nowMs} connected={fleet.connected} source={source} />
+
+      {controls}
 
       <VehicleSelector fleet={fleet} onSelect={onSelect} />
 
@@ -97,19 +112,36 @@ function datumNote(ref: 'RELATIVE' | 'MSL'): string {
   return ref === 'RELATIVE' ? 'above home' : 'above sea level';
 }
 
-function EmptyFleet({ connected, mock }: { connected: boolean; mock: boolean }) {
+function EmptyFleet({
+  connected,
+  source,
+  controls,
+}: {
+  connected: boolean;
+  source: StreamSource;
+  controls: React.ReactNode;
+}) {
   return (
     <div className="display">
+      {controls}
+
       <div className="panel empty">
         <div className="label">No vehicle</div>
-        <p className="empty__hint">
-          {mock
-            ? 'Replaying fixtures. The mock vehicle appears on the first frame.'
-            : connected
-              ? 'Connected to the backend. Waiting for a heartbeat.'
-              : 'Not connected to the backend. Start it, or open ?source=mock.'}
-        </p>
+        <p className="empty__hint">{emptyHint(source, connected)}</p>
       </div>
     </div>
   );
+}
+
+function emptyHint(source: StreamSource, connected: boolean): string {
+  switch (source) {
+    case 'mock':
+      return 'Replaying fixtures. The mock vehicle appears on the first frame.';
+    case 'replay':
+      return 'Replaying a recording. Pick one, then press play.';
+    default:
+      return connected
+        ? 'Connected to the backend. Waiting for a heartbeat.'
+        : 'Not connected to the backend. Start it, or open ?source=mock.';
+  }
 }

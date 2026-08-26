@@ -1,6 +1,6 @@
 # 0002: Bound recording resources and shutdown
 
-Status: Proposed
+Status: Accepted
 
 ## Context
 
@@ -15,9 +15,9 @@ These are safety bounds, not a complete historical-data retention policy.
 Aggregate database age, recording count, deletion, and compaction remain
 undecided.
 
-## Proposed decision
+## Decision
 
-Apply provisional, configurable bounds at every layer:
+Apply configurable bounds at every layer:
 
 - `Recorder.Publish` remains non-blocking and its queue remains capped at 1,024
   events. Rejected events consume sequence numbers so loss is observable.

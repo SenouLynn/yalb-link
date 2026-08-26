@@ -30,6 +30,7 @@ import {
   type FleetState,
 } from '@/fleet/state';
 import type { StreamEvent } from '@/stream/events';
+import type { StreamSource } from '@/stream/select';
 
 import { FlightDisplay } from './FlightDisplay';
 import { NO_VALUE } from './format';
@@ -92,12 +93,12 @@ function build(...events: StreamEvent[]): FleetState {
   );
 }
 
-function render(fleet: FleetState, nowMs = T0, mock = false): string {
+function render(fleet: FleetState, nowMs = T0, source: StreamSource = 'live'): string {
   return renderToStaticMarkup(
     <FlightDisplay
       fleet={fleet}
       nowMs={nowMs}
-      mock={mock}
+      source={source}
       onSelect={() => {
         /* selection is exercised through the reducer's own tests */
       }}
@@ -344,7 +345,11 @@ describe('FlightDisplay without a vehicle', () => {
   });
 
   it('says so when replaying fixtures', () => {
-    expect(render(initialFleetState, T0, true)).toContain('Replaying fixtures');
+    expect(render(initialFleetState, T0, 'mock')).toContain('Replaying fixtures');
+  });
+
+  it('says so when replaying a recording', () => {
+    expect(render(initialFleetState, T0, 'replay')).toContain('Replaying a recording');
   });
 });
 
@@ -369,8 +374,17 @@ describe('FlightDisplay link and vehicle state are separate', () => {
   });
 
   it('says MOCK rather than LIVE when replaying fixtures', () => {
-    const html = render(build(...fullFlight()), T0, true);
+    const html = render(build(...fullFlight()), T0, 'mock');
 
     expect(html).toContain('MOCK');
+  });
+
+  it('says REPLAY, in amber, when replaying a recording', () => {
+    // Recorded telemetry rendering as live is the same failure the mock
+    // opt-in rule exists to prevent, so the chip has to say which it is.
+    const html = render(build(...fullFlight()), T0, 'replay');
+
+    expect(html).toContain('REPLAY');
+    expect(html).not.toContain('>LIVE<');
   });
 });

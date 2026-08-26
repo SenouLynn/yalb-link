@@ -79,6 +79,40 @@ exists. Executable artifacts are authoritative if this file drifts.
 - Memory is ephemeral. Restart, reconnect, and duplicate bootstrap events are
   handled by keyed, idempotent state; there is no replay or `Last-Event-ID`.
 
+## Recording replay
+
+- `GET /api/recordings/{id}/events` pages by sequence number, not by offset:
+  sequence numbers are dense, immutable, and already the ordering key, while an
+  offset would shift under a writer still committing batches. `next_seq` is the
+  cursor and `null` ends the walk.
+- Events are rendered with `protojson`, spliced into the envelope as raw JSON.
+  `encoding/json` would mangle enums and well-known types. The browser parses a
+  replayed event with `parseStreamJson`, the same reader the live SSE path uses
+  through `parseStreamEvent`.
+- The row lookup, not the event query, decides 404. An unknown recording and one
+  with no events yet are different answers.
+- An `active` recording serves its committed prefix. Reading a recording must
+  not require stopping it.
+- `occurred_at_ms` is the fold's `observed_at` for telemetry and `occurred_at`
+  for fleet events, so playback and freshness run on one timeline.
+- Pacing is the browser's. The backend serves pages; `logic/playback` owns the
+  clock, so scrubbing and speed are local state rather than a reconnect, and
+  the ordering rules are testable without a DOM or a network.
+- `ReplayEventSource` implements `TelemetryStream.now()`; live and mock leave it
+  unset and keep the wall clock. Recorded telemetry carries the timestamps of
+  the flight that produced it, so wall-clock freshness would blank the display
+  entirely.
+- Events are emitted in recorded order. `dueCount` stops at the first event that
+  is not yet due even when a later one is, because recorded order is delivery
+  order rather than timestamp order.
+- Seeking backwards emits a `reset` and replays from the buffer's start. The map
+  track only appends, so a rewind rebuilds it rather than leaving a tail from a
+  future the operator has seeked away from. An explicit vehicle selection
+  survives the reset; an automatic one is picked again.
+- The browser holds at most `MAX_BUFFERED_EVENTS` (50,000) of a recording's
+  200,000-event cap and reports the truncation rather than showing a partial
+  flight as a whole one.
+
 ## Flight display
 
 - Freshness uses the backend's `observed_at`, not browser receipt time. The hub
@@ -99,7 +133,11 @@ exists. Executable artifacts are authoritative if this file drifts.
 - `frontend/src/map/MapPanel.tsx` is the renderer boundary. UI components pass
   plain position, track, and tile-source data; MapLibre types do not leak into
   fleet or display state.
-- Live SSE is the default; `?source=mock` is the only way to reach fixtures.
+- Live SSE is the default. `?source=mock` reaches fixtures and
+  `?source=replay&recording=<id>` reaches a recording; both are opt-in, and the
+  Source chip names them in amber. The rule runs both ways — a page asked for a
+  replay it cannot load stays in replay mode and says so rather than quietly
+  showing live telemetry instead.
 
 ## Development topology
 
@@ -118,14 +156,16 @@ exists. Executable artifacts are authoritative if this file drifts.
 
 - The system is read-only. Rate requests are data acquisition, not an operator
   command surface; nothing arms, commands, or configures a vehicle.
-- No persistence adapter or persistence configuration exists. Backend restart
-  loses all retained state.
+- Recording is opt-in and off by default; with it disabled the backend restart
+  still loses all retained state. Recordings have no aggregate retention
+  policy: nothing deletes or compacts them, so the database grows without
+  bound. ADR 0002 bounds one recording, not the file they share.
 - Transaction responses are decoded and logged, but there is no request
   registry or RPC surface consuming them.
 - Inbound MAVLink frames are unauthenticated; no signing configuration exists.
 - `/api/events` has no authentication and no origin restriction.
-- The UI has instruments and a single-selected-vehicle map, but no mission
-  editor or telemetry inspector. Map imagery is fetched directly by the
+- The UI has instruments, a single-selected-vehicle map, and recording replay,
+  but no mission editor or telemetry inspector. Map imagery is fetched directly by the
   browser from a public tile host, an external network dependency beyond the
   localhost/SITL/backend path. The local tile-source seam is not wired into
   the UI yet.

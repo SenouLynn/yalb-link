@@ -313,3 +313,97 @@ body {
     transition: none;
   }
 }
+
+/* --- replay transport ---------------------------------------------------- */
+/*
+ * Amber-edged on purpose. This bar is only ever on screen when the display is
+ * showing a recording, and its border is the peripheral cue that what is on
+ * the instruments already happened.
+ */
+
+.replay {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap);
+  border-color: var(--caution);
+}
+
+.replay--error {
+  color: var(--caution);
+}
+
+.replay__button {
+  min-width: 5rem;
+  padding: 0.35rem 0.75rem;
+  font-family: var(--label);
+  font-size: 0.85rem;
+  color: var(--lume);
+  background: var(--panel-deep);
+  border: 1px solid var(--bezel);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.replay__button:disabled {
+  color: var(--dead);
+  cursor: default;
+}
+
+.replay__clock {
+  font-family: var(--data);
+  font-variant-numeric: tabular-nums;
+  color: var(--lume);
+}
+
+.replay__scrub {
+  flex: 1;
+  min-width: 8rem;
+  accent-color: var(--caution);
+}
+
+.replay__speed {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.replay__speed select {
+  font-family: var(--data);
+  color: var(--lume);
+  background: var(--panel-deep);
+  border: 1px solid var(--bezel);
+  border-radius: var(--radius);
+  padding: 0.2rem 0.3rem;
+}
+
+.replay__name {
+  font-family: var(--data);
+  color: var(--lume-dim);
+}
+
+.replay__note {
+  font-family: var(--label);
+  font-size: 0.8rem;
+  color: var(--lume-dim);
+}
+
+.replay__note--warn {
+  color: var(--caution);
+}
+
+.replay__pick {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.35rem 0.6rem;
+  color: var(--lume);
+  text-decoration: none;
+  background: var(--panel-deep);
+  border: 1px solid var(--bezel);
+  border-radius: var(--radius);
+}
+
+.replay__pick:hover {
+  border-color: var(--caution);
+}

@@ -31,12 +31,12 @@ export interface LiveOptions {
  */
 export class LiveEventSource implements TelemetryStream {
   private readonly url: string;
-  private readonly now: () => number;
+  private readonly wallNow: () => number;
   private readonly create: (url: string) => EventSource;
 
   constructor(options: LiveOptions = {}) {
     this.url = options.url ?? EVENTS_PATH;
-    this.now = options.now ?? (() => Date.now());
+    this.wallNow = options.now ?? (() => Date.now());
     this.create = options.create ?? ((url) => new globalThis.EventSource(url));
   }
 
@@ -44,7 +44,7 @@ export class LiveEventSource implements TelemetryStream {
     const source = this.create(this.url);
 
     const forward = (name: string) => (message: MessageEvent<string>) => {
-      const parsed = parseStreamEvent(name, message.data, this.now());
+      const parsed = parseStreamEvent(name, message.data, this.wallNow());
 
       if (parsed !== null) {
         onEvent(parsed);
@@ -55,14 +55,14 @@ export class LiveEventSource implements TelemetryStream {
     const onTelemetry = forward(EVENT_TELEMETRY);
 
     const onOpen = () => {
-      onEvent({ kind: 'connection', connected: true, receivedAtMs: this.now() });
+      onEvent({ kind: 'connection', connected: true, receivedAtMs: this.wallNow() });
     };
 
     // EventSource reports every failure as a bare `error`, including the ones
     // it is about to retry. Reporting it as a disconnect is correct either
     // way: until the next `open`, the browser is not receiving telemetry.
     const onError = () => {
-      onEvent({ kind: 'connection', connected: false, receivedAtMs: this.now() });
+      onEvent({ kind: 'connection', connected: false, receivedAtMs: this.wallNow() });
     };
 
     source.addEventListener(EVENT_FLEET, onFleet as EventListener);

@@ -2,20 +2,9 @@
 
 import type { StreamEvent, TelemetryStream } from './events';
 import { mockFrames, type MockFrame } from './fixtures';
+import { defaultScheduler, type Cancel, type Scheduler } from './scheduler';
 
-/** Cancels a scheduled callback. */
-export type Cancel = () => void;
-
-/** Schedules a callback. Injectable so tests need no timers. */
-export type Scheduler = (fn: () => void, delayMs: number) => Cancel;
-
-const defaultScheduler: Scheduler = (fn, delayMs) => {
-  const handle = globalThis.setTimeout(fn, delayMs);
-
-  return () => {
-    globalThis.clearTimeout(handle);
-  };
-};
+export type { Cancel, Scheduler } from './scheduler';
 
 export interface MockOptions {
   /** Injected clock. Defaults to the wall clock so freshness still ages. */
@@ -37,13 +26,13 @@ export interface MockOptions {
  * from whatever a vehicle happened to be doing.
  */
 export class MockEventSource implements TelemetryStream {
-  private readonly now: () => number;
+  private readonly wallNow: () => number;
   private readonly schedule: Scheduler;
   private readonly frames: MockFrame[];
   private readonly loop: boolean;
 
   constructor(options: MockOptions = {}) {
-    this.now = options.now ?? (() => Date.now());
+    this.wallNow = options.now ?? (() => Date.now());
     this.schedule = options.schedule ?? defaultScheduler;
     this.frames = options.frames ?? mockFrames();
     this.loop = options.loop ?? true;
@@ -57,7 +46,7 @@ export class MockEventSource implements TelemetryStream {
     // Mock playback is always "connected": there is no transport to lose, and
     // claiming otherwise would make the demo show a connection warning that
     // does not correspond to anything.
-    onEvent({ kind: 'connection', connected: true, receivedAtMs: this.now() });
+    onEvent({ kind: 'connection', connected: true, receivedAtMs: this.wallNow() });
 
     const step = (): void => {
       if (stopped || this.frames.length === 0) {
@@ -70,7 +59,7 @@ export class MockEventSource implements TelemetryStream {
         return;
       }
 
-      onEvent(frame.build(this.now()));
+      onEvent(frame.build(this.wallNow()));
 
       index += 1;
 
