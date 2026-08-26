@@ -183,6 +183,8 @@ func TestReplayEventsHandlerRejectsBadParameters(t *testing.T) {
 
 	targets := []string{
 		"/api/recordings/not-a-number/events",
+		"/api/recordings/0/events",
+		"/api/recordings/-1/events",
 		fmt.Sprintf("/api/recordings/%d/events?from_seq=abc", recording.ID),
 		fmt.Sprintf("/api/recordings/%d/events?from_seq=-1", recording.ID),
 		fmt.Sprintf("/api/recordings/%d/events?limit=abc", recording.ID),

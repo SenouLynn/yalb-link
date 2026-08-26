@@ -134,7 +134,9 @@ export class ReplayEventSource implements TelemetryStream {
   private onEvent: ((event: StreamEvent) => void) | null = null;
   private cancelTick: Cancel | null = null;
   private lastWallMs = 0;
-  private stopped = false;
+  /** Identifies the latest start, so an older async load cannot mutate it. */
+  private generation = 0;
+  private activeGeneration = 0;
   private loadPromise: Promise<void> = Promise.resolve();
   private snapshot: ReplayStatus | null = null;
   private readonly listeners = new Set<() => void>();
@@ -149,23 +151,36 @@ export class ReplayEventSource implements TelemetryStream {
   }
 
   start(onEvent: (event: StreamEvent) => void): Cancel {
+    const generation = ++this.generation;
+    this.activeGeneration = generation;
     this.onEvent = onEvent;
-    this.stopped = false;
+    this.cancelTick?.();
+    this.cancelTick = null;
+    this.playback = createPlayback(0, 0);
+    this.buffer = [];
+    this.cursor = 0;
+    this.recording = null;
+    this.loading = false;
+    this.truncated = false;
+    this.error = null;
     this.lastWallMs = this.wallNow();
+    this.notify();
 
     // Replay is always "connected": there is no transport to lose, and a
     // connection warning here would correspond to nothing. Whether the data is
     // live is a separate question, answered by the source chip.
     onEvent({ kind: 'connection', connected: true, receivedAtMs: this.wallNow() });
 
-    this.loadPromise = this.loadAll();
-    this.scheduleTick();
+    this.loadPromise = this.loadAll(generation);
+    this.scheduleTick(generation);
 
     return () => {
-      this.stopped = true;
-      this.onEvent = null;
-      this.cancelTick?.();
-      this.cancelTick = null;
+      if (this.activeGeneration === generation) {
+        this.activeGeneration = 0;
+        this.onEvent = null;
+        this.cancelTick?.();
+        this.cancelTick = null;
+      }
     };
   }
 
@@ -213,7 +228,19 @@ export class ReplayEventSource implements TelemetryStream {
     // Elapsed real time while paused is not playback time; without this, a
     // recording resumed after a minute would jump a minute forward.
     this.lastWallMs = this.wallNow();
-    this.apply(play(this.playback));
+    const wasFinished = this.playback.positionMs >= this.playback.endedAtMs;
+    const next = play(this.playback);
+
+    if (wasFinished && next.positionMs < this.playback.positionMs) {
+      this.playback = next;
+      this.cursor = 0;
+      this.emit({ kind: 'reset', receivedAtMs: this.wallNow() });
+      this.drain();
+      this.notify();
+      return;
+    }
+
+    this.apply(next);
   }
 
   pause(): void {
@@ -252,20 +279,20 @@ export class ReplayEventSource implements TelemetryStream {
     this.notify();
   }
 
-  private scheduleTick(): void {
-    if (this.stopped) {
+  private scheduleTick(generation: number): void {
+    if (this.activeGeneration !== generation) {
       return;
     }
 
     this.cancelTick = this.schedule(() => {
       this.cancelTick = null;
 
-      if (this.stopped) {
+      if (this.activeGeneration !== generation) {
         return;
       }
 
       this.tick();
-      this.scheduleTick();
+      this.scheduleTick(generation);
     }, this.tickMs);
   }
 
@@ -305,7 +332,7 @@ export class ReplayEventSource implements TelemetryStream {
     }
   }
 
-  private async loadAll(): Promise<void> {
+  private async loadAll(generation: number): Promise<void> {
     this.loading = true;
     this.error = null;
     this.notify();
@@ -315,31 +342,57 @@ export class ReplayEventSource implements TelemetryStream {
 
       for (;;) {
         const page = await this.fetchPage(this.recordingId, fromSeq, this.pageSize);
-        this.recording = page.recording;
-        this.absorb(page.events);
 
-        if (page.next_seq === null || this.buffer.length >= MAX_BUFFERED_EVENTS) {
-          this.truncated = page.next_seq !== null;
+        // React Strict Mode deliberately restarts effects in development. A
+        // response belonging to the cleaned-up start must not append into the
+        // replacement start's buffer.
+        if (this.activeGeneration !== generation) {
+          return;
+        }
+
+        this.recording = page.recording;
+        const overflowed = this.absorb(page.events);
+
+        if (overflowed || page.next_seq === null || this.buffer.length >= MAX_BUFFERED_EVENTS) {
+          this.truncated = overflowed || page.next_seq !== null;
           break;
         }
 
+        if (!Number.isSafeInteger(page.next_seq) || page.next_seq <= fromSeq) {
+          throw new Error('replay: backend returned a non-advancing next_seq');
+        }
         fromSeq = page.next_seq;
       }
     } catch (cause) {
-      this.error = cause instanceof Error ? cause.message : String(cause);
+      if (this.activeGeneration === generation) {
+        this.error = cause instanceof Error ? cause.message : String(cause);
+      }
     } finally {
-      this.loading = false;
-      // Show the recording's opening state rather than a blank display: an
-      // empty screen waiting on play looks like a recording that failed.
-      this.drain();
-      this.notify();
+      if (this.activeGeneration === generation) {
+        this.loading = false;
+        // Show the recording's opening state rather than a blank display: an
+        // empty screen waiting on play looks like a recording that failed.
+        this.drain();
+        this.notify();
+      }
     }
   }
 
-  /** Parses one page into the buffer and grows the timeline to fit it. */
-  private absorb(events: ReplayPageEventWire[]): void {
+  /** Parses one page into the buffer. Returns true if the cap cut it short. */
+  private absorb(events: ReplayPageEventWire[]): boolean {
     for (const wire of events) {
-      const name = wire.kind === 'fleet' ? EVENT_FLEET : EVENT_TELEMETRY;
+      if (this.buffer.length >= MAX_BUFFERED_EVENTS) {
+        return true;
+      }
+
+      const name = wire.kind === 'fleet'
+        ? EVENT_FLEET
+        : wire.kind === 'telemetry'
+          ? EVENT_TELEMETRY
+          : null;
+      if (name === null) {
+        continue;
+      }
       const parsed = parseStreamJson(name, wire.event as never, wire.occurred_at_ms);
 
       if (parsed === null) {
@@ -353,5 +406,7 @@ export class ReplayEventSource implements TelemetryStream {
       this.buffer.push({ atMs: wire.occurred_at_ms, event: parsed });
       this.playback = extendTo(this.playback, wire.occurred_at_ms);
     }
+
+    return false;
   }
 }

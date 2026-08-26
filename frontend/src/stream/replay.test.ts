@@ -9,7 +9,7 @@ import { AttitudeSchema, TelemetryEventSchema } from '@/gen/gcs/v1/telemetry_pb'
 import { VehicleIdSchema } from '@/gen/gcs/v1/vehicle_pb';
 
 import type { StreamEvent } from './events';
-import { ReplayEventSource, type ReplayPageWire } from './replay';
+import { MAX_BUFFERED_EVENTS, ReplayEventSource, type ReplayPageWire } from './replay';
 import type { Cancel, Scheduler } from './scheduler';
 
 const START = 1_700_000_000_000;
@@ -239,6 +239,27 @@ describe('ReplayEventSource', () => {
     stop();
   });
 
+  it('rebuilds from the beginning when Play restarts a finished replay', async () => {
+    const { source, scheduler, advanceWall } = newSource();
+    const { events, stop } = collect(source);
+    await source.loaded();
+
+    source.play();
+    advanceWall(3_000);
+    scheduler.tick();
+    expect(source.status().playing).toBe(false);
+    const beforeRestart = events.length;
+
+    source.play();
+
+    const restarted = events.slice(beforeRestart);
+    expect(restarted[0]?.kind).toBe('reset');
+    expect(restarted.filter((event) => event.kind === 'fleet' || event.kind === 'telemetry')).toHaveLength(1);
+    expect(source.now()).toBe(START);
+    expect(source.status().playing).toBe(true);
+    stop();
+  });
+
   it('returns a stable status snapshot until something actually changes', async () => {
     const { source, advanceWall, scheduler } = newSource();
     const { stop } = collect(source);
@@ -270,6 +291,65 @@ describe('ReplayEventSource', () => {
     expect(scheduler.pending()).toBe(1);
     stop();
     expect(scheduler.pending()).toBe(0);
+  });
+
+  it('ignores a page load from a cleaned-up Strict Mode start', async () => {
+    const script = pages();
+    const firstPage = script[0];
+    if (firstPage === undefined) throw new Error('test fixture has no first page');
+    const resolvers: ((page: ReplayPageWire) => void)[] = [];
+    const fetchPage = vi.fn(() => new Promise<ReplayPageWire>((resolve) => resolvers.push(resolve)));
+    const { source } = newSource({ fetchPage });
+
+    const first = collect(source);
+    first.stop();
+    const second = collect(source);
+
+    resolvers[0]?.(firstPage);
+    await Promise.resolve();
+    expect(fetchPage).toHaveBeenCalledTimes(2);
+
+    resolvers[1]?.({ ...firstPage, next_seq: null });
+    await source.loaded();
+
+    expect(source.status().totalEvents).toBe(2);
+    second.stop();
+  });
+
+  it('fails a non-advancing page cursor instead of requesting forever', async () => {
+    const firstPage = pages()[0];
+    if (firstPage === undefined) throw new Error('test fixture has no first page');
+    const first = { ...firstPage, next_seq: 0 };
+    const fetchPage = vi.fn(() => Promise.resolve(first));
+    const { source } = newSource({ fetchPage });
+    const { stop } = collect(source);
+    await source.loaded();
+
+    expect(fetchPage).toHaveBeenCalledTimes(1);
+    expect(source.status().error).toContain('non-advancing next_seq');
+    stop();
+  });
+
+  it('never buffers more than the documented browser cap', async () => {
+    const firstPage = pages()[0];
+    const event = firstPage?.events[0];
+    if (firstPage === undefined || event === undefined) throw new Error('test fixture is empty');
+    const oversized = {
+      ...firstPage,
+      next_seq: null,
+      events: Array.from({ length: MAX_BUFFERED_EVENTS + 1 }, (_, index) => ({
+        ...event,
+        seq: index + 1,
+      })),
+    };
+    const fetchPage = vi.fn(() => Promise.resolve(oversized));
+    const { source } = newSource({ fetchPage });
+    const { stop } = collect(source);
+    await source.loaded();
+
+    expect(source.status().totalEvents).toBe(MAX_BUFFERED_EVENTS);
+    expect(source.status().truncated).toBe(true);
+    stop();
   });
 
   it('surfaces a failed load as an error instead of throwing', async () => {

@@ -38,8 +38,8 @@ type ReplayPageEvent struct {
 func ReplayEventsHandler(store *Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-		if err != nil {
-			http.Error(w, "recording id must be an integer", http.StatusBadRequest)
+		if err != nil || id < 1 {
+			http.Error(w, "recording id must be a positive integer", http.StatusBadRequest)
 			return
 		}
 		query := r.URL.Query()
