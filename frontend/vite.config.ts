@@ -24,7 +24,8 @@ export default defineConfig({
       // the host (localhost) and Compose (the service name).
       '/api': {
         target: process.env['GCS_BACKEND_URL'] ?? 'http://localhost:8080',
-        changeOrigin: true,
+        // Command CSRF checks compare Origin with the browser's original Host.
+        changeOrigin: false,
         // Server-sent events must not be buffered or they arrive in bursts.
         ws: false,
         configure: (proxy) => {

@@ -533,10 +533,12 @@ func decodeCommandAck(msg message.Message) *gcsv1.ProtocolEvent {
 	return &gcsv1.ProtocolEvent{
 		Payload: &gcsv1.ProtocolEvent_CommandAck{
 			CommandAck: &gcsv1.CommandAck{
-				Command:      gcsv1.MavCmd(m.Command),
-				Result:       gcsv1.MavResult(m.Result),
-				Progress:     uint32(m.Progress),
-				ResultParam2: m.ResultParam2,
+				Command:         gcsv1.MavCmd(m.Command),
+				Result:          gcsv1.MavResult(m.Result),
+				Progress:        uint32(m.Progress),
+				ResultParam2:    m.ResultParam2,
+				TargetSystem:    uint32(m.TargetSystem),
+				TargetComponent: uint32(m.TargetComponent),
 			},
 		},
 	}

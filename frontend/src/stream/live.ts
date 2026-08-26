@@ -1,6 +1,6 @@
 /** The live backend stream, over the browser's own SSE client. */
 
-import { EVENT_FLEET, EVENT_TELEMETRY, type StreamEvent, type TelemetryStream } from './events';
+import { EVENT_COMMAND, EVENT_FLEET, EVENT_TELEMETRY, type StreamEvent, type TelemetryStream } from './events';
 import { parseStreamEvent } from './parse';
 
 /**
@@ -53,6 +53,7 @@ export class LiveEventSource implements TelemetryStream {
 
     const onFleet = forward(EVENT_FLEET);
     const onTelemetry = forward(EVENT_TELEMETRY);
+    const onCommand = forward(EVENT_COMMAND);
 
     const onOpen = () => {
       onEvent({ kind: 'connection', connected: true, receivedAtMs: this.wallNow() });
@@ -67,12 +68,14 @@ export class LiveEventSource implements TelemetryStream {
 
     source.addEventListener(EVENT_FLEET, onFleet as EventListener);
     source.addEventListener(EVENT_TELEMETRY, onTelemetry as EventListener);
+    source.addEventListener(EVENT_COMMAND, onCommand as EventListener);
     source.addEventListener('open', onOpen);
     source.addEventListener('error', onError);
 
     return () => {
       source.removeEventListener(EVENT_FLEET, onFleet as EventListener);
       source.removeEventListener(EVENT_TELEMETRY, onTelemetry as EventListener);
+      source.removeEventListener(EVENT_COMMAND, onCommand as EventListener);
       source.removeEventListener('open', onOpen);
       source.removeEventListener('error', onError);
       source.close();

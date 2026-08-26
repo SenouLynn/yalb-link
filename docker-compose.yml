@@ -85,6 +85,8 @@ services:
       GCS_MAVLINK_UDP_BIND: 0.0.0.0:14550
       # Enable per-frame logs with GCS_LOG_LEVEL=debug.
       GCS_LOG_LEVEL: ${GCS_LOG_LEVEL:-info}
+      GCS_COMMANDS_ENABLED: ${GCS_COMMANDS_ENABLED:-false}
+      GCS_RECORDING_ENABLED: ${GCS_RECORDING_ENABLED:-false}
     ports:
       - "8080:8080"
       # Host tools and SITL feed the same backend listener.

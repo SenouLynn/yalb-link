@@ -12,13 +12,9 @@ import (
 	"yalb.gcs/internal/vehicle"
 )
 
-// AutopilotComponentID is MAV_COMP_ID_AUTOPILOT1.
-//
-// Rates are requested from the autopilot only. Gimbals, companion computers,
-// and ADS-B receivers share the system ID and answer their own message sets;
-// asking each of them for ATTITUDE at 10 Hz is how a shared link gets
-// saturated by a GCS that meant to talk to one component.
-const AutopilotComponentID uint8 = 1
+// AutopilotComponentID is kept as an API compatibility alias. New command
+// policy shares the canonical constant from codec.
+const AutopilotComponentID = codec.AutopilotComponentID
 
 // RateRequest names one message family and how often it should arrive.
 type RateRequest struct {
@@ -132,7 +128,7 @@ func (r *RateRequester) triggers(fleet *gcsv1.FleetEvent) bool {
 		return false
 	}
 
-	if fleet.GetVehicleId().GetComponentId() != uint32(AutopilotComponentID) {
+	if fleet.GetVehicleId().GetComponentId() != uint32(codec.AutopilotComponentID) {
 		return false
 	}
 

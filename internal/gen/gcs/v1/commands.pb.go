@@ -9,6 +9,7 @@ package gcsv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -21,15 +22,78 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+type CommandState int32
+
+const (
+	CommandState_COMMAND_STATE_UNSPECIFIED CommandState = 0
+	CommandState_COMMAND_STATE_PENDING     CommandState = 1
+	CommandState_COMMAND_STATE_ACCEPTED    CommandState = 2
+	CommandState_COMMAND_STATE_REJECTED    CommandState = 3
+	CommandState_COMMAND_STATE_TIMED_OUT   CommandState = 4
+	CommandState_COMMAND_STATE_CANCELLED   CommandState = 5
+	CommandState_COMMAND_STATE_SEND_FAILED CommandState = 6
+)
+
+// Enum value maps for CommandState.
+var (
+	CommandState_name = map[int32]string{
+		0: "COMMAND_STATE_UNSPECIFIED",
+		1: "COMMAND_STATE_PENDING",
+		2: "COMMAND_STATE_ACCEPTED",
+		3: "COMMAND_STATE_REJECTED",
+		4: "COMMAND_STATE_TIMED_OUT",
+		5: "COMMAND_STATE_CANCELLED",
+		6: "COMMAND_STATE_SEND_FAILED",
+	}
+	CommandState_value = map[string]int32{
+		"COMMAND_STATE_UNSPECIFIED": 0,
+		"COMMAND_STATE_PENDING":     1,
+		"COMMAND_STATE_ACCEPTED":    2,
+		"COMMAND_STATE_REJECTED":    3,
+		"COMMAND_STATE_TIMED_OUT":   4,
+		"COMMAND_STATE_CANCELLED":   5,
+		"COMMAND_STATE_SEND_FAILED": 6,
+	}
+)
+
+func (x CommandState) Enum() *CommandState {
+	p := new(CommandState)
+	*p = x
+	return p
+}
+
+func (x CommandState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (CommandState) Descriptor() protoreflect.EnumDescriptor {
+	return file_gcs_v1_commands_proto_enumTypes[0].Descriptor()
+}
+
+func (CommandState) Type() protoreflect.EnumType {
+	return &file_gcs_v1_commands_proto_enumTypes[0]
+}
+
+func (x CommandState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use CommandState.Descriptor instead.
+func (CommandState) EnumDescriptor() ([]byte, []int) {
+	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{0}
+}
+
 // CommandAck mirrors COMMAND_ACK (#77) received from a vehicle.
 type CommandAck struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Command       MavCmd                 `protobuf:"varint,1,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
-	Result        MavResult              `protobuf:"varint,2,opt,name=result,proto3,enum=gcs.v1.MavResult" json:"result,omitempty"`
-	Progress      uint32                 `protobuf:"varint,3,opt,name=progress,proto3" json:"progress,omitempty"`                             // 0-100 while in progress; 255 = unknown
-	ResultParam2  int32                  `protobuf:"varint,4,opt,name=result_param2,json=resultParam2,proto3" json:"result_param2,omitempty"` // command-specific detail
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Command         MavCmd                 `protobuf:"varint,1,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
+	Result          MavResult              `protobuf:"varint,2,opt,name=result,proto3,enum=gcs.v1.MavResult" json:"result,omitempty"`
+	Progress        uint32                 `protobuf:"varint,3,opt,name=progress,proto3" json:"progress,omitempty"`                             // 0-100 while in progress; 255 = unknown
+	ResultParam2    int32                  `protobuf:"varint,4,opt,name=result_param2,json=resultParam2,proto3" json:"result_param2,omitempty"` // command-specific detail
+	TargetSystem    uint32                 `protobuf:"varint,5,opt,name=target_system,json=targetSystem,proto3" json:"target_system,omitempty"`
+	TargetComponent uint32                 `protobuf:"varint,6,opt,name=target_component,json=targetComponent,proto3" json:"target_component,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *CommandAck) Reset() {
@@ -90,17 +154,152 @@ func (x *CommandAck) GetResultParam2() int32 {
 	return 0
 }
 
+func (x *CommandAck) GetTargetSystem() uint32 {
+	if x != nil {
+		return x.TargetSystem
+	}
+	return 0
+}
+
+func (x *CommandAck) GetTargetComponent() uint32 {
+	if x != nil {
+		return x.TargetComponent
+	}
+	return 0
+}
+
+type CommandTransaction struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            uint32                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	VehicleId     *VehicleId             `protobuf:"bytes,2,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"`
+	Command       MavCmd                 `protobuf:"varint,3,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
+	State         CommandState           `protobuf:"varint,4,opt,name=state,proto3,enum=gcs.v1.CommandState" json:"state,omitempty"`
+	Result        MavResult              `protobuf:"varint,5,opt,name=result,proto3,enum=gcs.v1.MavResult" json:"result,omitempty"`
+	ResultParam2  int32                  `protobuf:"varint,6,opt,name=result_param2,json=resultParam2,proto3" json:"result_param2,omitempty"`
+	IssuedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
+	SettledAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=settled_at,json=settledAt,proto3" json:"settled_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CommandTransaction) Reset() {
+	*x = CommandTransaction{}
+	mi := &file_gcs_v1_commands_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandTransaction) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandTransaction) ProtoMessage() {}
+
+func (x *CommandTransaction) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_v1_commands_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandTransaction.ProtoReflect.Descriptor instead.
+func (*CommandTransaction) Descriptor() ([]byte, []int) {
+	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CommandTransaction) GetId() uint32 {
+	if x != nil {
+		return x.Id
+	}
+	return 0
+}
+
+func (x *CommandTransaction) GetVehicleId() *VehicleId {
+	if x != nil {
+		return x.VehicleId
+	}
+	return nil
+}
+
+func (x *CommandTransaction) GetCommand() MavCmd {
+	if x != nil {
+		return x.Command
+	}
+	return MavCmd_MAV_CMD_UNSPECIFIED
+}
+
+func (x *CommandTransaction) GetState() CommandState {
+	if x != nil {
+		return x.State
+	}
+	return CommandState_COMMAND_STATE_UNSPECIFIED
+}
+
+func (x *CommandTransaction) GetResult() MavResult {
+	if x != nil {
+		return x.Result
+	}
+	return MavResult_MAV_RESULT_ACCEPTED
+}
+
+func (x *CommandTransaction) GetResultParam2() int32 {
+	if x != nil {
+		return x.ResultParam2
+	}
+	return 0
+}
+
+func (x *CommandTransaction) GetIssuedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.IssuedAt
+	}
+	return nil
+}
+
+func (x *CommandTransaction) GetSettledAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.SettledAt
+	}
+	return nil
+}
+
 var File_gcs_v1_commands_proto protoreflect.FileDescriptor
 
 const file_gcs_v1_commands_proto_rawDesc = "" +
 	"\n" +
-	"\x15gcs/v1/commands.proto\x12\x06gcs.v1\x1a\x12gcs/v1/types.proto\"\xa2\x01\n" +
+	"\x15gcs/v1/commands.proto\x12\x06gcs.v1\x1a\x12gcs/v1/types.proto\x1a\x14gcs/v1/vehicle.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf2\x01\n" +
 	"\n" +
 	"CommandAck\x12(\n" +
 	"\acommand\x18\x01 \x01(\x0e2\x0e.gcs.v1.MavCmdR\acommand\x12)\n" +
 	"\x06result\x18\x02 \x01(\x0e2\x11.gcs.v1.MavResultR\x06result\x12\x1a\n" +
 	"\bprogress\x18\x03 \x01(\rR\bprogress\x12#\n" +
-	"\rresult_param2\x18\x04 \x01(\x05R\fresultParam2B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
+	"\rresult_param2\x18\x04 \x01(\x05R\fresultParam2\x12#\n" +
+	"\rtarget_system\x18\x05 \x01(\rR\ftargetSystem\x12)\n" +
+	"\x10target_component\x18\x06 \x01(\rR\x0ftargetComponent\"\xf0\x02\n" +
+	"\x12CommandTransaction\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\rR\x02id\x120\n" +
+	"\n" +
+	"vehicle_id\x18\x02 \x01(\v2\x11.gcs.v1.VehicleIdR\tvehicleId\x12(\n" +
+	"\acommand\x18\x03 \x01(\x0e2\x0e.gcs.v1.MavCmdR\acommand\x12*\n" +
+	"\x05state\x18\x04 \x01(\x0e2\x14.gcs.v1.CommandStateR\x05state\x12)\n" +
+	"\x06result\x18\x05 \x01(\x0e2\x11.gcs.v1.MavResultR\x06result\x12#\n" +
+	"\rresult_param2\x18\x06 \x01(\x05R\fresultParam2\x127\n" +
+	"\tissued_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\bissuedAt\x129\n" +
+	"\n" +
+	"settled_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tsettledAt*\xd9\x01\n" +
+	"\fCommandState\x12\x1d\n" +
+	"\x19COMMAND_STATE_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15COMMAND_STATE_PENDING\x10\x01\x12\x1a\n" +
+	"\x16COMMAND_STATE_ACCEPTED\x10\x02\x12\x1a\n" +
+	"\x16COMMAND_STATE_REJECTED\x10\x03\x12\x1b\n" +
+	"\x17COMMAND_STATE_TIMED_OUT\x10\x04\x12\x1b\n" +
+	"\x17COMMAND_STATE_CANCELLED\x10\x05\x12\x1d\n" +
+	"\x19COMMAND_STATE_SEND_FAILED\x10\x06B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
 
 var (
 	file_gcs_v1_commands_proto_rawDescOnce sync.Once
@@ -114,20 +313,31 @@ func file_gcs_v1_commands_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_commands_proto_rawDescData
 }
 
-var file_gcs_v1_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+var file_gcs_v1_commands_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
+var file_gcs_v1_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_gcs_v1_commands_proto_goTypes = []any{
-	(*CommandAck)(nil), // 0: gcs.v1.CommandAck
-	(MavCmd)(0),        // 1: gcs.v1.MavCmd
-	(MavResult)(0),     // 2: gcs.v1.MavResult
+	(CommandState)(0),             // 0: gcs.v1.CommandState
+	(*CommandAck)(nil),            // 1: gcs.v1.CommandAck
+	(*CommandTransaction)(nil),    // 2: gcs.v1.CommandTransaction
+	(MavCmd)(0),                   // 3: gcs.v1.MavCmd
+	(MavResult)(0),                // 4: gcs.v1.MavResult
+	(*VehicleId)(nil),             // 5: gcs.v1.VehicleId
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_gcs_v1_commands_proto_depIdxs = []int32{
-	1, // 0: gcs.v1.CommandAck.command:type_name -> gcs.v1.MavCmd
-	2, // 1: gcs.v1.CommandAck.result:type_name -> gcs.v1.MavResult
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 0: gcs.v1.CommandAck.command:type_name -> gcs.v1.MavCmd
+	4, // 1: gcs.v1.CommandAck.result:type_name -> gcs.v1.MavResult
+	5, // 2: gcs.v1.CommandTransaction.vehicle_id:type_name -> gcs.v1.VehicleId
+	3, // 3: gcs.v1.CommandTransaction.command:type_name -> gcs.v1.MavCmd
+	0, // 4: gcs.v1.CommandTransaction.state:type_name -> gcs.v1.CommandState
+	4, // 5: gcs.v1.CommandTransaction.result:type_name -> gcs.v1.MavResult
+	6, // 6: gcs.v1.CommandTransaction.issued_at:type_name -> google.protobuf.Timestamp
+	6, // 7: gcs.v1.CommandTransaction.settled_at:type_name -> google.protobuf.Timestamp
+	8, // [8:8] is the sub-list for method output_type
+	8, // [8:8] is the sub-list for method input_type
+	8, // [8:8] is the sub-list for extension type_name
+	8, // [8:8] is the sub-list for extension extendee
+	0, // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_gcs_v1_commands_proto_init() }
@@ -136,18 +346,20 @@ func file_gcs_v1_commands_proto_init() {
 		return
 	}
 	file_gcs_v1_types_proto_init()
+	file_gcs_v1_vehicle_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_commands_proto_rawDesc), len(file_gcs_v1_commands_proto_rawDesc)),
-			NumEnums:      0,
-			NumMessages:   1,
+			NumEnums:      1,
+			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
 		GoTypes:           file_gcs_v1_commands_proto_goTypes,
 		DependencyIndexes: file_gcs_v1_commands_proto_depIdxs,
+		EnumInfos:         file_gcs_v1_commands_proto_enumTypes,
 		MessageInfos:      file_gcs_v1_commands_proto_msgTypes,
 	}.Build()
 	File_gcs_v1_commands_proto = out.File

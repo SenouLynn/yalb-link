@@ -2,17 +2,21 @@
 // @generated from file gcs/v1/commands.proto (package gcs.v1, syntax proto3)
 /* eslint-disable */
 
-import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
-import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { GenEnum, GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
+import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
 import type { MavCmd, MavResult } from "./types_pb";
 import { file_gcs_v1_types } from "./types_pb";
+import type { VehicleId } from "./vehicle_pb";
+import { file_gcs_v1_vehicle } from "./vehicle_pb";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file gcs/v1/commands.proto.
  */
 export const file_gcs_v1_commands: GenFile = /*@__PURE__*/
-  fileDesc("ChVnY3MvdjEvY29tbWFuZHMucHJvdG8SBmdjcy52MSJ5CgpDb21tYW5kQWNrEh8KB2NvbW1hbmQYASABKA4yDi5nY3MudjEuTWF2Q21kEiEKBnJlc3VsdBgCIAEoDjIRLmdjcy52MS5NYXZSZXN1bHQSEAoIcHJvZ3Jlc3MYAyABKA0SFQoNcmVzdWx0X3BhcmFtMhgEIAEoBUIkWiJ5YWxiLmdjcy9pbnRlcm5hbC9nZW4vZ2NzL3YxO2djc3YxYgZwcm90bzM", [file_gcs_v1_types]);
+  fileDesc("ChVnY3MvdjEvY29tbWFuZHMucHJvdG8SBmdjcy52MSKqAQoKQ29tbWFuZEFjaxIfCgdjb21tYW5kGAEgASgOMg4uZ2NzLnYxLk1hdkNtZBIhCgZyZXN1bHQYAiABKA4yES5nY3MudjEuTWF2UmVzdWx0EhAKCHByb2dyZXNzGAMgASgNEhUKDXJlc3VsdF9wYXJhbTIYBCABKAUSFQoNdGFyZ2V0X3N5c3RlbRgFIAEoDRIYChB0YXJnZXRfY29tcG9uZW50GAYgASgNIqYCChJDb21tYW5kVHJhbnNhY3Rpb24SCgoCaWQYASABKA0SJQoKdmVoaWNsZV9pZBgCIAEoCzIRLmdjcy52MS5WZWhpY2xlSWQSHwoHY29tbWFuZBgDIAEoDjIOLmdjcy52MS5NYXZDbWQSIwoFc3RhdGUYBCABKA4yFC5nY3MudjEuQ29tbWFuZFN0YXRlEiEKBnJlc3VsdBgFIAEoDjIRLmdjcy52MS5NYXZSZXN1bHQSFQoNcmVzdWx0X3BhcmFtMhgGIAEoBRItCglpc3N1ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnNldHRsZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wKtkBCgxDb21tYW5kU3RhdGUSHQoZQ09NTUFORF9TVEFURV9VTlNQRUNJRklFRBAAEhkKFUNPTU1BTkRfU1RBVEVfUEVORElORxABEhoKFkNPTU1BTkRfU1RBVEVfQUNDRVBURUQQAhIaChZDT01NQU5EX1NUQVRFX1JFSkVDVEVEEAMSGwoXQ09NTUFORF9TVEFURV9USU1FRF9PVVQQBBIbChdDT01NQU5EX1NUQVRFX0NBTkNFTExFRBAFEh0KGUNPTU1BTkRfU1RBVEVfU0VORF9GQUlMRUQQBkIkWiJ5YWxiLmdjcy9pbnRlcm5hbC9nZW4vZ2NzL3YxO2djc3YxYgZwcm90bzM", [file_gcs_v1_types, file_gcs_v1_vehicle, file_google_protobuf_timestamp]);
 
 /**
  * CommandAck mirrors COMMAND_ACK (#77) received from a vehicle.
@@ -43,6 +47,16 @@ export type CommandAck = Message<"gcs.v1.CommandAck"> & {
    * @generated from field: int32 result_param2 = 4;
    */
   resultParam2: number;
+
+  /**
+   * @generated from field: uint32 target_system = 5;
+   */
+  targetSystem: number;
+
+  /**
+   * @generated from field: uint32 target_component = 6;
+   */
+  targetComponent: number;
 };
 
 /**
@@ -51,4 +65,102 @@ export type CommandAck = Message<"gcs.v1.CommandAck"> & {
  */
 export const CommandAckSchema: GenMessage<CommandAck> = /*@__PURE__*/
   messageDesc(file_gcs_v1_commands, 0);
+
+/**
+ * @generated from message gcs.v1.CommandTransaction
+ */
+export type CommandTransaction = Message<"gcs.v1.CommandTransaction"> & {
+  /**
+   * @generated from field: uint32 id = 1;
+   */
+  id: number;
+
+  /**
+   * @generated from field: gcs.v1.VehicleId vehicle_id = 2;
+   */
+  vehicleId?: VehicleId | undefined;
+
+  /**
+   * @generated from field: gcs.v1.MavCmd command = 3;
+   */
+  command: MavCmd;
+
+  /**
+   * @generated from field: gcs.v1.CommandState state = 4;
+   */
+  state: CommandState;
+
+  /**
+   * @generated from field: gcs.v1.MavResult result = 5;
+   */
+  result: MavResult;
+
+  /**
+   * @generated from field: int32 result_param2 = 6;
+   */
+  resultParam2: number;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp issued_at = 7;
+   */
+  issuedAt?: Timestamp | undefined;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp settled_at = 8;
+   */
+  settledAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message gcs.v1.CommandTransaction.
+ * Use `create(CommandTransactionSchema)` to create a new message.
+ */
+export const CommandTransactionSchema: GenMessage<CommandTransaction> = /*@__PURE__*/
+  messageDesc(file_gcs_v1_commands, 1);
+
+/**
+ * @generated from enum gcs.v1.CommandState
+ */
+export enum CommandState {
+  /**
+   * @generated from enum value: COMMAND_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: COMMAND_STATE_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * @generated from enum value: COMMAND_STATE_ACCEPTED = 2;
+   */
+  ACCEPTED = 2,
+
+  /**
+   * @generated from enum value: COMMAND_STATE_REJECTED = 3;
+   */
+  REJECTED = 3,
+
+  /**
+   * @generated from enum value: COMMAND_STATE_TIMED_OUT = 4;
+   */
+  TIMED_OUT = 4,
+
+  /**
+   * @generated from enum value: COMMAND_STATE_CANCELLED = 5;
+   */
+  CANCELLED = 5,
+
+  /**
+   * @generated from enum value: COMMAND_STATE_SEND_FAILED = 6;
+   */
+  SEND_FAILED = 6,
+}
+
+/**
+ * Describes the enum gcs.v1.CommandState.
+ */
+export const CommandStateSchema: GenEnum<CommandState> = /*@__PURE__*/
+  enumDesc(file_gcs_v1_commands, 0);
 

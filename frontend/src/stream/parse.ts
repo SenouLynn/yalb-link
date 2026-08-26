@@ -4,8 +4,9 @@ import { fromJson, fromJsonString, type JsonValue } from '@bufbuild/protobuf';
 
 import { FleetEventSchema } from '@/gen/gcs/v1/fleet_pb';
 import { TelemetryEventSchema } from '@/gen/gcs/v1/telemetry_pb';
+import { CommandTransactionSchema } from '@/gen/gcs/v1/commands_pb';
 
-import { EVENT_FLEET, EVENT_TELEMETRY, type StreamEvent } from './events';
+import { EVENT_COMMAND, EVENT_FLEET, EVENT_TELEMETRY, type StreamEvent } from './events';
 
 /**
  * Parses one SSE frame.
@@ -37,6 +38,9 @@ export function parseStreamEvent(
           receivedAtMs,
         };
 
+      case EVENT_COMMAND:
+		return { kind: 'command', event: fromJsonString(CommandTransactionSchema, data), receivedAtMs };
+
       default:
         return null;
     }
@@ -65,6 +69,9 @@ export function parseStreamJson(
 
       case EVENT_TELEMETRY:
         return { kind: 'telemetry', event: fromJson(TelemetryEventSchema, value), receivedAtMs };
+
+      case EVENT_COMMAND:
+		return { kind: 'command', event: fromJson(CommandTransactionSchema, value), receivedAtMs };
 
       default:
         return null;

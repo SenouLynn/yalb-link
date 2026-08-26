@@ -90,6 +90,8 @@ func buildReplayPage(recording Recording, events []ReplayEvent, limit int) (Repl
 		var message proto.Message = event.Telemetry
 		if event.Fleet != nil {
 			kind, message = KindFleet, event.Fleet
+		} else if event.Command != nil {
+			kind, message = KindCommand, event.Command
 		}
 		data, err := protojson.Marshal(message)
 		if err != nil {

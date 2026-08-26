@@ -14,6 +14,7 @@ type Event struct {
 	Fleet     *gcsv1.FleetEvent
 	Telemetry *gcsv1.TelemetryEvent
 	Protocol  *gcsv1.ProtocolEvent
+	Command   *gcsv1.CommandTransaction
 	Warning   *Warning
 }
 

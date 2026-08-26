@@ -26,6 +26,8 @@ const (
 	EventFleet = "fleet"
 	// EventTelemetry carries a TelemetryEvent: one streaming payload.
 	EventTelemetry = "telemetry"
+	// EventCommand carries an operator command transaction snapshot.
+	EventCommand = "command"
 )
 
 // DefaultQueue is the live headroom each subscriber gets beyond its bootstrap.
@@ -198,11 +200,21 @@ func (h *Hub) Publish(ctx context.Context, ev vehicle.Event) error {
 
 	case ev.Telemetry != nil:
 		h.record(ctx, keyOfTelemetry(ev.Telemetry), Event{Name: EventTelemetry, Message: ev.Telemetry})
+
+	case ev.Command != nil:
+		// Transactions are history, not retained current state.
+		h.broadcast(ctx, Event{Name: EventCommand, Message: ev.Command})
 	}
 
 	// Warnings and protocol events are logged, not streamed: the browser
 	// contract is exactly the two event names above.
 	return nil
+}
+
+func (h *Hub) broadcast(ctx context.Context, ev Event) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.deliver(ctx, ev)
 }
 
 // record retains an event and delivers it to every subscriber that has room.
@@ -224,6 +236,11 @@ func (h *Hub) record(ctx context.Context, key vehicleKey, ev Event) {
 		families[familyOf(msg)] = msg
 	}
 
+	h.deliver(ctx, ev)
+}
+
+// deliver sends a live event. Callers hold h.mu.
+func (h *Hub) deliver(ctx context.Context, ev Event) {
 	for sub := range h.subs {
 		select {
 		case sub.events <- ev:

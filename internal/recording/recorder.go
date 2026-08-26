@@ -75,6 +75,15 @@ func persistable(event vehicle.Event) (string, proto.Message, time.Time, error) 
 			return "", nil, time.Time{}, err
 		}
 		return KindTelemetry, event.Telemetry, timestamp, nil
+	case event.Command != nil:
+		timestamp := event.Command.GetSettledAt()
+		if timestamp == nil {
+			timestamp = event.Command.GetIssuedAt()
+		}
+		if timestamp == nil || !timestamp.IsValid() {
+			return "", nil, time.Time{}, errors.New("recording: command has no valid timestamp")
+		}
+		return KindCommand, event.Command, timestamp.AsTime().UTC(), nil
 	default:
 		return "", nil, time.Time{}, nil
 	}

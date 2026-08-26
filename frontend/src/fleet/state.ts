@@ -10,6 +10,7 @@
 import { FleetEventType, type FleetEvent } from '@/gen/gcs/v1/fleet_pb';
 import type { TelemetryEvent } from '@/gen/gcs/v1/telemetry_pb';
 import type { HeartbeatState } from '@/gen/gcs/v1/vehicle_pb';
+import type { CommandTransaction } from '@/gen/gcs/v1/commands_pb';
 import { isFresh } from '@/logic/freshness';
 import { accumulateGeoTrack, type GeoPoint } from '@/logic/geoTrack';
 import { sampleFromEvent, type TelemetrySample } from '@/logic/sample';
@@ -90,6 +91,8 @@ export interface FleetState {
   selectionPinned: boolean;
   /** Whether the browser currently has the backend stream. */
   connected: boolean;
+  /** Latest command event per vehicle. Not used to infer armed state. */
+  commands: Readonly<Record<VehicleKey, CommandTransaction>>;
 }
 
 export const initialFleetState: FleetState = {
@@ -98,6 +101,7 @@ export const initialFleetState: FleetState = {
   selected: null,
   selectionPinned: false,
   connected: false,
+  commands: {},
 };
 
 /** A vehicle the operator can act on: seen, and not currently reported lost. */
@@ -153,6 +157,12 @@ function applyStreamEvent(state: FleetState, event: StreamEvent): FleetState {
 
     case 'telemetry':
       return withVehicle(state, applyTelemetry(event.event, event.receivedAtMs));
+
+    case 'command': {
+		const id = event.event.vehicleId;
+		if (id === undefined) return state;
+		return { ...state, commands: { ...state.commands, [vehicleKey(id.systemId, id.componentId)]: event.event } };
+	}
 
     case 'reset':
       // Everything accumulated is discarded, but an operator's explicit choice

@@ -17,6 +17,9 @@ import (
 const (
 	GCSSystemID    byte = 255
 	GCSComponentID byte = 190
+	// AutopilotComponentID is MAV_COMP_ID_AUTOPILOT1. Commands target the
+	// autopilot, not another component sharing its system ID.
+	AutopilotComponentID byte = 1
 )
 
 // HeartbeatPeriod sets gomavlib's per-link GCS heartbeat rate.

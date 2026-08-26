@@ -78,6 +78,11 @@ func (s LogSink) Publish(ctx context.Context, ev vehicle.Event) error {
 
 	case ev.Protocol != nil:
 		s.protocol(ctx, log, ev.Protocol)
+
+	case ev.Command != nil:
+		log.InfoContext(ctx, "command transaction",
+			"id", ev.Command.GetId(), "sysid", ev.Command.GetVehicleId().GetSystemId(),
+			"command", ev.Command.GetCommand(), "state", ev.Command.GetState().String())
 	}
 
 	return nil

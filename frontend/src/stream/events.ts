@@ -8,11 +8,13 @@
 
 import type { FleetEvent } from '@/gen/gcs/v1/fleet_pb';
 import type { TelemetryEvent } from '@/gen/gcs/v1/telemetry_pb';
+import type { CommandTransaction } from '@/gen/gcs/v1/commands_pb';
 
 /** One thing that arrived from the backend, stamped on receipt. */
 export type StreamEvent =
   | { kind: 'fleet'; event: FleetEvent; receivedAtMs: number }
   | { kind: 'telemetry'; event: TelemetryEvent; receivedAtMs: number }
+  | { kind: 'command'; event: CommandTransaction; receivedAtMs: number }
   /**
    * Transport state, not vehicle state. A vehicle can be perfectly healthy
    * while the browser has lost its connection to the backend, and conflating
@@ -49,3 +51,4 @@ export interface TelemetryStream {
 /** SSE event names, matching `internal/stream`. */
 export const EVENT_FLEET = 'fleet';
 export const EVENT_TELEMETRY = 'telemetry';
+export const EVENT_COMMAND = 'command';

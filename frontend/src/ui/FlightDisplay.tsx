@@ -6,6 +6,7 @@ import type { ReplayEventSource } from '@/stream/replay';
 import type { StreamSource } from '@/stream/select';
 
 import { AttitudeIndicator } from './AttitudeIndicator';
+import { ArmControl } from './ArmControl';
 import { HeadingIndicator } from './HeadingIndicator';
 import { NO_VALUE, num, signed } from './format';
 import { hasDisplayValue, readFlight } from './readings';
@@ -49,6 +50,8 @@ export function FlightDisplay({
   return (
     <div className="display">
       <StatusBar view={view} nowMs={nowMs} connected={fleet.connected} source={source} />
+
+      <ArmControl view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} />
 
       {controls}
 

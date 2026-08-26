@@ -14,6 +14,7 @@ import (
 type ReplayEvent struct {
 	Fleet      *gcsv1.FleetEvent
 	Telemetry  *gcsv1.TelemetryEvent
+	Command    *gcsv1.CommandTransaction
 	OccurredAt time.Time
 	Seq        int64
 }
@@ -67,6 +68,11 @@ func (s *Store) ReplayFrom(ctx context.Context, recordingID, fromSeq int64, limi
 			event.Telemetry = &gcsv1.TelemetryEvent{}
 			if err := proto.Unmarshal(payload, event.Telemetry); err != nil {
 				return nil, fmt.Errorf("recording: decoding telemetry seq %d: %w", event.Seq, err)
+			}
+		case KindCommand:
+			event.Command = &gcsv1.CommandTransaction{}
+			if err := proto.Unmarshal(payload, event.Command); err != nil {
+				return nil, fmt.Errorf("recording: decoding command seq %d: %w", event.Seq, err)
 			}
 		default:
 			return nil, fmt.Errorf("recording: unknown event kind %q at seq %d", kind, event.Seq)

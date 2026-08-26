@@ -50,6 +50,7 @@ const (
 const (
 	KindFleet     = "fleet"
 	KindTelemetry = "telemetry"
+	KindCommand   = "command"
 )
 
 var (

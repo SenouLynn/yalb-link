@@ -3,6 +3,8 @@ syntax = "proto3";
 package gcs.v1;
 
 import "gcs/v1/types.proto";
+import "gcs/v1/vehicle.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
@@ -12,4 +14,27 @@ message CommandAck {
   MavResult result = 2;
   uint32 progress = 3;     // 0-100 while in progress; 255 = unknown
   int32 result_param2 = 4; // command-specific detail
+  uint32 target_system = 5;
+  uint32 target_component = 6;
+}
+
+enum CommandState {
+  COMMAND_STATE_UNSPECIFIED = 0;
+  COMMAND_STATE_PENDING = 1;
+  COMMAND_STATE_ACCEPTED = 2;
+  COMMAND_STATE_REJECTED = 3;
+  COMMAND_STATE_TIMED_OUT = 4;
+  COMMAND_STATE_CANCELLED = 5;
+  COMMAND_STATE_SEND_FAILED = 6;
+}
+
+message CommandTransaction {
+  uint32 id = 1;
+  VehicleId vehicle_id = 2;
+  MavCmd command = 3;
+  CommandState state = 4;
+  MavResult result = 5;
+  int32 result_param2 = 6;
+  google.protobuf.Timestamp issued_at = 7;
+  google.protobuf.Timestamp settled_at = 8;
 }

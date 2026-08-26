@@ -161,6 +161,23 @@ body {
   flex: 1;
 }
 
+.command-control {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.command-control button {
+  background: var(--panel-deep);
+  border: 1px solid var(--caution);
+  color: var(--lume);
+  font: 600 0.75rem var(--data);
+  padding: 0.6rem 1rem;
+}
+
+.command-control button:disabled { border-color: var(--dead); color: var(--dead); }
+.command-control__state { color: var(--lume-dim); font: 0.75rem var(--data); }
+
 .instruments {
   display: grid;
   gap: var(--gap);
