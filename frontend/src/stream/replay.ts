@@ -68,6 +68,28 @@ export interface ReplayPageWire {
   next_seq: number | null;
 }
 
+/** An HTTP failure while mutating a recording. */
+export class RecordingHTTPError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'RecordingHTTPError';
+  }
+}
+
+/** Permanently deletes one stopped recording. */
+export async function deleteRecording(id: number): Promise<void> {
+  const response = await globalThis.fetch(`${RECORDINGS_PATH}/${String(id)}`, { method: 'DELETE' });
+  if (!response.ok) {
+    throw new RecordingHTTPError(
+      `Deleting recording ${String(id)} returned HTTP ${String(response.status)}.`,
+      response.status,
+    );
+  }
+}
+
 /** Reads one page. Injected so tests need no network. */
 export type FetchPage = (recordingId: number, fromSeq: number, limit: number) => Promise<ReplayPageWire>;
 

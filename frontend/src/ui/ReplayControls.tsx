@@ -2,7 +2,13 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
-import { RECORDINGS_PATH, type RecordingWire, type ReplayEventSource } from '@/stream/replay';
+import {
+  deleteRecording,
+  RECORDINGS_PATH,
+  RecordingHTTPError,
+  type RecordingWire,
+  type ReplayEventSource,
+} from '@/stream/replay';
 import { replayUrl } from '@/stream/select';
 
 import { NO_VALUE } from './format';
@@ -107,6 +113,7 @@ function Transport({ source }: { source: ReplayEventSource }) {
 function RecordingPicker() {
   const [recordings, setRecordings] = useState<RecordingWire[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -151,12 +158,44 @@ function RecordingPicker() {
         <span className="replay__note">No recordings yet.</span>
       )}
       {recordings?.map((recording) => (
-        <a key={recording.id} className="replay__pick" href={replayUrl(recording.id)}>
-          {recording.name === '' ? `#${String(recording.id)}` : recording.name}
-          <span className="label">
-            {recording.event_count} events · {recording.status}
-          </span>
-        </a>
+        <div key={recording.id} className="replay__pick-row">
+          <a className="replay__pick" href={replayUrl(recording.id)}>
+            {recording.name === '' ? `#${String(recording.id)}` : recording.name}
+            <span className="label">
+              {recording.event_count} events · {recording.status}
+            </span>
+          </a>
+          <button
+            type="button"
+            className="replay__delete"
+            disabled={deleting === recording.id}
+            aria-label={`Delete ${recording.name === '' ? `recording ${String(recording.id)}` : recording.name}`}
+            onClick={() => {
+              const label = recording.name === '' ? `recording #${String(recording.id)}` : recording.name;
+              if (!globalThis.confirm(`Permanently delete ${label}?`)) {
+                return;
+              }
+              setDeleting(recording.id);
+              setError(null);
+              void deleteRecording(recording.id)
+                .then(() => {
+                  setRecordings((current) => current?.filter((item) => item.id !== recording.id) ?? []);
+                })
+                .catch((cause: unknown) => {
+                  if (cause instanceof RecordingHTTPError && cause.status === 409) {
+                    setError('Stop the recording first.');
+                  } else {
+                    setError(cause instanceof Error ? cause.message : String(cause));
+                  }
+                })
+                .finally(() => {
+                  setDeleting(null);
+                });
+            }}
+          >
+            {deleting === recording.id ? 'Deleting…' : 'Delete'}
+          </button>
+        </div>
       ))}
     </div>
   );

@@ -113,6 +113,24 @@ exists. Executable artifacts are authoritative if this file drifts.
   200,000-event cap and reports the truncation rather than showing a partial
   flight as a whole one.
 
+## Recording retention
+
+- Aggregate defaults retain at most 4 GiB of live SQLite pages, 30 days from a
+  recording's `started_at`, and 200 recording rows. The oldest stopped
+  recording is removed first while any bound is exceeded; startup performs the
+  same sweep as the five-minute writer timer.
+- Aggregate size means `(page_count - freelist_count) * page_size`, not the
+  database file length. SQLite keeps freed pages for reuse, so file length does
+  not fall after ordinary deletion and cannot drive a convergent sweep.
+- The live-page byte bound differs deliberately from ADR 0002's payload-byte
+  bound for one recording. The former includes SQLite structures; the latter
+  measures encoded protobuf payloads.
+- Active recordings are never swept or explicitly deleted. Deletion is ordered
+  through the writer and removes event rows in chunks before removing metadata.
+- No replay lease exists. Deleting a recording during paged replay makes the
+  browser's next page fail visibly. No `VACUUM` runs; the database reuses free
+  pages but retains its filesystem high-water mark.
+
 ## Flight display
 
 - Freshness uses the backend's `observed_at`, not browser receipt time. The hub
@@ -157,9 +175,9 @@ exists. Executable artifacts are authoritative if this file drifts.
 - The system is read-only. Rate requests are data acquisition, not an operator
   command surface; nothing arms, commands, or configures a vehicle.
 - Recording is opt-in and off by default; with it disabled the backend restart
-  still loses all retained state. Recordings have no aggregate retention
-  policy: nothing deletes or compacts them, so the database grows without
-  bound. ADR 0002 bounds one recording, not the file they share.
+  still loses all retained state. Retention bounds live database pages, age,
+  and count, but does not compact the SQLite file or return its high-water-mark
+  allocation to the filesystem.
 - Transaction responses are decoded and logged, but there is no request
   registry or RPC surface consuming them.
 - Inbound MAVLink frames are unauthenticated; no signing configuration exists.

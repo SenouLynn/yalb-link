@@ -3,6 +3,7 @@ package recording
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -63,4 +64,57 @@ func TestStartHandlerAcceptsEmptyBody(t *testing.T) {
 	if response.Code != http.StatusCreated {
 		t.Errorf("status = %d, body = %s", response.Code, response.Body.String())
 	}
+}
+
+func TestDeleteHandler(t *testing.T) {
+	store := newTestStore(t, nil)
+	started, err := store.StartRecording(context.Background(), "delete me")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("active", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodDelete, "/api/recordings/1", nil)
+		request.SetPathValue("id", fmt.Sprint(started.ID))
+		response := httptest.NewRecorder()
+		DeleteHandler(store)(response, request)
+		if response.Code != http.StatusConflict {
+			t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+		}
+	})
+	if _, err := store.StopRecording(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("invalid", func(t *testing.T) {
+		for _, id := range []string{"nope", "0"} {
+			request := httptest.NewRequest(http.MethodDelete, "/api/recordings/"+id, nil)
+			request.SetPathValue("id", id)
+			response := httptest.NewRecorder()
+			DeleteHandler(store)(response, request)
+			if response.Code != http.StatusBadRequest {
+				t.Errorf("id %q status = %d", id, response.Code)
+			}
+		}
+	})
+
+	t.Run("success", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodDelete, "/api/recordings/1", nil)
+		request.SetPathValue("id", fmt.Sprint(started.ID))
+		response := httptest.NewRecorder()
+		DeleteHandler(store)(response, request)
+		if response.Code != http.StatusNoContent || response.Body.Len() != 0 {
+			t.Fatalf("status = %d, body = %q", response.Code, response.Body.String())
+		}
+	})
+
+	t.Run("missing", func(t *testing.T) {
+		request := httptest.NewRequest(http.MethodDelete, "/api/recordings/999", nil)
+		request.SetPathValue("id", "999")
+		response := httptest.NewRecorder()
+		DeleteHandler(store)(response, request)
+		if response.Code != http.StatusNotFound {
+			t.Fatalf("status = %d, body = %s", response.Code, response.Body.String())
+		}
+	})
 }

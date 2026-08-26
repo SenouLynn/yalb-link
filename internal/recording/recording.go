@@ -27,6 +27,14 @@ const (
 	DefaultMaxBytes = int64(256 << 20)
 	// DefaultMaxDuration caps the elapsed duration of one recording.
 	DefaultMaxDuration = 30 * time.Minute
+	// DefaultMaxTotalBytes caps live SQLite pages used by all recordings.
+	DefaultMaxTotalBytes = int64(4 << 30)
+	// DefaultMaxTotalAge caps how long a recording is retained.
+	DefaultMaxTotalAge = 30 * 24 * time.Hour
+	// DefaultMaxRecordings caps retained recording lifecycle rows.
+	DefaultMaxRecordings = 200
+	// DefaultSweepInterval is how often aggregate retention is enforced.
+	DefaultSweepInterval = 5 * time.Minute
 	// DefaultOperationTimeout bounds database and lifecycle control operations.
 	DefaultOperationTimeout = 5 * time.Second
 	// DefaultShutdownTimeout bounds Store.Close, including writer drain.
@@ -53,6 +61,8 @@ var (
 	ErrClosed = errors.New("recording: store is closed")
 	// ErrRecordingNotFound means no recording exists with the requested id.
 	ErrRecordingNotFound = errors.New("recording: no such recording")
+	// ErrRecordingInUse means an active recording cannot be deleted.
+	ErrRecordingInUse = errors.New("recording: recording is active; stop it first")
 )
 
 // Config controls a local SQLite recording store.
@@ -66,6 +76,10 @@ type Config struct {
 	MaxEvents        int64
 	MaxBytes         int64
 	MaxDuration      time.Duration
+	MaxTotalBytes    int64
+	MaxTotalAge      time.Duration
+	MaxRecordings    int
+	SweepInterval    time.Duration
 	OperationTimeout time.Duration
 	ShutdownTimeout  time.Duration
 	After            func(time.Duration) <-chan time.Time
@@ -103,14 +117,15 @@ type writeRecord struct {
 }
 
 type writerCommand struct {
-	ctx     context.Context
-	started time.Time
-	startID int64
-	stopID  int64
-	reason  string
-	done    chan struct{}
-	err     error
-	close   bool
+	ctx      context.Context
+	started  time.Time
+	startID  int64
+	stopID   int64
+	deleteID int64
+	reason   string
+	done     chan struct{}
+	err      error
+	close    bool
 }
 
 type writerItem struct {
@@ -130,6 +145,10 @@ type Store struct {
 	maxEvents        int64
 	maxBytes         int64
 	maxDuration      time.Duration
+	maxTotalBytes    int64
+	maxTotalAge      time.Duration
+	maxRecordings    int
+	sweepInterval    time.Duration
 	operationTimeout time.Duration
 	shutdownTimeout  time.Duration
 	after            func(time.Duration) <-chan time.Time
@@ -186,10 +205,16 @@ func Open(cfg Config) (*Store, error) {
 		items: make(chan writerItem, cfg.Queue), done: make(chan struct{}), closeDone: make(chan struct{}),
 		batchSize: cfg.BatchSize, batchInterval: cfg.BatchInterval,
 		maxEvents: cfg.MaxEvents, maxBytes: cfg.MaxBytes, maxDuration: cfg.MaxDuration,
+		maxTotalBytes: cfg.MaxTotalBytes, maxTotalAge: cfg.MaxTotalAge,
+		maxRecordings: cfg.MaxRecordings, sweepInterval: cfg.SweepInterval,
 		operationTimeout: cfg.OperationTimeout, shutdownTimeout: cfg.ShutdownTimeout, after: cfg.After,
 		lifecycle: make(chan struct{}, 1),
 	}
 	store.lifecycle <- struct{}{}
+	if _, err := store.sweep(ctx); err != nil {
+		db.Close() //nolint:errcheck // the retention error is more useful.
+		return nil, fmt.Errorf("recording: applying retention at startup: %w", err)
+	}
 	go store.runWriter()
 
 	return store, nil
@@ -229,6 +254,18 @@ func defaultConfig(cfg *Config) {
 	}
 	if cfg.MaxDuration <= 0 {
 		cfg.MaxDuration = DefaultMaxDuration
+	}
+	if cfg.MaxTotalBytes == 0 {
+		cfg.MaxTotalBytes = DefaultMaxTotalBytes
+	}
+	if cfg.MaxTotalAge == 0 {
+		cfg.MaxTotalAge = DefaultMaxTotalAge
+	}
+	if cfg.MaxRecordings == 0 {
+		cfg.MaxRecordings = DefaultMaxRecordings
+	}
+	if cfg.SweepInterval == 0 {
+		cfg.SweepInterval = DefaultSweepInterval
 	}
 	if cfg.OperationTimeout <= 0 {
 		cfg.OperationTimeout = DefaultOperationTimeout
@@ -361,6 +398,46 @@ func (s *Store) StopRecording(ctx context.Context) (Recording, error) {
 	}
 
 	return s.recording(opCtx, active.id)
+}
+
+// DeleteRecording permanently removes one stopped recording and its events.
+func (s *Store) DeleteRecording(ctx context.Context, id int64) error {
+	opCtx, cancel := s.operationContext(ctx)
+	defer cancel()
+	if err := s.acquireLifecycle(opCtx); err != nil {
+		return err
+	}
+	defer s.releaseLifecycle()
+
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return ErrClosed
+	}
+	if s.current != nil && s.current.id == id {
+		s.mu.Unlock()
+		return ErrRecordingInUse
+	}
+	s.mu.Unlock()
+	recording, err := s.recording(opCtx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("%w: %d", ErrRecordingNotFound, id)
+		}
+		return err
+	}
+	if recording.Status == "active" {
+		return ErrRecordingInUse
+	}
+
+	command := &writerCommand{ctx: opCtx, deleteID: id, done: make(chan struct{})}
+	if err := s.sendCommand(opCtx, command); err != nil {
+		return err
+	}
+	if err := waitCommand(opCtx, command); err != nil {
+		return fmt.Errorf("recording: deleting writer data: %w", err)
+	}
+	return nil
 }
 
 // ListRecordings returns all lifecycle records in creation order.

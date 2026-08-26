@@ -9,11 +9,33 @@ import { AttitudeSchema, TelemetryEventSchema } from '@/gen/gcs/v1/telemetry_pb'
 import { VehicleIdSchema } from '@/gen/gcs/v1/vehicle_pb';
 
 import type { StreamEvent } from './events';
-import { MAX_BUFFERED_EVENTS, ReplayEventSource, type ReplayPageWire } from './replay';
+import {
+  deleteRecording,
+  MAX_BUFFERED_EVENTS,
+  ReplayEventSource,
+  type ReplayPageWire,
+} from './replay';
 import type { Cancel, Scheduler } from './scheduler';
 
 const START = 1_700_000_000_000;
 const VEHICLE = create(VehicleIdSchema, { systemId: 7, componentId: 1 });
+
+describe('deleteRecording', () => {
+  it('sends DELETE and accepts 204', async () => {
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(deleteRecording(7)).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith('/api/recordings/7', { method: 'DELETE' });
+    fetch.mockRestore();
+  });
+
+  it.each([404, 409])('preserves HTTP status %d', async (status) => {
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status }));
+
+    await expect(deleteRecording(7)).rejects.toMatchObject({ status });
+    fetch.mockRestore();
+  });
+});
 
 /** A scheduler that fires only when the test says so. */
 function manualScheduler(): { schedule: Scheduler; tick: () => void; pending: () => number } {

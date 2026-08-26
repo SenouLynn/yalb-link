@@ -59,8 +59,12 @@ func run(log *slog.Logger) error {
 	var store *recording.Store
 	if recording.ResolveEnabled(os.LookupEnv(recording.EnvEnabled)) {
 		path := recording.ResolveDBPath(os.LookupEnv(recording.EnvDBPath))
+		maxTotalBytes := recording.ResolveMaxTotalBytes(os.LookupEnv(recording.EnvMaxTotalBytes))
+		maxTotalAge := recording.ResolveMaxTotalAge(os.LookupEnv(recording.EnvMaxTotalAge))
 		var err error
-		store, err = recording.Open(recording.Config{Path: path, Log: log})
+		store, err = recording.Open(recording.Config{
+			Path: path, Log: log, MaxTotalBytes: maxTotalBytes, MaxTotalAge: maxTotalAge,
+		})
 		if err != nil {
 			return fmt.Errorf("gcs: opening recording store: %w", err)
 		}
@@ -175,6 +179,7 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub
 		mux.HandleFunc("POST /api/recordings/start", recording.StartHandler(store))
 		mux.HandleFunc("POST /api/recordings/stop", recording.StopHandler(store))
 		mux.HandleFunc("GET /api/recordings", recording.ListHandler(store))
+		mux.HandleFunc(recording.DeletePattern, recording.DeleteHandler(store))
 		mux.HandleFunc(recording.EventsPattern, recording.ReplayEventsHandler(store))
 	}
 

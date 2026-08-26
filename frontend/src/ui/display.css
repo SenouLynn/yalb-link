@@ -404,6 +404,30 @@ body {
   border-radius: var(--radius);
 }
 
+.replay__pick-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.45rem;
+}
+
+.replay__pick-row .replay__pick {
+  flex: 1;
+}
+
+.replay__delete {
+  border: 1px solid color-mix(in srgb, var(--caution) 55%, transparent);
+  border-radius: 0.3rem;
+  background: transparent;
+  color: var(--caution);
+  cursor: pointer;
+  padding: 0.35rem 0.55rem;
+}
+
+.replay__delete:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .replay__pick:hover {
   border-color: var(--caution);
 }

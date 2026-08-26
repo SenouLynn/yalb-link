@@ -1,6 +1,9 @@
 package recording
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestResolveEnabled(t *testing.T) {
 	tests := []struct {
@@ -21,6 +24,24 @@ func TestResolveEnabled(t *testing.T) {
 				t.Errorf("ResolveEnabled(%q, %v) = %v, want %v", test.value, test.set, got, test.want)
 			}
 		})
+	}
+}
+
+func TestResolveRetentionConfig(t *testing.T) {
+	if got := ResolveMaxTotalBytes("", false); got != DefaultMaxTotalBytes {
+		t.Errorf("unset bytes = %d", got)
+	}
+	if got := ResolveMaxTotalBytes("1048576", true); got != 1048576 {
+		t.Errorf("parsed bytes = %d", got)
+	}
+	if got := ResolveMaxTotalBytes("invalid", true); got != DefaultMaxTotalBytes {
+		t.Errorf("invalid bytes = %d", got)
+	}
+	if got := ResolveMaxTotalAge("12h", true); got != 12*time.Hour {
+		t.Errorf("parsed age = %s", got)
+	}
+	if got := ResolveMaxTotalAge("invalid", true); got != DefaultMaxTotalAge {
+		t.Errorf("invalid age = %s", got)
 	}
 }
 

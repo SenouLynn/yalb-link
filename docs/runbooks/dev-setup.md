@@ -150,7 +150,11 @@ Recording is disabled by default. Start the backend with a writable SQLite
 path, then use the lifecycle endpoints around a SITL flight:
 
 ```sh
-GCS_RECORDING_ENABLED=true GCS_RECORDING_DB_PATH=./recordings.db go run ./cmd/gcs
+GCS_RECORDING_ENABLED=true \
+GCS_RECORDING_DB_PATH=./recordings.db \
+GCS_RECORDING_MAX_TOTAL_BYTES=4294967296 \
+GCS_RECORDING_MAX_TOTAL_AGE=720h \
+go run ./cmd/gcs
 curl -X POST http://localhost:8080/api/recordings/start
 curl -X POST http://localhost:8080/api/recordings/stop
 curl http://localhost:8080/api/recordings
@@ -164,7 +168,19 @@ warnings remain outside recording scope.
 Initial safety defaults cap one recording at 200,000 events, 256 MiB of
 protobuf payloads, or 30 minutes. Database and lifecycle operations time out
 after five seconds, and store shutdown after ten seconds. These are tunable
-`recording.Config` defaults; aggregate database cleanup is not yet implemented.
+`recording.Config` defaults.
+
+Aggregate retention defaults to 4 GiB of live SQLite pages, 30 days, and 200
+recordings, swept every five minutes and at startup. The two environment
+variables above override size and age; count and sweep interval are code-level
+configuration. Set a value negative to disable that bound. A stopped recording
+can also be removed explicitly:
+
+```sh
+curl -X DELETE -i http://localhost:8080/api/recordings/1
+```
+
+Deletion frees pages for SQLite to reuse but does not shrink the database file.
 
 ## Replay a recorded flight
 

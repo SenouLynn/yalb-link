@@ -26,6 +26,10 @@ func (s *Store) runWriter() { //nolint:funlen,gocognit,cyclop // A single owner 
 	var batchTimerC <-chan time.Time
 	var durationC <-chan time.Time
 	var durationID int64
+	var sweepC <-chan time.Time
+	if s.sweepInterval > 0 {
+		sweepC = s.after(s.sweepInterval)
+	}
 
 	stopBatchTimer := func() {
 		if batchTimer != nil && !batchTimer.Stop() {
@@ -158,6 +162,20 @@ func (s *Store) runWriter() { //nolint:funlen,gocognit,cyclop // A single owner 
 			}
 
 			flush()
+			if command.deleteID != 0 {
+				ctx, cancel := s.operationContext(command.ctx)
+				command.err = s.deleteRecording(ctx, command.deleteID)
+				cancel()
+				if command.err == nil {
+					terminal[command.deleteID] = true
+					delete(totals, command.deleteID)
+					delete(consecutiveFailures, command.deleteID)
+					if durationID == command.deleteID {
+						durationID = 0
+						durationC = nil
+					}
+				}
+			}
 			if command.stopID != 0 && !terminal[command.stopID] {
 				ctx, cancel := s.operationContext(context.Background())
 				command.err = s.markStopped(ctx, command.stopID, "stopped", command.reason)
@@ -178,6 +196,15 @@ func (s *Store) runWriter() { //nolint:funlen,gocognit,cyclop // A single owner 
 
 		case <-durationC:
 			expireDuration()
+
+		case <-sweepC:
+			flush()
+			ctx, cancel := s.operationContext(context.Background())
+			if _, err := s.sweep(ctx); err != nil {
+				s.log.Error("applying recording retention", "err", err)
+			}
+			cancel()
+			sweepC = s.after(s.sweepInterval)
 		}
 	}
 }

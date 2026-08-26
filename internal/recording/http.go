@@ -5,7 +5,11 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 )
+
+// DeletePattern is the method-aware route for deleting one recording.
+const DeletePattern = "DELETE /api/recordings/{id}"
 
 // StartHandler starts the single supported active recording.
 func StartHandler(store *Store) http.HandlerFunc {
@@ -59,6 +63,29 @@ func ListHandler(store *Store) http.HandlerFunc {
 			recordings = []Recording{}
 		}
 		writeJSON(w, http.StatusOK, recordings)
+	}
+}
+
+// DeleteHandler permanently removes one stopped recording.
+func DeleteHandler(store *Store) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+		if err != nil || id < 1 {
+			http.Error(w, "invalid recording id", http.StatusBadRequest)
+			return
+		}
+		if err := store.DeleteRecording(r.Context(), id); err != nil {
+			switch {
+			case errors.Is(err, ErrRecordingNotFound):
+				http.Error(w, err.Error(), http.StatusNotFound)
+			case errors.Is(err, ErrRecordingInUse):
+				http.Error(w, err.Error(), http.StatusConflict)
+			default:
+				http.Error(w, "could not delete recording", http.StatusInternalServerError)
+			}
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 	}
 }
 

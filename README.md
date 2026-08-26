@@ -26,7 +26,8 @@ The repository currently has:
 - deterministic vehicle discovery, loss, recovery, freshness, and route-table tests;
 - an in-memory event hub and a `GET /api/events` server-sent-event stream that
   bootstraps each browser from retained state;
-- opt-in, bounded SQLite recording with explicit start/stop lifecycle and
+- opt-in, bounded SQLite recording with explicit start/stop/delete lifecycle,
+  aggregate age/count/live-size retention, and
   deterministic replay after a backend restart, served as paged JSON from
   `GET /api/recordings/{id}/events`;
 - a fleet-aware React flight display — artificial horizon, heading tape,
@@ -40,16 +41,16 @@ The repository currently has:
 - native Go/TypeScript tests and a Bazel checkpoint build.
 
 It is **read-only observation**. The project does not yet have a command or
-mission surface, authentication, or MAVLink signing. Recordings accumulate
-without an aggregate retention policy: nothing yet deletes or compacts them.
+mission surface, authentication, or MAVLink signing. SQLite reuses pages freed
+by recording retention, but the database file does not shrink automatically.
 
 No project license has been selected or committed.
 
 ### Next demonstrable outcome
 
-Aggregate recording retention — deleting a recording, and bounding total
-database age and size. ADR 0002 bounds one recording; nothing yet bounds the
-file they all share, so a long-running backend fills its disk.
+A first safe operator command transaction — one addressed command with an
+observable acknowledgement, timeout, and failure state, without implying that
+the broader mission surface is ready.
 
 ### What the display refuses to do
 
