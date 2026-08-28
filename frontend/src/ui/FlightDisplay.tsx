@@ -51,7 +51,7 @@ export function FlightDisplay({
     <div className="display">
       <StatusBar view={view} nowMs={nowMs} connected={fleet.connected} source={source} />
 
-      <ArmControl view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} />
+      <ArmControl view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} nowMs={nowMs} />
 
       {controls}
 
