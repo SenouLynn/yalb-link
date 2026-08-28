@@ -62,17 +62,49 @@ exists. Executable artifacts are authoritative if this file drifts.
 
 ## Operator commands
 
-- Commands are off unless `GCS_COMMANDS_ENABLED` is true. The sole endpoint is
-  `POST /api/commands/arm`; there is no generic dispatcher.
+- Commands are off unless `GCS_COMMANDS_ENABLED` is true. The only endpoints are
+  `POST /api/commands/arm` and `POST /api/commands/arm/resolve`; there is no
+  generic dispatcher and no generic resolution surface.
 - An ACK matches the commanded vehicle by frame sender and this GCS by payload
   target `(255,190)`. Zero-target and foreign ACKs cannot settle a transaction.
-- Timeout, cancellation, or an uncertain link-write failure permanently poison
-  that vehicle/command key until backend restart. MAVLink provides no invocation
-  identity with which to prove a later ACK is not stale.
+- Timeout, cancellation, or an uncertain link-write failure poison that
+  vehicle/command key. MAVLink provides no invocation identity with which to
+  prove a later ACK is not stale, so no traffic ever clears a poison.
 - The POST returns synchronously. Command SSE is live-only (not bootstrap state),
   while recordings preserve pending and terminal snapshots.
 - Origin/content-type/fetch-metadata checks protect local development from
   casual CSRF; they are not authentication.
+
+## Ambiguity resolution
+
+- A poisoned key retains its terminal transaction. An arm request refused
+  because of it answers `409` with that snapshot under code
+  `command_unresolved`, so the workflow survives a page reload.
+- An operator clears one poison by attesting to the armed state they observed.
+  The terminal state is never rewritten: the ambiguity stays a historical fact
+  and the attestation is recorded beside it.
+- The observed state is an enum on the wire. A missing, empty, or unknown value
+  is rejected. A bare boolean would have made an omitted field read as
+  "observed disarmed" — an attestation nobody made.
+- A resolution reference is `(registry_epoch, id)`. Ids are a per-process
+  counter, so the random epoch stops a client that survived a restart from
+  resolving an unrelated transaction that reused the number.
+- Resolution moves the key into a 30-second quarantine rather than making it
+  immediately commandable, because clearing the poison reopens the stale-ACK
+  window the poison was guarding. `DefaultResolutionQuarantine` is its own
+  constant, not a multiple of the command timeout: late-ACK latency is a
+  property of the link.
+- Quarantined commands are refused with code `command_quarantined` and a
+  relative `retry_after_ms`. Relative on purpose — no browser decides expiry
+  from its own clock, and the registry stays authoritative on the next request.
+- The quarantine is a stated operational bound, not invocation correlation. An
+  ACK delayed beyond it can still collide. It also covers in-process recovery
+  only: restart clears poison, quarantine, and epoch together.
+- Resolution publishes outside the registry mutex and does not roll back on a
+  publish error. No production publisher can report one, and a rollback would
+  restore a poison subscribers were already told was resolved.
+- Transactions and attestations carry the fixed label `local-operator`. It
+  records that a human acted, not who.
 
 ## Browser event stream
 
@@ -188,8 +220,11 @@ exists. Executable artifacts are authoritative if this file drifts.
 ## Current limits
 
 - The system is read-only unless the command gate is enabled. With it enabled,
-  only guarded arm/disarm is exposed; no generic command or configuration
-  surface exists.
+  only guarded arm/disarm and its resolution are exposed; no generic command or
+  configuration surface exists.
+- There is no authentication anywhere. `local-operator` is a label, not an
+  identity, and multi-user or TAK identity is deferred until a second principal
+  actually exists.
 - Recording is opt-in and off by default; with it disabled the backend restart
   still loses all retained state. Retention bounds live database pages, age,
   and count, but does not compact the SQLite file or return its high-water-mark

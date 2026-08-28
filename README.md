@@ -16,6 +16,8 @@ SITL -> MAVLink UDP -> codec -> per-vehicle fold -> event hub
                                              paged JSON replay -> same display
 operator -> guarded arm POST -> addressed COMMAND_LONG -> ACK registry
                                       |-> command SSE / recording / response
+                                      \-> ambiguous outcome -> operator
+                                          attestation -> bounded quarantine
 ```
 
 The repository currently has:
@@ -42,19 +44,30 @@ The repository currently has:
 - Docker Compose definitions for Copter and Plane SITL;
 - native Go/TypeScript tests and a Bazel checkpoint build.
 - an opt-in, addressed arm/disarm transaction with acknowledgement, timeout,
-  cancellation, and delivery-uncertain failure states.
+  cancellation, and delivery-uncertain failure states;
+- an operator-attested resolution for an ambiguous arm/disarm outcome, which
+  records the observed armed state beside the unchanged terminal state and
+  reopens commanding only after a bounded stale-ACK quarantine.
 
 It is read-only unless `GCS_COMMANDS_ENABLED=true`; even then, the only operator
-command is guarded arm/disarm. The project does not have a generic command or
-mission surface, authentication, or MAVLink signing. SQLite reuses pages freed
-by recording retention, but the database file does not shrink automatically.
+commands are guarded arm/disarm and its resolution. The project does not have a
+generic command or mission surface, authentication, or MAVLink signing.
+Transactions carry the fixed label `local-operator`, which records that a human
+acted rather than who. SQLite reuses pages freed by recording retention, but the
+database file does not shrink automatically.
 
 No project license has been selected or committed.
 
 ### Next demonstrable outcome
 
-Authenticated operator sessions and an explicit workflow for resolving an
-ambiguous timed-out command, without expanding to a generic command surface.
+Serving map imagery through the local tile-source seam rather than the public
+tile host, removing the display's only dependency on a network beyond
+localhost, SITL, and the backend.
+
+Operator authentication is deliberately deferred rather than pending. The system
+runs in a trusted local environment with one operator, so a network identity
+boundary waits for a deployment that needs one; multi-user and TAK identity wait
+with it.
 
 ### What the display refuses to do
 

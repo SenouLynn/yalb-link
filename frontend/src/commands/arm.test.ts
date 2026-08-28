@@ -17,13 +17,6 @@ describe('postArm', () => {
     }));
   });
 
-  it('preserves a poisoned-key 409 message', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('previous command unresolved — restart the backend\n', { status: 409 }));
-    await expect(postArm(1, false)).rejects.toEqual(
-      new CommandHTTPError('previous command unresolved — restart the backend', 409),
-    );
-  });
-
   it('reads a poisoned 409 as the transaction that must be resolved', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({
       code: 'command_unresolved',
