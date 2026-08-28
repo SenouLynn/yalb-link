@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file gcs/v1/commands.proto.
  */
 export const file_gcs_v1_commands: GenFile = /*@__PURE__*/
-  fileDesc("ChVnY3MvdjEvY29tbWFuZHMucHJvdG8SBmdjcy52MSKqAQoKQ29tbWFuZEFjaxIfCgdjb21tYW5kGAEgASgOMg4uZ2NzLnYxLk1hdkNtZBIhCgZyZXN1bHQYAiABKA4yES5nY3MudjEuTWF2UmVzdWx0EhAKCHByb2dyZXNzGAMgASgNEhUKDXJlc3VsdF9wYXJhbTIYBCABKAUSFQoNdGFyZ2V0X3N5c3RlbRgFIAEoDRIYChB0YXJnZXRfY29tcG9uZW50GAYgASgNIqYCChJDb21tYW5kVHJhbnNhY3Rpb24SCgoCaWQYASABKA0SJQoKdmVoaWNsZV9pZBgCIAEoCzIRLmdjcy52MS5WZWhpY2xlSWQSHwoHY29tbWFuZBgDIAEoDjIOLmdjcy52MS5NYXZDbWQSIwoFc3RhdGUYBCABKA4yFC5nY3MudjEuQ29tbWFuZFN0YXRlEiEKBnJlc3VsdBgFIAEoDjIRLmdjcy52MS5NYXZSZXN1bHQSFQoNcmVzdWx0X3BhcmFtMhgGIAEoBRItCglpc3N1ZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEi4KCnNldHRsZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wKtkBCgxDb21tYW5kU3RhdGUSHQoZQ09NTUFORF9TVEFURV9VTlNQRUNJRklFRBAAEhkKFUNPTU1BTkRfU1RBVEVfUEVORElORxABEhoKFkNPTU1BTkRfU1RBVEVfQUNDRVBURUQQAhIaChZDT01NQU5EX1NUQVRFX1JFSkVDVEVEEAMSGwoXQ09NTUFORF9TVEFURV9USU1FRF9PVVQQBBIbChdDT01NQU5EX1NUQVRFX0NBTkNFTExFRBAFEh0KGUNPTU1BTkRfU1RBVEVfU0VORF9GQUlMRUQQBkIkWiJ5YWxiLmdjcy9pbnRlcm5hbC9nZW4vZ2NzL3YxO2djc3YxYgZwcm90bzM", [file_gcs_v1_types, file_gcs_v1_vehicle, file_google_protobuf_timestamp]);
+  fileDesc("ChVnY3MvdjEvY29tbWFuZHMucHJvdG8SBmdjcy52MSKqAQoKQ29tbWFuZEFjaxIfCgdjb21tYW5kGAEgASgOMg4uZ2NzLnYxLk1hdkNtZBIhCgZyZXN1bHQYAiABKA4yES5nY3MudjEuTWF2UmVzdWx0EhAKCHByb2dyZXNzGAMgASgNEhUKDXJlc3VsdF9wYXJhbTIYBCABKAUSFQoNdGFyZ2V0X3N5c3RlbRgFIAEoDRIYChB0YXJnZXRfY29tcG9uZW50GAYgASgNIrwBChFDb21tYW5kUmVzb2x1dGlvbhIoCg5vYnNlcnZlZF9zdGF0ZRgBIAEoDjIQLmdjcy52MS5Bcm1TdGF0ZRIWCg5vcGVyYXRvcl9sYWJlbBgCIAEoCRIvCgthdHRlc3RlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASNAoQcXVhcmFudGluZV91bnRpbBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXAisAMKEkNvbW1hbmRUcmFuc2FjdGlvbhIKCgJpZBgBIAEoDRIlCgp2ZWhpY2xlX2lkGAIgASgLMhEuZ2NzLnYxLlZlaGljbGVJZBIfCgdjb21tYW5kGAMgASgOMg4uZ2NzLnYxLk1hdkNtZBIjCgVzdGF0ZRgEIAEoDjIULmdjcy52MS5Db21tYW5kU3RhdGUSIQoGcmVzdWx0GAUgASgOMhEuZ2NzLnYxLk1hdlJlc3VsdBIVCg1yZXN1bHRfcGFyYW0yGAYgASgFEi0KCWlzc3VlZF9hdBgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLgoKc2V0dGxlZF9hdBgIIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKQoPcmVxdWVzdGVkX3N0YXRlGAkgASgOMhAuZ2NzLnYxLkFybVN0YXRlEhYKDm9wZXJhdG9yX2xhYmVsGAogASgJEhYKDnJlZ2lzdHJ5X2Vwb2NoGAsgASgJEi0KCnJlc29sdXRpb24YDCABKAsyGS5nY3MudjEuQ29tbWFuZFJlc29sdXRpb24qUgoIQXJtU3RhdGUSGQoVQVJNX1NUQVRFX1VOU1BFQ0lGSUVEEAASEwoPQVJNX1NUQVRFX0FSTUVEEAESFgoSQVJNX1NUQVRFX0RJU0FSTUVEEAIq2QEKDENvbW1hbmRTdGF0ZRIdChlDT01NQU5EX1NUQVRFX1VOU1BFQ0lGSUVEEAASGQoVQ09NTUFORF9TVEFURV9QRU5ESU5HEAESGgoWQ09NTUFORF9TVEFURV9BQ0NFUFRFRBACEhoKFkNPTU1BTkRfU1RBVEVfUkVKRUNURUQQAxIbChdDT01NQU5EX1NUQVRFX1RJTUVEX09VVBAEEhsKF0NPTU1BTkRfU1RBVEVfQ0FOQ0VMTEVEEAUSHQoZQ09NTUFORF9TVEFURV9TRU5EX0ZBSUxFRBAGQiRaInlhbGIuZ2NzL2ludGVybmFsL2dlbi9nY3MvdjE7Z2NzdjFiBnByb3RvMw", [file_gcs_v1_types, file_gcs_v1_vehicle, file_google_protobuf_timestamp]);
 
 /**
  * CommandAck mirrors COMMAND_ACK (#77) received from a vehicle.
@@ -67,6 +67,55 @@ export const CommandAckSchema: GenMessage<CommandAck> = /*@__PURE__*/
   messageDesc(file_gcs_v1_commands, 0);
 
 /**
+ * CommandResolution records an operator's attestation about a transaction that
+ * MAVLink left ambiguous.
+ *
+ * It never changes the transaction's terminal state. The ambiguity remains a
+ * historical fact and the attestation is recorded beside it, because
+ * COMMAND_ACK identifies a command number rather than an invocation and so
+ * cannot retroactively prove what the vehicle did.
+ *
+ * @generated from message gcs.v1.CommandResolution
+ */
+export type CommandResolution = Message<"gcs.v1.CommandResolution"> & {
+  /**
+   * The armed state the operator reports having observed. A stored resolution
+   * never holds UNSPECIFIED; the HTTP surface rejects a missing value.
+   *
+   * @generated from field: gcs.v1.ArmState observed_state = 1;
+   */
+  observedState: ArmState;
+
+  /**
+   * The fixed local operator label. Not an authenticated identity.
+   *
+   * @generated from field: string operator_label = 2;
+   */
+  operatorLabel: string;
+
+  /**
+   * @generated from field: google.protobuf.Timestamp attested_at = 3;
+   */
+  attestedAt?: Timestamp | undefined;
+
+  /**
+   * When the post-resolution stale-ACK quarantine ends. Absolute here for the
+   * record; callers are told the remaining milliseconds instead, so no browser
+   * decides expiry from its own clock.
+   *
+   * @generated from field: google.protobuf.Timestamp quarantine_until = 4;
+   */
+  quarantineUntil?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message gcs.v1.CommandResolution.
+ * Use `create(CommandResolutionSchema)` to create a new message.
+ */
+export const CommandResolutionSchema: GenMessage<CommandResolution> = /*@__PURE__*/
+  messageDesc(file_gcs_v1_commands, 1);
+
+/**
  * @generated from message gcs.v1.CommandTransaction
  */
 export type CommandTransaction = Message<"gcs.v1.CommandTransaction"> & {
@@ -109,6 +158,37 @@ export type CommandTransaction = Message<"gcs.v1.CommandTransaction"> & {
    * @generated from field: google.protobuf.Timestamp settled_at = 8;
    */
   settledAt?: Timestamp | undefined;
+
+  /**
+   * The arm state this transaction requested. MAV_CMD 400 alone cannot say
+   * whether the operator asked to arm or to disarm.
+   *
+   * @generated from field: gcs.v1.ArmState requested_state = 9;
+   */
+  requestedState: ArmState;
+
+  /**
+   * The fixed local operator label that issued the command.
+   *
+   * @generated from field: string operator_label = 10;
+   */
+  operatorLabel: string;
+
+  /**
+   * Identifies the backend process that assigned `id`. Transaction ids are a
+   * per-process counter, so a stale client surviving a restart could otherwise
+   * resolve an unrelated transaction that reused the number.
+   *
+   * @generated from field: string registry_epoch = 11;
+   */
+  registryEpoch: string;
+
+  /**
+   * Present once an operator has attested to the observed outcome.
+   *
+   * @generated from field: gcs.v1.CommandResolution resolution = 12;
+   */
+  resolution?: CommandResolution | undefined;
 };
 
 /**
@@ -116,7 +196,39 @@ export type CommandTransaction = Message<"gcs.v1.CommandTransaction"> & {
  * Use `create(CommandTransactionSchema)` to create a new message.
  */
 export const CommandTransactionSchema: GenMessage<CommandTransaction> = /*@__PURE__*/
-  messageDesc(file_gcs_v1_commands, 1);
+  messageDesc(file_gcs_v1_commands, 2);
+
+/**
+ * ArmState is a requested or operator-observed armed state.
+ *
+ * An enum rather than a bool so that an absent value decodes as UNSPECIFIED
+ * rather than silently as DISARMED. An attestation the operator never made
+ * must never read as one they did.
+ *
+ * @generated from enum gcs.v1.ArmState
+ */
+export enum ArmState {
+  /**
+   * @generated from enum value: ARM_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: ARM_STATE_ARMED = 1;
+   */
+  ARMED = 1,
+
+  /**
+   * @generated from enum value: ARM_STATE_DISARMED = 2;
+   */
+  DISARMED = 2,
+}
+
+/**
+ * Describes the enum gcs.v1.ArmState.
+ */
+export const ArmStateSchema: GenEnum<ArmState> = /*@__PURE__*/
+  enumDesc(file_gcs_v1_commands, 0);
 
 /**
  * @generated from enum gcs.v1.CommandState
@@ -162,5 +274,5 @@ export enum CommandState {
  * Describes the enum gcs.v1.CommandState.
  */
 export const CommandStateSchema: GenEnum<CommandState> = /*@__PURE__*/
-  enumDesc(file_gcs_v1_commands, 0);
+  enumDesc(file_gcs_v1_commands, 1);
 

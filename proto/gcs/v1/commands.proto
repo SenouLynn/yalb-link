@@ -18,6 +18,40 @@ message CommandAck {
   uint32 target_component = 6;
 }
 
+// ArmState is a requested or operator-observed armed state.
+//
+// An enum rather than a bool so that an absent value decodes as UNSPECIFIED
+// rather than silently as DISARMED. An attestation the operator never made
+// must never read as one they did.
+enum ArmState {
+  ARM_STATE_UNSPECIFIED = 0;
+  ARM_STATE_ARMED = 1;
+  ARM_STATE_DISARMED = 2;
+}
+
+// CommandResolution records an operator's attestation about a transaction that
+// MAVLink left ambiguous.
+//
+// It never changes the transaction's terminal state. The ambiguity remains a
+// historical fact and the attestation is recorded beside it, because
+// COMMAND_ACK identifies a command number rather than an invocation and so
+// cannot retroactively prove what the vehicle did.
+message CommandResolution {
+  // The armed state the operator reports having observed. A stored resolution
+  // never holds UNSPECIFIED; the HTTP surface rejects a missing value.
+  ArmState observed_state = 1;
+
+  // The fixed local operator label. Not an authenticated identity.
+  string operator_label = 2;
+
+  google.protobuf.Timestamp attested_at = 3;
+
+  // When the post-resolution stale-ACK quarantine ends. Absolute here for the
+  // record; callers are told the remaining milliseconds instead, so no browser
+  // decides expiry from its own clock.
+  google.protobuf.Timestamp quarantine_until = 4;
+}
+
 enum CommandState {
   COMMAND_STATE_UNSPECIFIED = 0;
   COMMAND_STATE_PENDING = 1;
@@ -37,4 +71,19 @@ message CommandTransaction {
   int32 result_param2 = 6;
   google.protobuf.Timestamp issued_at = 7;
   google.protobuf.Timestamp settled_at = 8;
+
+  // The arm state this transaction requested. MAV_CMD 400 alone cannot say
+  // whether the operator asked to arm or to disarm.
+  ArmState requested_state = 9;
+
+  // The fixed local operator label that issued the command.
+  string operator_label = 10;
+
+  // Identifies the backend process that assigned `id`. Transaction ids are a
+  // per-process counter, so a stale client surviving a restart could otherwise
+  // resolve an unrelated transaction that reused the number.
+  string registry_epoch = 11;
+
+  // Present once an operator has attested to the observed outcome.
+  CommandResolution resolution = 12;
 }

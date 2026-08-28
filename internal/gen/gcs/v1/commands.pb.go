@@ -22,6 +22,60 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// ArmState is a requested or operator-observed armed state.
+//
+// An enum rather than a bool so that an absent value decodes as UNSPECIFIED
+// rather than silently as DISARMED. An attestation the operator never made
+// must never read as one they did.
+type ArmState int32
+
+const (
+	ArmState_ARM_STATE_UNSPECIFIED ArmState = 0
+	ArmState_ARM_STATE_ARMED       ArmState = 1
+	ArmState_ARM_STATE_DISARMED    ArmState = 2
+)
+
+// Enum value maps for ArmState.
+var (
+	ArmState_name = map[int32]string{
+		0: "ARM_STATE_UNSPECIFIED",
+		1: "ARM_STATE_ARMED",
+		2: "ARM_STATE_DISARMED",
+	}
+	ArmState_value = map[string]int32{
+		"ARM_STATE_UNSPECIFIED": 0,
+		"ARM_STATE_ARMED":       1,
+		"ARM_STATE_DISARMED":    2,
+	}
+)
+
+func (x ArmState) Enum() *ArmState {
+	p := new(ArmState)
+	*p = x
+	return p
+}
+
+func (x ArmState) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ArmState) Descriptor() protoreflect.EnumDescriptor {
+	return file_gcs_v1_commands_proto_enumTypes[0].Descriptor()
+}
+
+func (ArmState) Type() protoreflect.EnumType {
+	return &file_gcs_v1_commands_proto_enumTypes[0]
+}
+
+func (x ArmState) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ArmState.Descriptor instead.
+func (ArmState) EnumDescriptor() ([]byte, []int) {
+	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{0}
+}
+
 type CommandState int32
 
 const (
@@ -67,11 +121,11 @@ func (x CommandState) String() string {
 }
 
 func (CommandState) Descriptor() protoreflect.EnumDescriptor {
-	return file_gcs_v1_commands_proto_enumTypes[0].Descriptor()
+	return file_gcs_v1_commands_proto_enumTypes[1].Descriptor()
 }
 
 func (CommandState) Type() protoreflect.EnumType {
-	return &file_gcs_v1_commands_proto_enumTypes[0]
+	return &file_gcs_v1_commands_proto_enumTypes[1]
 }
 
 func (x CommandState) Number() protoreflect.EnumNumber {
@@ -80,7 +134,7 @@ func (x CommandState) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use CommandState.Descriptor instead.
 func (CommandState) EnumDescriptor() ([]byte, []int) {
-	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{0}
+	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{1}
 }
 
 // CommandAck mirrors COMMAND_ACK (#77) received from a vehicle.
@@ -168,23 +222,115 @@ func (x *CommandAck) GetTargetComponent() uint32 {
 	return 0
 }
 
+// CommandResolution records an operator's attestation about a transaction that
+// MAVLink left ambiguous.
+//
+// It never changes the transaction's terminal state. The ambiguity remains a
+// historical fact and the attestation is recorded beside it, because
+// COMMAND_ACK identifies a command number rather than an invocation and so
+// cannot retroactively prove what the vehicle did.
+type CommandResolution struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The armed state the operator reports having observed. A stored resolution
+	// never holds UNSPECIFIED; the HTTP surface rejects a missing value.
+	ObservedState ArmState `protobuf:"varint,1,opt,name=observed_state,json=observedState,proto3,enum=gcs.v1.ArmState" json:"observed_state,omitempty"`
+	// The fixed local operator label. Not an authenticated identity.
+	OperatorLabel string                 `protobuf:"bytes,2,opt,name=operator_label,json=operatorLabel,proto3" json:"operator_label,omitempty"`
+	AttestedAt    *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=attested_at,json=attestedAt,proto3" json:"attested_at,omitempty"`
+	// When the post-resolution stale-ACK quarantine ends. Absolute here for the
+	// record; callers are told the remaining milliseconds instead, so no browser
+	// decides expiry from its own clock.
+	QuarantineUntil *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=quarantine_until,json=quarantineUntil,proto3" json:"quarantine_until,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *CommandResolution) Reset() {
+	*x = CommandResolution{}
+	mi := &file_gcs_v1_commands_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CommandResolution) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CommandResolution) ProtoMessage() {}
+
+func (x *CommandResolution) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_v1_commands_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CommandResolution.ProtoReflect.Descriptor instead.
+func (*CommandResolution) Descriptor() ([]byte, []int) {
+	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CommandResolution) GetObservedState() ArmState {
+	if x != nil {
+		return x.ObservedState
+	}
+	return ArmState_ARM_STATE_UNSPECIFIED
+}
+
+func (x *CommandResolution) GetOperatorLabel() string {
+	if x != nil {
+		return x.OperatorLabel
+	}
+	return ""
+}
+
+func (x *CommandResolution) GetAttestedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.AttestedAt
+	}
+	return nil
+}
+
+func (x *CommandResolution) GetQuarantineUntil() *timestamppb.Timestamp {
+	if x != nil {
+		return x.QuarantineUntil
+	}
+	return nil
+}
+
 type CommandTransaction struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            uint32                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
-	VehicleId     *VehicleId             `protobuf:"bytes,2,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"`
-	Command       MavCmd                 `protobuf:"varint,3,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
-	State         CommandState           `protobuf:"varint,4,opt,name=state,proto3,enum=gcs.v1.CommandState" json:"state,omitempty"`
-	Result        MavResult              `protobuf:"varint,5,opt,name=result,proto3,enum=gcs.v1.MavResult" json:"result,omitempty"`
-	ResultParam2  int32                  `protobuf:"varint,6,opt,name=result_param2,json=resultParam2,proto3" json:"result_param2,omitempty"`
-	IssuedAt      *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
-	SettledAt     *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=settled_at,json=settledAt,proto3" json:"settled_at,omitempty"`
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Id           uint32                 `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
+	VehicleId    *VehicleId             `protobuf:"bytes,2,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"`
+	Command      MavCmd                 `protobuf:"varint,3,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
+	State        CommandState           `protobuf:"varint,4,opt,name=state,proto3,enum=gcs.v1.CommandState" json:"state,omitempty"`
+	Result       MavResult              `protobuf:"varint,5,opt,name=result,proto3,enum=gcs.v1.MavResult" json:"result,omitempty"`
+	ResultParam2 int32                  `protobuf:"varint,6,opt,name=result_param2,json=resultParam2,proto3" json:"result_param2,omitempty"`
+	IssuedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=issued_at,json=issuedAt,proto3" json:"issued_at,omitempty"`
+	SettledAt    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=settled_at,json=settledAt,proto3" json:"settled_at,omitempty"`
+	// The arm state this transaction requested. MAV_CMD 400 alone cannot say
+	// whether the operator asked to arm or to disarm.
+	RequestedState ArmState `protobuf:"varint,9,opt,name=requested_state,json=requestedState,proto3,enum=gcs.v1.ArmState" json:"requested_state,omitempty"`
+	// The fixed local operator label that issued the command.
+	OperatorLabel string `protobuf:"bytes,10,opt,name=operator_label,json=operatorLabel,proto3" json:"operator_label,omitempty"`
+	// Identifies the backend process that assigned `id`. Transaction ids are a
+	// per-process counter, so a stale client surviving a restart could otherwise
+	// resolve an unrelated transaction that reused the number.
+	RegistryEpoch string `protobuf:"bytes,11,opt,name=registry_epoch,json=registryEpoch,proto3" json:"registry_epoch,omitempty"`
+	// Present once an operator has attested to the observed outcome.
+	Resolution    *CommandResolution `protobuf:"bytes,12,opt,name=resolution,proto3" json:"resolution,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CommandTransaction) Reset() {
 	*x = CommandTransaction{}
-	mi := &file_gcs_v1_commands_proto_msgTypes[1]
+	mi := &file_gcs_v1_commands_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -196,7 +342,7 @@ func (x *CommandTransaction) String() string {
 func (*CommandTransaction) ProtoMessage() {}
 
 func (x *CommandTransaction) ProtoReflect() protoreflect.Message {
-	mi := &file_gcs_v1_commands_proto_msgTypes[1]
+	mi := &file_gcs_v1_commands_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -209,7 +355,7 @@ func (x *CommandTransaction) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CommandTransaction.ProtoReflect.Descriptor instead.
 func (*CommandTransaction) Descriptor() ([]byte, []int) {
-	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{1}
+	return file_gcs_v1_commands_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *CommandTransaction) GetId() uint32 {
@@ -268,6 +414,34 @@ func (x *CommandTransaction) GetSettledAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *CommandTransaction) GetRequestedState() ArmState {
+	if x != nil {
+		return x.RequestedState
+	}
+	return ArmState_ARM_STATE_UNSPECIFIED
+}
+
+func (x *CommandTransaction) GetOperatorLabel() string {
+	if x != nil {
+		return x.OperatorLabel
+	}
+	return ""
+}
+
+func (x *CommandTransaction) GetRegistryEpoch() string {
+	if x != nil {
+		return x.RegistryEpoch
+	}
+	return ""
+}
+
+func (x *CommandTransaction) GetResolution() *CommandResolution {
+	if x != nil {
+		return x.Resolution
+	}
+	return nil
+}
+
 var File_gcs_v1_commands_proto protoreflect.FileDescriptor
 
 const file_gcs_v1_commands_proto_rawDesc = "" +
@@ -280,7 +454,13 @@ const file_gcs_v1_commands_proto_rawDesc = "" +
 	"\bprogress\x18\x03 \x01(\rR\bprogress\x12#\n" +
 	"\rresult_param2\x18\x04 \x01(\x05R\fresultParam2\x12#\n" +
 	"\rtarget_system\x18\x05 \x01(\rR\ftargetSystem\x12)\n" +
-	"\x10target_component\x18\x06 \x01(\rR\x0ftargetComponent\"\xf0\x02\n" +
+	"\x10target_component\x18\x06 \x01(\rR\x0ftargetComponent\"\xf7\x01\n" +
+	"\x11CommandResolution\x127\n" +
+	"\x0eobserved_state\x18\x01 \x01(\x0e2\x10.gcs.v1.ArmStateR\robservedState\x12%\n" +
+	"\x0eoperator_label\x18\x02 \x01(\tR\roperatorLabel\x12;\n" +
+	"\vattested_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"attestedAt\x12E\n" +
+	"\x10quarantine_until\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x0fquarantineUntil\"\xb4\x04\n" +
 	"\x12CommandTransaction\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\rR\x02id\x120\n" +
 	"\n" +
@@ -291,7 +471,18 @@ const file_gcs_v1_commands_proto_rawDesc = "" +
 	"\rresult_param2\x18\x06 \x01(\x05R\fresultParam2\x127\n" +
 	"\tissued_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\bissuedAt\x129\n" +
 	"\n" +
-	"settled_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tsettledAt*\xd9\x01\n" +
+	"settled_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\tsettledAt\x129\n" +
+	"\x0frequested_state\x18\t \x01(\x0e2\x10.gcs.v1.ArmStateR\x0erequestedState\x12%\n" +
+	"\x0eoperator_label\x18\n" +
+	" \x01(\tR\roperatorLabel\x12%\n" +
+	"\x0eregistry_epoch\x18\v \x01(\tR\rregistryEpoch\x129\n" +
+	"\n" +
+	"resolution\x18\f \x01(\v2\x19.gcs.v1.CommandResolutionR\n" +
+	"resolution*R\n" +
+	"\bArmState\x12\x19\n" +
+	"\x15ARM_STATE_UNSPECIFIED\x10\x00\x12\x13\n" +
+	"\x0fARM_STATE_ARMED\x10\x01\x12\x16\n" +
+	"\x12ARM_STATE_DISARMED\x10\x02*\xd9\x01\n" +
 	"\fCommandState\x12\x1d\n" +
 	"\x19COMMAND_STATE_UNSPECIFIED\x10\x00\x12\x19\n" +
 	"\x15COMMAND_STATE_PENDING\x10\x01\x12\x1a\n" +
@@ -313,31 +504,38 @@ func file_gcs_v1_commands_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_commands_proto_rawDescData
 }
 
-var file_gcs_v1_commands_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_gcs_v1_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_gcs_v1_commands_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_gcs_v1_commands_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_gcs_v1_commands_proto_goTypes = []any{
-	(CommandState)(0),             // 0: gcs.v1.CommandState
-	(*CommandAck)(nil),            // 1: gcs.v1.CommandAck
-	(*CommandTransaction)(nil),    // 2: gcs.v1.CommandTransaction
-	(MavCmd)(0),                   // 3: gcs.v1.MavCmd
-	(MavResult)(0),                // 4: gcs.v1.MavResult
-	(*VehicleId)(nil),             // 5: gcs.v1.VehicleId
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(ArmState)(0),                 // 0: gcs.v1.ArmState
+	(CommandState)(0),             // 1: gcs.v1.CommandState
+	(*CommandAck)(nil),            // 2: gcs.v1.CommandAck
+	(*CommandResolution)(nil),     // 3: gcs.v1.CommandResolution
+	(*CommandTransaction)(nil),    // 4: gcs.v1.CommandTransaction
+	(MavCmd)(0),                   // 5: gcs.v1.MavCmd
+	(MavResult)(0),                // 6: gcs.v1.MavResult
+	(*timestamppb.Timestamp)(nil), // 7: google.protobuf.Timestamp
+	(*VehicleId)(nil),             // 8: gcs.v1.VehicleId
 }
 var file_gcs_v1_commands_proto_depIdxs = []int32{
-	3, // 0: gcs.v1.CommandAck.command:type_name -> gcs.v1.MavCmd
-	4, // 1: gcs.v1.CommandAck.result:type_name -> gcs.v1.MavResult
-	5, // 2: gcs.v1.CommandTransaction.vehicle_id:type_name -> gcs.v1.VehicleId
-	3, // 3: gcs.v1.CommandTransaction.command:type_name -> gcs.v1.MavCmd
-	0, // 4: gcs.v1.CommandTransaction.state:type_name -> gcs.v1.CommandState
-	4, // 5: gcs.v1.CommandTransaction.result:type_name -> gcs.v1.MavResult
-	6, // 6: gcs.v1.CommandTransaction.issued_at:type_name -> google.protobuf.Timestamp
-	6, // 7: gcs.v1.CommandTransaction.settled_at:type_name -> google.protobuf.Timestamp
-	8, // [8:8] is the sub-list for method output_type
-	8, // [8:8] is the sub-list for method input_type
-	8, // [8:8] is the sub-list for extension type_name
-	8, // [8:8] is the sub-list for extension extendee
-	0, // [0:8] is the sub-list for field type_name
+	5,  // 0: gcs.v1.CommandAck.command:type_name -> gcs.v1.MavCmd
+	6,  // 1: gcs.v1.CommandAck.result:type_name -> gcs.v1.MavResult
+	0,  // 2: gcs.v1.CommandResolution.observed_state:type_name -> gcs.v1.ArmState
+	7,  // 3: gcs.v1.CommandResolution.attested_at:type_name -> google.protobuf.Timestamp
+	7,  // 4: gcs.v1.CommandResolution.quarantine_until:type_name -> google.protobuf.Timestamp
+	8,  // 5: gcs.v1.CommandTransaction.vehicle_id:type_name -> gcs.v1.VehicleId
+	5,  // 6: gcs.v1.CommandTransaction.command:type_name -> gcs.v1.MavCmd
+	1,  // 7: gcs.v1.CommandTransaction.state:type_name -> gcs.v1.CommandState
+	6,  // 8: gcs.v1.CommandTransaction.result:type_name -> gcs.v1.MavResult
+	7,  // 9: gcs.v1.CommandTransaction.issued_at:type_name -> google.protobuf.Timestamp
+	7,  // 10: gcs.v1.CommandTransaction.settled_at:type_name -> google.protobuf.Timestamp
+	0,  // 11: gcs.v1.CommandTransaction.requested_state:type_name -> gcs.v1.ArmState
+	3,  // 12: gcs.v1.CommandTransaction.resolution:type_name -> gcs.v1.CommandResolution
+	13, // [13:13] is the sub-list for method output_type
+	13, // [13:13] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_gcs_v1_commands_proto_init() }
@@ -352,8 +550,8 @@ func file_gcs_v1_commands_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_commands_proto_rawDesc), len(file_gcs_v1_commands_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   2,
+			NumEnums:      2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
