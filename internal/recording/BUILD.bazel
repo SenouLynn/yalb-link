@@ -13,7 +13,7 @@ go_library(
         "schema.go",
         "writer.go",
     ],
-    embedsrcs = ["migrations/0001_init.sql"],
+    embedsrcs = ["migrations/0001_init.sql", "migrations/0002_command_kind.sql"],
     importpath = "yalb.gcs/internal/recording",
     visibility = ["//:__subpackages__"],
     deps = [
@@ -40,6 +40,7 @@ go_test(
         "replay_http_test.go",
         "replay_test.go",
         "retention_test.go",
+        "schema_test.go",
         "test_helpers_test.go",
         "writer_test.go",
     ],
@@ -51,5 +52,6 @@ go_test(
         "@org_golang_google_protobuf//proto",
         "@org_golang_google_protobuf//types/known/timestamppb",
         "@org_uber_go_goleak//:goleak",
+        "@org_modernc_sqlite//:sqlite",
     ],
 )

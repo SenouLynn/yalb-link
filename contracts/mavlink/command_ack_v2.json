@@ -6,7 +6,7 @@
   },
   "message_id": 77,
   "message_name": "COMMAND_ACK",
-  "note": "correlates against the in-flight registry keyed by (sysId, compId, commandID)",
+  "note": "legacy zero-target ACK; decoded but deliberately ineligible for operator correlation",
   "seq": 42,
   "sys_id": 1
 }

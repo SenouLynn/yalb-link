@@ -210,9 +210,8 @@ func stampObservedAt(evt *gcsv1.TelemetryEvent, nowMs int64) {
 
 // protocol passes a decoded transaction response through to the sinks.
 //
-// The fold keeps no transaction state — there is no request registry yet — but
-// dropping these here would make a decoded COMMAND_ACK unobservable anywhere
-// above the codec.
+// The fold keeps no transaction state. Command correlation lives in the
+// command registry sink; other protocol responses remain observable to logs.
 func protocol(evt *gcsv1.ProtocolEvent) []Event {
 	if evt == nil {
 		return nil

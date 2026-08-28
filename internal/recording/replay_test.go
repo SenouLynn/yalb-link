@@ -126,3 +126,28 @@ func TestReplayFromUnknownRecordingIsEmpty(t *testing.T) {
 		t.Fatalf("length = %d, want 0", len(page))
 	}
 }
+
+func TestCommandRoundTripsThroughRecording(t *testing.T) {
+	store := newTestStore(t, nil)
+	recording, err := store.StartRecording(context.Background(), "command")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := timestamppb.New(time.Unix(1_800_000_000, 0).UTC())
+	tx := &gcsv1.CommandTransaction{Id: 9, VehicleId: &gcsv1.VehicleId{SystemId: 1, ComponentId: 1},
+		Command: gcsv1.MavCmd_MAV_CMD_COMPONENT_ARM_DISARM, State: gcsv1.CommandState_COMMAND_STATE_ACCEPTED,
+		IssuedAt: at, SettledAt: at}
+	if err := (&Recorder{Store: store}).Publish(context.Background(), vehicle.Event{Command: tx}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.StopRecording(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	events, err := store.Replay(context.Background(), recording.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(events) != 1 || !proto.Equal(events[0].Command, tx) {
+		t.Fatalf("replayed command = %+v", events)
+	}
+}

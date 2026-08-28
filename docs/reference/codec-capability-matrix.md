@@ -33,7 +33,7 @@ These decode separately from streaming vehicle state.
 | RECV-MISSION-COUNT | MISSION_COUNT | 44 | Decode → ProtocolEvent.mission_count | contracts/mavlink/mission_count_v2.bin | complete |
 | RECV-MISSION-ACK | MISSION_ACK | 47 | Decode → ProtocolEvent.mission_ack | contracts/mavlink/mission_ack_v2.bin | complete |
 | RECV-MISSION-ITEM | MISSION_ITEM_INT | 73 | Decode → ProtocolEvent.mission_item | contracts/mavlink/mission_item_int_v2.bin | complete |
-| RECV-COMMAND-ACK | COMMAND_ACK | 77 | Decode → ProtocolEvent.command_ack | contracts/mavlink/command_ack_v2.bin | complete |
+| RECV-COMMAND-ACK | COMMAND_ACK | 77 | Decode → ProtocolEvent.command_ack | contracts/mavlink/command_ack_addressed_v2.bin | complete | Addressed, foreign, and legacy zero-target fixtures cover correlation inputs |
 
 ## Unit Normalisation
 
@@ -65,7 +65,7 @@ Encoders return payload messages; `Node.WriteTo` selects the known link.
 | SEND-MISSION-ACK | MISSION_ACK | 47 | Acknowledge a transfer | contracts/mavlink/mission_ack_out.bin | complete | |
 | SEND-MISSION-REQUEST-INT | MISSION_REQUEST_INT | 51 | Request one item | contracts/mavlink/mission_request_int_out.bin | complete | |
 | SEND-MISSION-ITEM-INT | MISSION_ITEM_INT | 73 | One mission item | contracts/mavlink/mission_item_int_out.bin | complete | x/y convert to degE7; z stays float metres |
-| SEND-CMD-LONG | COMMAND_LONG | 76 | Command envelope | contracts/mavlink/command_long_arm_out.bin | complete | Encoder only; it performs no authorization or command validation |
+| SEND-CMD-LONG | COMMAND_LONG | 76 | Command envelope | contracts/mavlink/command_long_arm_out.bin | complete | Codec encoder is unvalidated; `internal/command/policy.go` restricts the operator path to non-force arm/disarm |
 | SEND-SET-MESSAGE-INTERVAL | COMMAND_LONG (MAV_CMD 511) | 76 | Request one message family at a fixed interval | internal/bridge/rates_test.go | complete | Wraps SEND-CMD-LONG; interval is microseconds, 0 = firmware default, -1 = disabled |
 | SEND-SET-POSITION-TARGET | SET_POSITION_TARGET_GLOBAL_INT | 86 | Guided reposition | contracts/mavlink/set_position_target_global_int_out.bin | complete | type_mask 0xDF8; FORCE_SET bit asserted clear |
 

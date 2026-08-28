@@ -1,0 +1,14 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "command": 400,
+    "result": 0,
+    "target_component": 190,
+    "target_system": 255
+  },
+  "message_id": 77,
+  "message_name": "COMMAND_ACK",
+  "note": "eligible ACK: frame sender is the vehicle and payload target is this GCS",
+  "seq": 42,
+  "sys_id": 1
+}

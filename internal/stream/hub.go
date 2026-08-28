@@ -206,8 +206,7 @@ func (h *Hub) Publish(ctx context.Context, ev vehicle.Event) error {
 		h.broadcast(ctx, Event{Name: EventCommand, Message: ev.Command})
 	}
 
-	// Warnings and protocol events are logged, not streamed: the browser
-	// contract is exactly the two event names above.
+	// Warnings and protocol events are logged, not streamed.
 	return nil
 }
 

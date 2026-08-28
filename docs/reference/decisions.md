@@ -43,8 +43,9 @@ exists. Executable artifacts are authoritative if this file drifts.
   interval once, at encode time.
 - A failed write is a sink failure and stops the bridge. A GCS that silently
   failed to ask for telemetry would show a healthy link carrying nothing.
-- There is no ACK correlation or retry. `COMMAND_ACK` is decoded and logged;
-  success is judged by the telemetry that arrives.
+- Arm/disarm has strict addressed ACK correlation; telemetry rate requests have
+  no correlation, and no command is retried. Success of acquisition is judged
+  by the telemetry that arrives.
 
 ## Vehicle state
 
@@ -59,10 +60,24 @@ exists. Executable artifacts are authoritative if this file drifts.
   through the descriptor rather than a type switch, so a new family cannot be
   added unstamped. `TelemetryEvent` and `ProtocolEvent` both reach the sinks.
 
+## Operator commands
+
+- Commands are off unless `GCS_COMMANDS_ENABLED` is true. The sole endpoint is
+  `POST /api/commands/arm`; there is no generic dispatcher.
+- An ACK matches the commanded vehicle by frame sender and this GCS by payload
+  target `(255,190)`. Zero-target and foreign ACKs cannot settle a transaction.
+- Timeout, cancellation, or an uncertain link-write failure permanently poison
+  that vehicle/command key until backend restart. MAVLink provides no invocation
+  identity with which to prove a later ACK is not stale.
+- The POST returns synchronously. Command SSE is live-only (not bootstrap state),
+  while recordings preserve pending and terminal snapshots.
+- Origin/content-type/fetch-metadata checks protect local development from
+  casual CSRF; they are not authentication.
+
 ## Browser event stream
 
-- `GET /api/events` is the only public surface added. Two event names, `fleet`
-  and `telemetry`, each carrying the existing protobuf message as protobuf JSON.
+- `GET /api/events` carries `fleet`, `telemetry`, and live-only `command`
+  protobuf-JSON events.
 - The oneof payload establishes message presence. Ordinary proto3 scalar
   defaults therefore remain safe with standard `protojson`: an ATTITUDE
   payload containing zero roll is present and decodes as a level reading.
@@ -172,8 +187,9 @@ exists. Executable artifacts are authoritative if this file drifts.
 
 ## Current limits
 
-- The system is read-only. Rate requests are data acquisition, not an operator
-  command surface; nothing arms, commands, or configures a vehicle.
+- The system is read-only unless the command gate is enabled. With it enabled,
+  only guarded arm/disarm is exposed; no generic command or configuration
+  surface exists.
 - Recording is opt-in and off by default; with it disabled the backend restart
   still loses all retained state. Retention bounds live database pages, age,
   and count, but does not compact the SQLite file or return its high-water-mark

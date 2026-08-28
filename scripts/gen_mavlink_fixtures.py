@@ -402,7 +402,27 @@ def gen_transactions():
             result=0,     # MAV_RESULT_ACCEPTED
         ),
         fields={"command": 400, "result": 0},
-        note="correlates against the in-flight registry keyed by (sysId, compId, commandID)",
+        note="legacy zero-target ACK; decoded but deliberately ineligible for operator correlation",
+    )
+
+    fixture(
+        "command_ack_addressed_v2", 77, "COMMAND_ACK", mav2,
+        lambda m: m.command_ack_encode(
+            command=400, result=0, progress=0, result_param2=0,
+            target_system=255, target_component=190,
+        ),
+        fields={"command": 400, "result": 0, "target_system": 255, "target_component": 190},
+        note="eligible ACK: frame sender is the vehicle and payload target is this GCS",
+    )
+
+    fixture(
+        "command_ack_foreign_v2", 77, "COMMAND_ACK", mav2,
+        lambda m: m.command_ack_encode(
+            command=400, result=0, progress=0, result_param2=0,
+            target_system=42, target_component=99,
+        ),
+        fields={"command": 400, "result": 0, "target_system": 42, "target_component": 99},
+        note="foreign ACK: addressed to another GCS and ineligible for correlation",
     )
 
 

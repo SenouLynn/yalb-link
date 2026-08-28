@@ -128,12 +128,13 @@ aircraft that does not exist.
 
 ## The browser event stream
 
-`GET /api/events` is a `text/event-stream` with two event names:
+`GET /api/events` is a `text/event-stream` with three event names:
 
 | Event | Payload |
 |---|---|
 | `fleet` | `gcs.v1.FleetEvent` as protobuf JSON |
 | `telemetry` | `gcs.v1.TelemetryEvent` as protobuf JSON |
+| `command` | `gcs.v1.CommandTransaction` as protobuf JSON (live only; not bootstrapped) |
 
 Each connection is bootstrapped from retained state — the latest fleet event
 per vehicle, then the latest telemetry per vehicle and family, in identity
@@ -162,8 +163,8 @@ curl http://localhost:8080/api/recordings
 
 The start request may instead carry `{"name":"test flight"}` as JSON. The
 backend flushes every event accepted before stop returns. The SQLite store
-persists fleet and telemetry protobuf events; protocol events and local
-warnings remain outside recording scope.
+persists fleet, telemetry, and command protobuf events; protocol events and
+local warnings remain outside recording scope.
 
 Initial safety defaults cap one recording at 200,000 events, 256 MiB of
 protobuf payloads, or 30 minutes. Database and lifecycle operations time out
@@ -208,3 +209,24 @@ Source chip reads `REPLAY` in amber for as long as the page is showing history.
 Restarting the backend between recording and replay is the check worth running:
 it is what distinguishes durable storage from a buffer that happened to still
 be in memory.
+
+## Arm or disarm one SITL vehicle
+
+Operator commands are disabled by default. For local SITL, enable the gate and
+optionally recording before starting the backend:
+
+```sh
+GCS_COMMANDS_ENABLED=true GCS_RECORDING_ENABLED=true docker compose --profile ui up
+curl -H 'Content-Type: application/json' \
+  -d '{"system_id":1,"arm":true}' http://localhost:8080/api/commands/arm
+```
+
+The display requires a second confirmation click. `ACCEPTED` describes the
+command ACK; the ARMED/DISARMED chip continues to come only from HEARTBEAT.
+There is no retry. A timeout, cancelled browser request, or uncertain write
+blocks another arm/disarm for that vehicle for this process session; restart
+`gcs-backend` to clear it. Zero-target ACKs are ignored.
+
+The endpoint's origin, fetch-metadata, and JSON content-type checks are
+local-development CSRF protection, not authentication. Do not expose it to an
+untrusted network.

@@ -14,6 +14,8 @@ SITL -> MAVLink UDP -> codec -> per-vehicle fold -> event hub
                                                \-> bounded SQLite recording
                                                         |
                                              paged JSON replay -> same display
+operator -> guarded arm POST -> addressed COMMAND_LONG -> ACK registry
+                                      |-> command SSE / recording / response
 ```
 
 The repository currently has:
@@ -39,8 +41,11 @@ The repository currently has:
   trajectory logic;
 - Docker Compose definitions for Copter and Plane SITL;
 - native Go/TypeScript tests and a Bazel checkpoint build.
+- an opt-in, addressed arm/disarm transaction with acknowledgement, timeout,
+  cancellation, and delivery-uncertain failure states.
 
-It is **read-only observation**. The project does not yet have a command or
+It is read-only unless `GCS_COMMANDS_ENABLED=true`; even then, the only operator
+command is guarded arm/disarm. The project does not have a generic command or
 mission surface, authentication, or MAVLink signing. SQLite reuses pages freed
 by recording retention, but the database file does not shrink automatically.
 
@@ -48,9 +53,8 @@ No project license has been selected or committed.
 
 ### Next demonstrable outcome
 
-A first safe operator command transaction — one addressed command with an
-observable acknowledgement, timeout, and failure state, without implying that
-the broader mission surface is ready.
+Authenticated operator sessions and an explicit workflow for resolving an
+ambiguous timed-out command, without expanding to a generic command surface.
 
 ### What the display refuses to do
 

@@ -404,6 +404,30 @@ func TestReconnectGetsFreshBootstrap(t *testing.T) {
 	}
 }
 
+func TestCommandIsLiveButNotBootstrapped(t *testing.T) {
+	h := newTestHub(t, 4)
+	events, unsubscribe := h.Subscribe()
+	defer unsubscribe()
+	if err := h.Publish(context.Background(), vehicle.Event{Command: &gcsv1.CommandTransaction{
+		Id: 7, VehicleId: &gcsv1.VehicleId{SystemId: 1, ComponentId: 1},
+		State: gcsv1.CommandState_COMMAND_STATE_ACCEPTED,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	got := <-events
+	if got.Name != EventCommand {
+		t.Fatalf("live event = %q, want command", got.Name)
+	}
+
+	bootstrap, unsubscribe2 := h.Subscribe()
+	defer unsubscribe2()
+	select {
+	case event := <-bootstrap:
+		t.Fatalf("command retained in bootstrap: %v", event)
+	default:
+	}
+}
+
 // TestUnsubscribeIsIdempotent covers the handler's defer running after the hub
 // already evicted or closed the same subscriber.
 func TestUnsubscribeIsIdempotent(t *testing.T) {

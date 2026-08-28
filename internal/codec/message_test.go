@@ -341,6 +341,22 @@ func assertCommandAck(t *testing.T, d Decoded) {
 	}
 }
 
+func assertAddressedCommandAck(t *testing.T, d Decoded) {
+	t.Helper()
+	ack := d.Transaction.GetCommandAck()
+	if ack.GetTargetSystem() != uint32(GCSSystemID) || ack.GetTargetComponent() != uint32(GCSComponentID) {
+		t.Fatalf("ACK target = %d:%d, want %d:%d", ack.GetTargetSystem(), ack.GetTargetComponent(), GCSSystemID, GCSComponentID)
+	}
+}
+
+func assertForeignCommandAck(t *testing.T, d Decoded) {
+	t.Helper()
+	ack := d.Transaction.GetCommandAck()
+	if ack.GetTargetSystem() != 42 || ack.GetTargetComponent() != 99 {
+		t.Fatalf("ACK target = %d:%d, want 42:99", ack.GetTargetSystem(), ack.GetTargetComponent())
+	}
+}
+
 func TestDecodeTransactionFixtures(t *testing.T) {
 	t.Parallel()
 
@@ -353,6 +369,8 @@ func TestDecodeTransactionFixtures(t *testing.T) {
 		{assertMissionAckPayload, "mission_ack_v2"},
 		{assertMissionItem, "mission_item_int_v2"},
 		{assertCommandAck, "command_ack_v2"},
+		{assertAddressedCommandAck, "command_ack_addressed_v2"},
+		{assertForeignCommandAck, "command_ack_foreign_v2"},
 	}
 
 	for _, tc := range tests {

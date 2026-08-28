@@ -1,0 +1,14 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "command": 400,
+    "result": 0,
+    "target_component": 99,
+    "target_system": 42
+  },
+  "message_id": 77,
+  "message_name": "COMMAND_ACK",
+  "note": "foreign ACK: addressed to another GCS and ineligible for correlation",
+  "seq": 42,
+  "sys_id": 1
+}

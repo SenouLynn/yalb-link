@@ -15,6 +15,7 @@ go_library(
     deps = [
         "//internal/bridge",
         "//internal/codec",
+        "//internal/command",
         "//internal/recording",
         "//internal/routes",
         "//internal/stream",
