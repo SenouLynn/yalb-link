@@ -19,7 +19,7 @@ go_library(
 
 go_test(
     name = "command_test",
-    srcs = ["http_test.go", "registry_test.go"],
+    srcs = ["http_test.go", "registry_test.go", "resolve_http_test.go", "resolve_test.go"],
     embed = [":command"],
     deps = [
         "//internal/codec", "//internal/gen/gcs/v1:gcs", "//internal/routes", "//internal/vehicle",

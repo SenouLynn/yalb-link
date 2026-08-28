@@ -194,6 +194,7 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub
 	mux.HandleFunc("GET "+stream.Path, stream.Handler(hub, log))
 	if registry != nil {
 		mux.HandleFunc(command.ArmPattern, command.ArmHandler(registry))
+		mux.HandleFunc(command.ResolvePattern, command.ResolveHandler(registry))
 	}
 	if store != nil {
 		mux.HandleFunc("POST /api/recordings/start", recording.StartHandler(store))
