@@ -226,6 +226,23 @@ describe('FlightDisplay with missing readings', () => {
     expect(html).not.toContain('var(--sky)');
   });
 
+  it('does not predict when position has never arrived', () => {
+    const html = render(
+      build(
+        discovered(),
+        telemetry({ case: 'attitude', value: create(AttitudeSchema, { rollRad: 0 }) }),
+        telemetry({
+          case: 'vfrHud',
+          value: create(VfrHudSchema, { groundspeedMS: 10, headingDeg: 90 }),
+        }),
+      ),
+    );
+
+    expect(html).toContain('10.0');
+    expect(html).toContain('090');
+    expect(html).not.toContain('5 s prediction');
+  });
+
   it('draws the horizon once attitude arrives, including a level one', () => {
     const level = render(
       build(
@@ -300,6 +317,31 @@ describe('FlightDisplay staleness', () => {
     // Current heading and ground speed still support a straight prediction;
     // stale attitude cannot keep an old turn on screen.
     expect(html).toContain('5 s prediction');
+  });
+
+  it('suppresses the prediction when position alone becomes stale', () => {
+    const html = render(
+      build(
+        ...fullFlight(T0),
+        telemetry(
+          { case: 'attitude', value: create(AttitudeSchema, { rollRad: 0 }) },
+          T0 + 5_000,
+        ),
+        telemetry(
+          {
+            case: 'vfrHud',
+            value: create(VfrHudSchema, { groundspeedMS: 10, headingDeg: 90 }),
+          },
+          T0 + 5_000,
+        ),
+      ),
+      T0 + 5_100,
+    );
+
+    expect(html).toContain('10.0');
+    expect(html).toContain('090');
+    expect(html).toContain('provenance--stale');
+    expect(html).not.toContain('5 s prediction');
   });
 });
 

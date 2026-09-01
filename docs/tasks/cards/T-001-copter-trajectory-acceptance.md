@@ -1,7 +1,7 @@
 ---
 id: T-001
 title: Demonstrate predicted trajectory with live Copter SITL
-status: ready
+status: done
 priority: 0
 owner: unassigned
 depends_on: none
@@ -27,10 +27,10 @@ evidence.
 
 ## Acceptance criteria
 
-- [ ] Copter SITL telemetry drives a visible live position track and prediction.
-- [ ] The prediction responds plausibly to a heading or velocity change.
-- [ ] Any defect found is fixed or represented by a new board card.
-- [ ] The repeatable procedure and observed result are recorded in the relevant
+- [x] Copter SITL telemetry drives a visible live position track and prediction.
+- [x] The prediction responds plausibly to a heading or velocity change.
+- [x] Any defect found is fixed or represented by a new board card.
+- [x] The repeatable procedure and observed result are recorded in the relevant
       runbook or executable check.
 
 ## Verification
@@ -45,8 +45,12 @@ position, track, and five-second prediction.
 
 ## Open questions
 
-- Which maneuver gives the shortest repeatable evidence of a changing vector?
+None. Two Guided position targets on opposite north/south legs make the vector
+change unambiguous without requiring a mission upload.
 
 ## Notes
 
-None.
+Accepted on 2026-09-01 against the Compose ArduCopter 4.7.0 SITL. Browser
+inspection observed a live 500-point track and an 11-coordinate prediction;
+the in-motion sample was 9.9 m/s on a 180-degree heading and projected about
+50 m over the configured five-second horizon. No defect was found.

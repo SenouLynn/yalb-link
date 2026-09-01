@@ -102,6 +102,90 @@ autopilot that refuses a rate says so:
 docker compose logs -f gcs-backend | grep -E "rates requested|command ack"
 ```
 
+## Accept the live Copter trajectory
+
+1. Start `docker compose --profile ui up` and open
+   <http://localhost:3000> before moving the vehicle so the browser accumulates
+   the complete track.
+2. Attach a MAVLink ground station to `tcp:127.0.0.1:5760`, wait for healthy
+   GPS and EKF state, switch Copter to Guided mode, arm, and take off to 15 m.
+3. Send a Guided position target at `37.77535, -122.41900, 15`, then a second
+   target at `37.77450, -122.41900, 15`. These north/south legs are long enough
+   to make both the velocity vector and heading reversal unambiguous at the
+   default map zoom.
+4. During each leg, confirm the cyan track follows the vehicle and the dashed
+   amber `5 S PREDICTION` extends ahead of it. Confirm that the projection
+   reverses when the vehicle changes from the northbound to southbound leg.
+
+Acceptance result on 2026-09-01 with ArduCopter 4.7.0: the live browser tracked
+vehicle `1:1`; heading changed from 274 degrees on the westbound setup leg to
+180 degrees on the southbound acceptance leg. At 9.9 m/s the map held its
+bounded 500-point track and rendered an 11-coordinate trajectory from
+`37.7747935, -122.4189998` to `37.7743469, -122.4189969`, approximately 50 m
+ahead over the five-second horizon. No trajectory defect was observed.
+
+## Accept the live Plane trajectory
+
+1. Start only Plane, the backend, and the browser UI so the default vehicle
+   selection cannot select Copter instead:
+
+   ```sh
+   docker compose --profile multi-sitl --profile ui up \
+     gcs-backend ardupilot-sitl-plane-2 gcs-frontend
+   ```
+
+2. Open <http://localhost:3000>, then attach a MAVLink ground station to
+   `tcp:127.0.0.1:5761`. Wait for healthy GPS and EKF state.
+3. Put Plane in Takeoff mode, arm it, and let the autonomous takeoff reach a
+   stable circuit. Switch to Guided mode and send a position target roughly
+   150--200 m from home at 35 m above home. A fixed-wing target produces a
+   sustained banked turn, which is the shortest repeatable way to exercise a
+   visibly changing prediction vector.
+4. Confirm the cyan track follows the circuit and the dashed amber
+   `5 S PREDICTION` remains ahead of the vehicle while rotating through the
+   turn. Check that the displayed heading, direction of travel, and projection
+   agree before and after at least a 30-degree heading change.
+
+Acceptance result on 2026-09-01 with ArduPlane 4.6.3: the live browser showed
+armed fixed-wing vehicle `2:1`, current position and VFR HUD readings, a map
+canvas and vehicle marker, and `5 S PREDICTION`. During the Guided turn the
+browser heading changed from 55 to 87 degrees while ground speed held at
+22.1 m/s; the projection remained present and rotated with the aircraft. That
+speed projects about 110 m over the five-second horizon. The preceding live
+MAVLink samples covered the full circuit and populated the bounded position
+track. No trajectory defect was observed.
+
+## Accept trajectory freshness posture
+
+Use a controlled MAVLink publisher on UDP 14550 so one required family can be
+withheld while unrelated traffic stays live. The publisher should use a
+distinct system ID and send `HEARTBEAT`, `ATTITUDE`, and `VFR_HUD` continuously
+with a nonzero ground speed:
+
+1. Withhold `GLOBAL_POSITION_INT` (message 33) from the initial stream. Open
+   the live UI and confirm that heading and ground speed are current while the
+   map has no vehicle marker or `5 S PREDICTION`.
+2. Begin message 33 at 5 Hz. Confirm the marker and prediction appear without a
+   page reload.
+3. Stop only message 33 for more than the five-second telemetry TTL. Keep the
+   heartbeat, attitude, and VFR HUD messages flowing. Confirm position shows
+   stale provenance and the marker and prediction disappear, while heading and
+   speed remain current.
+4. Resume message 33 at 5 Hz. Confirm the marker and prediction return without
+   a reload.
+
+Against a full Copter SITL stream, message 33 can be isolated with
+`MAV_CMD_SET_MESSAGE_INTERVAL` (command 511): use param 1 = `33` and param 2 =
+`-1` to stop it, then param 2 = `200000` to restore 5 Hz.
+
+Acceptance result on 2026-09-01: a controlled live vehicle `42:1` began with
+fresh 10.0 m/s speed and 90-degree heading but no position; the browser exposed
+zero track and trajectory points. Fresh position produced a marker, track, and
+11-coordinate prediction. With position stopped for more than five seconds,
+the browser retained live 0.1-second attitude and VFR HUD readings but removed
+the marker and prediction and marked only position stale. Resuming position
+restored the marker and 11-coordinate prediction in the same page.
+
 ## Demonstrate the path end to end
 
 1. `docker compose --profile ui up`

@@ -1,7 +1,7 @@
 ---
 id: T-003
 title: Demonstrate absent and stale trajectory posture
-status: ready
+status: done
 priority: 0
 owner: unassigned
 depends_on: none
@@ -26,11 +26,11 @@ position, heading, or velocity is absent or stale.
 
 ## Acceptance criteria
 
-- [ ] An absent required input does not render a predicted trajectory.
-- [ ] A stale required input removes or suppresses the predicted trajectory.
-- [ ] Recovery with fresh inputs restores the prediction without a reload.
-- [ ] Any defect found is fixed or represented by a new board card.
-- [ ] The repeatable procedure and observed result are recorded in the relevant
+- [x] An absent required input does not render a predicted trajectory.
+- [x] A stale required input removes or suppresses the predicted trajectory.
+- [x] Recovery with fresh inputs restores the prediction without a reload.
+- [x] Any defect found is fixed or represented by a new board card.
+- [x] The repeatable procedure and observed result are recorded in the relevant
       runbook or executable check.
 
 ## Verification
@@ -44,9 +44,14 @@ map's trajectory overlay.
 
 ## Open questions
 
-- What is the most repeatable live mechanism for making each input stale without
-  stopping unrelated telemetry?
+None. A controlled publisher can omit and resume one family; on live SITL,
+`MAV_CMD_SET_MESSAGE_INTERVAL` isolates the same family without stopping
+unrelated telemetry.
 
 ## Notes
 
-None.
+Accepted on 2026-09-01 in one live browser session. With position absent, the
+map had zero track and trajectory points while heading and speed remained live.
+Fresh position produced an 11-coordinate prediction; stale position removed
+it while attitude and VFR HUD remained 0.1 seconds old; fresh position restored
+the same 11-coordinate prediction without a reload. No defect was found.

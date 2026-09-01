@@ -1,7 +1,7 @@
 ---
 id: T-002
 title: Demonstrate predicted trajectory with live Plane SITL
-status: ready
+status: done
 priority: 0
 owner: unassigned
 depends_on: none
@@ -27,16 +27,17 @@ evidence.
 
 ## Acceptance criteria
 
-- [ ] Plane SITL telemetry drives a visible live position track and prediction.
-- [ ] The prediction responds plausibly to a heading or velocity change.
-- [ ] Any defect found is fixed or represented by a new board card.
-- [ ] The repeatable procedure and observed result are recorded in the relevant
+- [x] Plane SITL telemetry drives a visible live position track and prediction.
+- [x] The prediction responds plausibly to a heading or velocity change.
+- [x] Any defect found is fixed or represented by a new board card.
+- [x] The repeatable procedure and observed result are recorded in the relevant
       runbook or executable check.
 
 ## Verification
 
 ```sh
-docker compose --profile ui up
+docker compose --profile multi-sitl --profile ui up \
+  gcs-backend ardupilot-sitl-plane-2 gcs-frontend
 make test
 ```
 
@@ -45,8 +46,16 @@ position, track, and five-second prediction.
 
 ## Open questions
 
-- Which maneuver gives the shortest repeatable evidence of a changing vector?
+None. A Guided position target after autonomous takeoff produces a sustained
+banked turn, making the changing prediction vector unambiguous without a
+mission upload.
 
 ## Notes
 
-None.
+Accepted on 2026-09-01 against the Compose ArduPlane 4.6.3 SITL. Headless
+browser inspection observed live fixed-wing vehicle `2:1`, the map canvas and
+vehicle marker, and the `5 S PREDICTION` overlay. During a Guided turn, browser
+heading changed from 55 to 87 degrees at 22.1 m/s while the projection remained
+visible and rotated with the aircraft, a roughly 110 m five-second horizon.
+The preceding live MAVLink samples covered the full circuit and populated the
+position track. No defect was found.
