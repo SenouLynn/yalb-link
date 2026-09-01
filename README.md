@@ -61,10 +61,11 @@ No project license has been selected or committed.
 
 ### Next demonstrable outcome
 
-A live SITL/browser acceptance run of the predicted trajectory for Copter and
-Plane, including its absent- and stale-data posture. The trajectory is a
-read-only browser projection of telemetry already received; it does not command
-the vehicle.
+A read-only onboard mission download shown in the browser for live Copter and
+Plane SITL. The operator can request the selected vehicle's mission, inspect its
+ordered items on the map and in a list, and distinguish an empty mission from a
+failed or incomplete transfer. Mission upload, clear, start, and set-current
+operations remain unavailable.
 
 Local/offline imagery and future 3D tile support are deliberately deferred. The
 current public raster basemap remains a prototyping dependency; no tile storage
