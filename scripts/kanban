@@ -1,0 +1,216 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || {
+  echo "kanban: run inside a Git worktree" >&2
+  exit 1
+}
+tasks_dir="$repo_root/docs/tasks/cards"
+lock_dir="$repo_root/docs/tasks/.kanban-lock"
+
+usage() {
+  echo "usage: $0 {list|next|check|claim <id> <owner>|move <id> <status>}" >&2
+  exit 2
+}
+
+field() {
+  local file=$1 key=$2
+  awk -F ': *' -v key="$key" '$1 == key { sub(/^[^:]*:[[:space:]]*/, ""); print; exit }' "$file"
+}
+
+card_for() {
+  local wanted=$1 file found=""
+  while IFS= read -r file; do
+    if [[ $(field "$file" id) == "$wanted" ]]; then
+      if [[ -n $found ]]; then
+        echo "kanban: duplicate id $wanted" >&2
+        return 1
+      fi
+      found=$file
+    fi
+  done < <(find "$tasks_dir" -maxdepth 1 -type f -name 'T-*.md' -print | sort)
+  [[ -n $found ]] || {
+    echo "kanban: unknown card $wanted" >&2
+    return 1
+  }
+  printf '%s\n' "$found"
+}
+
+dependencies_done() {
+  local file=$1 dependency dependency_file dependencies
+  dependencies=$(field "$file" depends_on)
+  [[ $dependencies == none ]] && return 0
+  IFS=',' read -ra dependency_list <<< "$dependencies"
+  for dependency in "${dependency_list[@]}"; do
+    dependency=${dependency//[[:space:]]/}
+    dependency_file=$(card_for "$dependency") || return 1
+    [[ $(field "$dependency_file" status) == done ]] || return 1
+  done
+}
+
+list_cards() {
+  local only_ready=${1:-false} file id title status priority owner readiness rows=""
+  while IFS= read -r file; do
+    id=$(field "$file" id)
+    title=$(field "$file" title)
+    status=$(field "$file" status)
+    priority=$(field "$file" priority)
+    owner=$(field "$file" owner)
+    readiness=""
+    if [[ $status == ready ]] && ! dependencies_done "$file"; then
+      readiness=" (waiting)"
+    fi
+    if [[ $only_ready == true ]]; then
+      [[ $status == ready && -z $readiness ]] || continue
+    fi
+    rows+="$status|$priority|$id|$owner|$title$readiness"$'\n'
+  done < <(find "$tasks_dir" -maxdepth 1 -type f -name 'T-*.md' -print | sort)
+
+  printf '%-12s %-3s %-7s %-18s %s\n' STATUS PRI ID OWNER TITLE
+  if [[ -n $rows ]]; then
+    while IFS='|' read -r status priority id owner title; do
+      [[ -n $id ]] || continue
+      printf '%-12s %-3s %-7s %-18s %s\n' "$status" "$priority" "$id" "$owner" "$title"
+    done < <(printf '%s' "$rows" | sort -t '|' -k2,2n -k3,3)
+  fi
+}
+
+replace_field() {
+  local file=$1 key=$2 value=$3 temporary
+  temporary=$(mktemp "$tasks_dir/.kanban.XXXXXX")
+  awk -v key="$key" -v value="$value" '
+    BEGIN { replaced = 0 }
+    $0 ~ "^" key ":[[:space:]]*" { print key ": " value; replaced = 1; next }
+    { print }
+    END { if (!replaced) exit 1 }
+  ' "$file" > "$temporary"
+  chmod --reference="$file" "$temporary" 2>/dev/null || true
+  mv "$temporary" "$file"
+}
+
+acquire_lock() {
+  mkdir "$lock_dir" 2>/dev/null || {
+    echo "kanban: another board update is in progress" >&2
+    exit 1
+  }
+  trap 'rmdir "$lock_dir" 2>/dev/null || true' EXIT
+}
+
+check_cards() {
+  local file id title status priority owner dependencies errors=0 ids=""
+  while IFS= read -r file; do
+    id=$(field "$file" id)
+    title=$(field "$file" title)
+    status=$(field "$file" status)
+    priority=$(field "$file" priority)
+    owner=$(field "$file" owner)
+    dependencies=$(field "$file" depends_on)
+
+    [[ $id =~ ^T-[0-9]{3,}$ ]] || { echo "$file: invalid id '$id'" >&2; errors=1; }
+    [[ $(basename "$file") == "$id"-* ]] || { echo "$file: filename must begin with $id-" >&2; errors=1; }
+    [[ -n $title ]] || { echo "$file: title is required" >&2; errors=1; }
+    [[ $status =~ ^(backlog|ready|in_progress|blocked|done)$ ]] || { echo "$file: invalid status '$status'" >&2; errors=1; }
+    [[ $priority =~ ^[0-4]$ ]] || { echo "$file: priority must be 0..4" >&2; errors=1; }
+    [[ -n $owner ]] || { echo "$file: owner is required" >&2; errors=1; }
+    if [[ $status == in_progress && $owner == unassigned ]]; then
+      echo "$file: in_progress cards require an owner" >&2
+      errors=1
+    fi
+    if [[ $status != in_progress && $status != blocked && $owner != unassigned ]]; then
+      echo "$file: $status cards must be unassigned" >&2
+      errors=1
+    fi
+    if [[ " $ids " == *" $id "* ]]; then
+      echo "$file: duplicate id $id" >&2
+      errors=1
+    fi
+    ids+=" $id"
+
+    if [[ $dependencies != none ]]; then
+      IFS=',' read -ra dependency_list <<< "$dependencies"
+      for dependency in "${dependency_list[@]}"; do
+        dependency=${dependency//[[:space:]]/}
+        if ! card_for "$dependency" >/dev/null; then
+          echo "$file: missing dependency $dependency" >&2
+          errors=1
+        fi
+      done
+    fi
+  done < <(find "$tasks_dir" -maxdepth 1 -type f -name 'T-*.md' -print | sort)
+
+  [[ $errors == 0 ]] || return 1
+  echo "kanban: board is valid"
+}
+
+claim_card() {
+  [[ $# == 2 ]] || usage
+  local id=$1 owner=$2 file active_file
+  [[ $owner =~ ^[A-Za-z0-9._/-]+$ && $owner != unassigned ]] || {
+    echo "kanban: owner must be a short agent name" >&2
+    exit 1
+  }
+  acquire_lock
+  file=$(card_for "$id")
+  [[ $(field "$file" status) == ready ]] || {
+    echo "kanban: $id is not ready" >&2
+    exit 1
+  }
+  dependencies_done "$file" || {
+    echo "kanban: $id has unfinished dependencies" >&2
+    exit 1
+  }
+  while IFS= read -r active_file; do
+    if [[ $(field "$active_file" status) == in_progress && $(field "$active_file" owner) == "$owner" ]]; then
+      echo "kanban: $owner already owns $(field "$active_file" id)" >&2
+      exit 1
+    fi
+  done < <(find "$tasks_dir" -maxdepth 1 -type f -name 'T-*.md' -print)
+  replace_field "$file" owner "$owner"
+  replace_field "$file" status in_progress
+  echo "kanban: $owner claimed $id"
+}
+
+move_card() {
+  [[ $# == 2 ]] || usage
+  local id=$1 new_status=$2 file current_status owner
+  [[ $new_status =~ ^(backlog|ready|in_progress|blocked|done)$ ]] || {
+    echo "kanban: invalid status $new_status" >&2
+    exit 1
+  }
+  [[ $new_status != in_progress ]] || {
+    echo "kanban: use 'claim' to start a card" >&2
+    exit 1
+  }
+  acquire_lock
+  file=$(card_for "$id")
+  current_status=$(field "$file" status)
+  owner=$(field "$file" owner)
+  if [[ $new_status == blocked && $current_status != in_progress ]]; then
+    echo "kanban: only in_progress cards can be blocked" >&2
+    exit 1
+  fi
+  if [[ $new_status == done && $current_status != in_progress ]]; then
+    echo "kanban: only in_progress cards can be completed" >&2
+    exit 1
+  fi
+  if [[ $new_status == backlog || $new_status == ready || $new_status == done ]]; then
+    replace_field "$file" owner unassigned
+  elif [[ $new_status == blocked && $owner == unassigned ]]; then
+    echo "kanban: blocked cards require their current owner" >&2
+    exit 1
+  fi
+  replace_field "$file" status "$new_status"
+  echo "kanban: moved $id from $current_status to $new_status"
+}
+
+mkdir -p "$tasks_dir"
+command=${1:-}
+shift || true
+case "$command" in
+  list) [[ $# == 0 ]] || usage; list_cards ;;
+  next) [[ $# == 0 ]] || usage; list_cards true ;;
+  check) [[ $# == 0 ]] || usage; check_cards ;;
+  claim) claim_card "$@" ;;
+  move) move_card "$@" ;;
+  *) usage ;;
+esac

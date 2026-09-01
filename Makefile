@@ -7,10 +7,16 @@ COMPOSE ?= docker compose
 
 .DEFAULT_GOAL := help
 
-.PHONY: help
+.PHONY: help tasks check-tasks
 help: ## List targets
 	@grep -hE '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
 	  | awk 'BEGIN{FS=":.*?## "}{printf "  %-22s %s\n", $$1, $$2}'
+
+tasks: ## Show the agent task board
+	./scripts/kanban list
+
+check-tasks: ## Validate agent task metadata and dependencies
+	./scripts/kanban check
 
 # --- proto ------------------------------------------------------------------
 

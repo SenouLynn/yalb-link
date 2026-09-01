@@ -89,6 +89,7 @@ as old — which is what it is.
 make test                        # Go and TypeScript tests
 make lint                        # golangci-lint and eslint
 make bazel-test                  # hermetic checkpoint
+make tasks                       # agent task board and current ownership
 docker compose --profile ui up   # SITL, backend, and the flight display
 ```
 
