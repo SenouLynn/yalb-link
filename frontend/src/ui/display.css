@@ -232,6 +232,10 @@ body {
 
 /* --- map ---------------------------------------------------------------- */
 
+.map-shell {
+  position: relative;
+}
+
 .map-panel {
   width: 100%;
   height: clamp(18rem, 48vw, 30rem);
@@ -240,6 +244,22 @@ body {
   background: var(--panel-deep);
   border: 1px solid var(--bezel);
   border-radius: var(--radius);
+}
+
+.trajectory-key {
+  position: absolute;
+  z-index: 1;
+  top: 0.75rem;
+  left: 0.75rem;
+  padding: 0.3rem 0.5rem;
+  color: var(--amber);
+  background: rgb(13 16 19 / 88%);
+  border: 1px solid var(--bezel);
+  border-radius: 0.25rem;
+  font: 600 0.72rem/1 var(--mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  pointer-events: none;
 }
 
 .vehicle-marker {

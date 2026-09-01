@@ -6,17 +6,22 @@ import { useEffect, useRef } from 'react';
 
 import type { GeoPoint } from '@/logic/geoTrack';
 import type { PositionResult } from '@/logic/position';
+import type { GeoCoordinate } from '@/logic/trajectory';
 
 import { DEFAULT_BASEMAP, type TileSource } from './tileSource';
 
 export interface MapPanelProps {
   position: PositionResult | null;
   track: GeoPoint[];
+  /** Five-second prediction; empty means the inputs are unavailable or stale. */
+  trajectory?: GeoCoordinate[];
   tileSource?: TileSource;
 }
 
 const TRACK_SOURCE = 'track';
 const TRACK_LAYER = 'track-line';
+const TRAJECTORY_SOURCE = 'trajectory';
+const TRAJECTORY_LAYER = 'trajectory-line';
 
 /** The single coordinate-order flip: this codebase is lat-first, MapLibre is lng-first. */
 export function toLngLat(latDeg: number, lonDeg: number): [number, number] {
@@ -42,25 +47,43 @@ function buildStyle(tileSource: TileSource): maplibregl.StyleSpecification {
   };
 }
 
-function trackFeature(track: GeoPoint[]) {
+function lineFeature(points: GeoCoordinate[]) {
   return {
     type: 'Feature' as const,
     properties: {},
     geometry: {
       type: 'LineString' as const,
-      coordinates: track.map((point) => toLngLat(point.latDeg, point.lonDeg)),
+      coordinates: points.map((point) => toLngLat(point.latDeg, point.lonDeg)),
     },
   };
 }
 
-function addTrackLayer(map: maplibregl.Map, track: GeoPoint[]): void {
-  map.addSource(TRACK_SOURCE, { type: 'geojson', data: trackFeature(track) });
+function addFlightLayers(
+  map: maplibregl.Map,
+  track: GeoPoint[],
+  trajectory: GeoCoordinate[],
+): void {
+  map.addSource(TRACK_SOURCE, { type: 'geojson', data: lineFeature(track) });
   map.addLayer({
     id: TRACK_LAYER,
     type: 'line',
     source: TRACK_SOURCE,
     layout: { 'line-cap': 'round', 'line-join': 'round' },
     paint: { 'line-color': '#74d7ff', 'line-width': 2.5, 'line-opacity': 0.9 },
+  });
+
+  map.addSource(TRAJECTORY_SOURCE, { type: 'geojson', data: lineFeature(trajectory) });
+  map.addLayer({
+    id: TRAJECTORY_LAYER,
+    type: 'line',
+    source: TRAJECTORY_SOURCE,
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: {
+      'line-color': '#d9a441',
+      'line-width': 3,
+      'line-opacity': 0.95,
+      'line-dasharray': [2, 2],
+    },
   });
 }
 
@@ -73,15 +96,22 @@ function createVehicleMarkerElement(): HTMLElement {
   return element;
 }
 
-export function MapPanel({ position, track, tileSource = DEFAULT_BASEMAP }: MapPanelProps) {
+export function MapPanel({
+  position,
+  track,
+  trajectory = [],
+  tileSource = DEFAULT_BASEMAP,
+}: MapPanelProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const loadedRef = useRef(false);
   const centredRef = useRef(false);
   const trackRef = useRef(track);
+  const trajectoryRef = useRef(trajectory);
 
   trackRef.current = track;
+  trajectoryRef.current = trajectory;
 
   useEffect(() => {
     if (containerRef.current === null) {
@@ -99,7 +129,7 @@ export function MapPanel({ position, track, tileSource = DEFAULT_BASEMAP }: MapP
 
     map.on('load', () => {
       loadedRef.current = true;
-      addTrackLayer(map, trackRef.current);
+      addFlightLayers(map, trackRef.current, trajectoryRef.current);
     });
 
     const observer = new ResizeObserver(() => map.resize());
@@ -126,7 +156,7 @@ export function MapPanel({ position, track, tileSource = DEFAULT_BASEMAP }: MapP
     void map.setStyle(buildStyle(tileSource));
     void map.once('styledata', () => {
       if (map.getSource(TRACK_SOURCE) === undefined) {
-        addTrackLayer(map, trackRef.current);
+        addFlightLayers(map, trackRef.current, trajectoryRef.current);
       }
     });
   }, [tileSource]);
@@ -166,9 +196,22 @@ export function MapPanel({ position, track, tileSource = DEFAULT_BASEMAP }: MapP
     const source = mapRef.current?.getSource<maplibregl.GeoJSONSource>(TRACK_SOURCE);
 
     if (loadedRef.current && source !== undefined) {
-      source.setData(trackFeature(track));
+      source.setData(lineFeature(track));
     }
   }, [track]);
 
-  return <div ref={containerRef} className="map-panel" aria-label="Vehicle position map" />;
+  useEffect(() => {
+    const source = mapRef.current?.getSource<maplibregl.GeoJSONSource>(TRAJECTORY_SOURCE);
+
+    if (loadedRef.current && source !== undefined) {
+      source.setData(lineFeature(trajectory));
+    }
+  }, [trajectory]);
+
+  return (
+    <div className="map-shell">
+      <div ref={containerRef} className="map-panel" aria-label="Vehicle position map" />
+      {trajectory.length > 1 ? <div className="trajectory-key">5 s prediction</div> : null}
+    </div>
+  );
 }

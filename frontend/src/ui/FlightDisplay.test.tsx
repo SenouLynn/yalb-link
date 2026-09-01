@@ -200,6 +200,10 @@ describe('FlightDisplay with a fully reporting vehicle', () => {
     expect(html).toContain('aria-label="Vehicle position map"');
   });
 
+  it('labels a live short-horizon prediction separately from the flown track', () => {
+    expect(html).toContain('5 s prediction');
+  });
+
   it('renders no unavailable markers when everything is reporting', () => {
     expect(html).not.toContain(NO_VALUE);
   });
@@ -253,6 +257,7 @@ describe('FlightDisplay staleness', () => {
     expect(html).toContain('Attitude unavailable');
     expect(html).not.toContain('3D');
     expect(html).not.toContain('>OK<');
+    expect(html).not.toContain('5 s prediction');
   });
 
   it('leaves fresh readings unmarked', () => {
@@ -272,6 +277,18 @@ describe('FlightDisplay staleness', () => {
           },
           T0 + 5_000,
         ),
+        telemetry(
+          {
+            case: 'globalPosition',
+            value: create(GlobalPositionSchema, {
+              latDeg: 37.775,
+              lonDeg: -122.4193,
+              altRelativeM: 26,
+              altMslM: 133.2,
+            }),
+          },
+          T0 + 5_000,
+        ),
       ),
       T0 + 5_100,
     );
@@ -280,6 +297,9 @@ describe('FlightDisplay staleness', () => {
     expect(html).toContain('provenance--stale');
     expect(html).toContain('6.1');
     expect(html).toContain('095');
+    // Current heading and ground speed still support a straight prediction;
+    // stale attitude cannot keep an old turn on screen.
+    expect(html).toContain('5 s prediction');
   });
 });
 

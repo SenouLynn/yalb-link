@@ -198,6 +198,11 @@ exists. Executable artifacts are authoritative if this file drifts.
 - `frontend/src/map/MapPanel.tsx` is the renderer boundary. UI components pass
   plain position, track, and tile-source data; MapLibre types do not leak into
   fleet or display state.
+- The map's dashed amber line is a five-second CTRV prediction, not a commanded
+  route. It uses only display-approved fresh position, heading, and ground
+  velocity. Fresh attitude adds curvature; absent or stale attitude falls back
+  to a straight path, while absent or stale position, heading, or velocity
+  removes the prediction. No stall-speed value is assumed.
 - Live SSE is the default. `?source=mock` reaches fixtures and
   `?source=replay&recording=<id>` reaches a recording; both are opt-in, and the
   Source chip names them in amber. The rule runs both ways — a page asked for a
@@ -236,8 +241,8 @@ exists. Executable artifacts are authoritative if this file drifts.
 - The UI has instruments, a single-selected-vehicle map, and recording replay,
   but no mission editor or telemetry inspector. Map imagery is fetched directly by the
   browser from a public tile host, an external network dependency beyond the
-  localhost/SITL/backend path. The local tile-source seam is not wired into
-  the UI yet.
+  localhost/SITL/backend path. Local/offline imagery and future 3D tiles are
+  deferred; no tile storage or serving architecture has been selected.
 - Vitest runs without a DOM or WebGL context, so it covers map prop wiring and
   the pure track fold but not MapLibre's canvas lifecycle. Live browser
   acceptance remains a manual/CI-capable gate.

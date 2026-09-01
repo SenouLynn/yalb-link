@@ -36,7 +36,8 @@ The repository currently has:
   `GET /api/recordings/{id}/events`;
 - a fleet-aware React flight display — artificial horizon, heading tape,
   altitude with its datum, speed, climb, power, link health, and a live
-  MapLibre position/track map — that also
+  MapLibre position/track map with a freshness-gated five-second prediction —
+  that also
   runs from deterministic fixtures at `?source=mock` and replays a recorded
   flight at `?source=replay&recording=<id>`, with pause, scrub, and speed;
 - pure TypeScript attitude, heading, position, battery, track, freshness, and
@@ -60,9 +61,14 @@ No project license has been selected or committed.
 
 ### Next demonstrable outcome
 
-Serving map imagery through the local tile-source seam rather than the public
-tile host, removing the display's only dependency on a network beyond
-localhost, SITL, and the backend.
+A live SITL/browser acceptance run of the predicted trajectory for Copter and
+Plane, including its absent- and stale-data posture. The trajectory is a
+read-only browser projection of telemetry already received; it does not command
+the vehicle.
+
+Local/offline imagery and future 3D tile support are deliberately deferred. The
+current public raster basemap remains a prototyping dependency; no tile storage
+or serving architecture has been selected.
 
 Operator authentication is deliberately deferred rather than pending. The system
 runs in a trusted local environment with one operator, so a network identity

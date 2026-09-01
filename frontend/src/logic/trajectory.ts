@@ -13,6 +13,12 @@ export interface EnuOffset {
   eastM: number;
 }
 
+/** A map coordinate. Kept free of renderer-specific types. */
+export interface GeoCoordinate {
+  latDeg: number;
+  lonDeg: number;
+}
+
 /** Seconds of prediction. */
 export const HORIZON_S = 5;
 
@@ -21,6 +27,8 @@ export const TRAJECTORY_POINTS = 10;
 
 const GRAVITY_MPS2 = 9.80665;
 const DEG_TO_RAD = Math.PI / 180;
+const RAD_TO_DEG = 180 / Math.PI;
+const EARTH_RADIUS_M = 6_371_008.8;
 
 /** Below this yaw rate the arc is indistinguishable from a straight line. */
 const STRAIGHT_LINE_YAW_RATE = 1e-4;
@@ -32,7 +40,7 @@ const STRAIGHT_LINE_YAW_RATE = 1e-4;
  */
 export function resolvePredictiveTrajectory(
   sample: TelemetrySample,
-  stallSpeedMps: number,
+  stallSpeedMps?: number,
 ): EnuOffset[] {
   const heading = resolveHeading(sample);
 
@@ -55,8 +63,40 @@ export function resolvePredictiveTrajectory(
   return integrate(heading.headingDeg * DEG_TO_RAD, speed, yawRateRadS);
 }
 
+/**
+ * Places a short local prediction on the map.
+ *
+ * This local tangent-plane approximation is intentionally limited to the
+ * five-second horizon. At a pole longitude is undefined, so no path is
+ * returned rather than inventing one.
+ */
+export function projectTrajectoryToGeo(
+  origin: GeoCoordinate,
+  offsets: EnuOffset[],
+): GeoCoordinate[] {
+  if (offsets.length === 0) {
+    return [];
+  }
+
+  const originLatRad = origin.latDeg * DEG_TO_RAD;
+  const longitudeScale = Math.cos(originLatRad);
+
+  if (Math.abs(longitudeScale) < 1e-6) {
+    return [];
+  }
+
+  return [
+    origin,
+    ...offsets.map((offset) => ({
+      latDeg: origin.latDeg + (offset.northM / EARTH_RADIUS_M) * RAD_TO_DEG,
+      lonDeg:
+        origin.lonDeg + (offset.eastM / (EARTH_RADIUS_M * longitudeScale)) * RAD_TO_DEG,
+    })),
+  ];
+}
+
 /** Resolves propagation speed, applying the stall floor to measured airspeed. */
-function resolveSpeed(sample: TelemetrySample, stallSpeedMps: number): number | null {
+function resolveSpeed(sample: TelemetrySample, stallSpeedMps?: number): number | null {
   const { airspeedMps } = sample;
 
   if (isNum(airspeedMps) && isNum(stallSpeedMps)) {

@@ -91,6 +91,11 @@ func TestSizeLimitClosesAtCommittedBatchBoundary(t *testing.T) {
 func TestDurationLimitDoesNotRequireAnotherEvent(t *testing.T) {
 	durationElapsed := make(chan time.Time, 1)
 	store := newTestStore(t, func(cfg *Config) {
+		// The injected duration timer must not also drive the independent
+		// retention sweep. time.After returns a distinct channel per timer;
+		// returning this one channel for both made either select case consume
+		// the single test signal nondeterministically.
+		cfg.SweepInterval = -1
 		cfg.After = func(time.Duration) <-chan time.Time { return durationElapsed }
 	})
 	started, err := store.StartRecording(context.Background(), "idle flight")
@@ -99,11 +104,22 @@ func TestDurationLimitDoesNotRequireAnotherEvent(t *testing.T) {
 	}
 	durationElapsed <- time.Now()
 
+	// Observe the in-memory lifecycle transition, then assert persisted state
+	// once rather than turning database polling into part of this timer test.
 	waitFor(t, func() bool {
-		listed, listErr := store.ListRecordings(context.Background())
-		return listErr == nil && len(listed) == 1 && listed[0].ID == started.ID &&
-			listed[0].Status == "limit_reached" && listed[0].StopReason == "duration_limit"
+		store.mu.Lock()
+		defer store.mu.Unlock()
+		return store.current == nil
 	})
+
+	listed, err := store.ListRecordings(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(listed) != 1 || listed[0].ID != started.ID ||
+		listed[0].Status != "limit_reached" || listed[0].StopReason != "duration_limit" {
+		t.Fatalf("recording after duration limit = %+v", listed)
+	}
 }
 
 func TestPublishNeverBlocksWhenQueueIsFull(t *testing.T) {

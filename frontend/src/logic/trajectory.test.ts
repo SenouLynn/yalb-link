@@ -5,6 +5,7 @@ import {
   HORIZON_S,
   TRAJECTORY_POINTS,
   type EnuOffset,
+  projectTrajectoryToGeo,
   resolvePredictiveTrajectory,
 } from './trajectory';
 import { baseSample } from './testing';
@@ -69,6 +70,14 @@ describe('resolvePredictiveTrajectory', () => {
     expect(lastPoint(points)?.eastM).toBeCloseTo(0, 6);
   });
 
+  it('uses ground velocity when no trustworthy stall speed is configured', () => {
+    const points = resolvePredictiveTrajectory(
+      baseSample({ airspeedMps: 1, groundspeedMps: 10, headingDeg: 0, rollRad: 0 }),
+    );
+
+    expect(lastPoint(points)?.northM).toBeCloseTo(10 * HORIZON_S, 6);
+  });
+
   it('curves the track when banked', () => {
     const banked = resolvePredictiveTrajectory(
       baseSample({ groundspeedMps: 20, headingDeg: 0, rollRad: 0.5 }),
@@ -96,5 +105,25 @@ describe('resolvePredictiveTrajectory', () => {
         expect(Number.isFinite(point.eastM)).toBe(true);
       }
     }
+  });
+});
+
+describe('projectTrajectoryToGeo', () => {
+  it('places north/east offsets relative to the current position', () => {
+    const points = projectTrajectoryToGeo(
+      { latDeg: 47.6062, lonDeg: -122.3321 },
+      [{ northM: 100, eastM: 100 }],
+    );
+
+    expect(points).toHaveLength(2);
+    expect(points[0]).toEqual({ latDeg: 47.6062, lonDeg: -122.3321 });
+    expect(points[1]?.latDeg).toBeGreaterThan(47.6062);
+    expect(points[1]?.lonDeg).toBeGreaterThan(-122.3321);
+  });
+
+  it('does not invent longitude at a pole', () => {
+    expect(
+      projectTrajectoryToGeo({ latDeg: 90, lonDeg: 0 }, [{ northM: 0, eastM: 10 }]),
+    ).toEqual([]);
   });
 });

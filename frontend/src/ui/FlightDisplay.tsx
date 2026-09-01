@@ -1,6 +1,12 @@
 /** The assembled mini flight display for one selected vehicle. */
 
 import type { FleetState, VehicleKey } from '@/fleet/state';
+import type { TelemetrySample } from '@/logic/sample';
+import {
+  projectTrajectoryToGeo,
+  resolvePredictiveTrajectory,
+  type GeoCoordinate,
+} from '@/logic/trajectory';
 import { MapPanel } from '@/map/MapPanel';
 import type { ReplayEventSource } from '@/stream/replay';
 import type { StreamSource } from '@/stream/select';
@@ -105,9 +111,54 @@ export function FlightDisplay({
       <MapPanel
         position={hasDisplayValue(readings.position) ? readings.position.value : null}
         track={view.track}
+        trajectory={displayTrajectory(readings, view.sample)}
       />
     </div>
   );
+}
+
+/**
+ * Builds a read-only prediction exclusively from display-approved live values.
+ * Ground speed is deliberate: no vehicle-specific stall speed is configured.
+ * Stale attitude drops curvature but cannot keep an old turn on screen.
+ */
+function displayTrajectory(
+  readings: ReturnType<typeof readFlight>,
+  sample: TelemetrySample,
+): GeoCoordinate[] {
+  if (
+    !hasDisplayValue(readings.position) ||
+    !hasDisplayValue(readings.heading) ||
+    !hasDisplayValue(readings.flightPath)
+  ) {
+    return [];
+  }
+
+  const liveAttitude = hasDisplayValue(readings.attitude);
+  const trajectorySample: TelemetrySample = {
+    sourceMessage: 'DISPLAY_TRAJECTORY',
+    receivedAtMs: sample.receivedAtMs,
+    headingDeg: readings.heading.value.headingDeg,
+    groundspeedMps: readings.flightPath.value.groundSpeedMps,
+    ...(liveAttitude
+      ? {
+          rollRad: sample.rollRad,
+          pitchRad: sample.pitchRad,
+          pitchspeedRadS: sample.pitchspeedRadS,
+          yawspeedRadS: sample.yawspeedRadS,
+        }
+      : {}),
+  };
+
+  const offsets = resolvePredictiveTrajectory(trajectorySample);
+  const last = offsets[offsets.length - 1];
+
+  // A stationary vehicle has no visible future path.
+  if (last === undefined || Math.hypot(last.northM, last.eastM) < 0.01) {
+    return [];
+  }
+
+  return projectTrajectoryToGeo(readings.position.value, offsets);
 }
 
 /** Names the altitude datum explicitly; the two differ by field elevation. */
