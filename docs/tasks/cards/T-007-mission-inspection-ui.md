@@ -1,7 +1,7 @@
 ---
 id: T-007
 title: Show a downloaded mission in the flight display
-status: backlog
+status: done
 priority: 0
 owner: unassigned
 depends_on: T-004
@@ -33,17 +33,17 @@ the flown track or five-second prediction.
 
 ## Acceptance criteria
 
-- [ ] Mission loading is explicit and tied to the full selected vehicle
+- [x] Mission loading is explicit and tied to the full selected vehicle
       identity; switching vehicles cannot display the prior vehicle's mission.
-- [ ] Empty, loading, failed, and complete downloads are distinguishable and a
+- [x] Empty, loading, failed, and complete downloads are distinguishable and a
       failed refresh does not masquerade as a current snapshot.
-- [ ] Ordered items retain command, frame, parameters, coordinates, altitude,
+- [x] Ordered items retain command, frame, parameters, coordinates, altitude,
       and autocontinue values in an inspectable list.
-- [ ] Supported global positional items render as a route and numbered points
+- [x] Supported global positional items render as a route and numbered points
       styled distinctly from the live track and predicted trajectory.
-- [ ] Non-positional or unsupported-frame items remain visible in the list and
+- [x] Non-positional or unsupported-frame items remain visible in the list and
       are omitted from geometry with an explicit explanation.
-- [ ] A fresh `MISSION_CURRENT` highlights the active sequence; absent or stale
+- [x] A fresh `MISSION_CURRENT` highlights the active sequence; absent or stale
       mission state does not claim an active item.
 
 ## Verification
@@ -63,3 +63,18 @@ contract over HTTP.
 The mission line is commanded intent, unlike the amber prediction. Labels and
 styling must make that semantic difference visible without relying on color
 alone.
+
+Implementation notes:
+
+- Download state is keyed by the full `system_id:component_id`. A selection
+  mismatch projects immediately to the idle state, and both refresh start and
+  failure carry no snapshot, preventing stale mission display.
+- The list preserves backend order and exposes every item field. Global/global
+  relative positional navigation commands become an ice-blue solid route with
+  numbered points and a “Commanded mission” key. Unsupported frames and
+  non-positional commands stay in the list with a per-item “Not mapped” reason.
+- `MISSION_CURRENT.seq` is projected into vehicle state, but highlights only
+  while that message family remains inside the normal telemetry freshness TTL.
+- Verified with `pnpm typecheck`, `pnpm lint`, and the full `pnpm vitest run`
+  suite (27 files, 265 tests). MapLibre browser automation remains out of scope
+  as specified; geometry and rendered presentation are covered deterministically.

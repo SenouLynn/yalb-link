@@ -57,6 +57,7 @@ export interface TelemetrySample {
   systemStatusRemainingPct?: number | undefined;
 
   ekfFlags?: number | undefined;
+  missionCurrentSeq?: number | undefined;
 
   /** Identity fields merged from HeartbeatState by the vehicle accumulator. */
   vehicleType?: number | undefined;
@@ -142,6 +143,13 @@ export function sampleFromEvent(
         systemStatusVoltageMv: payload.value.voltageBatteryMv,
         systemStatusCurrentCa: payload.value.currentBatteryCa,
         systemStatusRemainingPct: payload.value.batteryRemainingPct,
+      };
+
+    case 'missionCurrent':
+      return {
+        sourceMessage: 'MISSION_CURRENT',
+        receivedAtMs,
+        missionCurrentSeq: payload.value.seq,
       };
 
     case 'ekfStatusReport':

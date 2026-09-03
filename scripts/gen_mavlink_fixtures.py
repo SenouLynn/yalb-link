@@ -389,10 +389,46 @@ def gen_transactions():
         ),
         fields={
             "seq": 1, "frame": 6, "command": 16, "autocontinue": 1,
+            "target_system": 255, "target_component": 190,
             "x": LAT_E7, "y": LON_E7, "z": 50.0,
         },
         expected_proto={"x": LAT_DEG, "y": LON_DEG, "z": 50.0},
         note="x/y are degE7 ints but z is already float metres — only two of the three convert",
+    )
+
+    # Local-frame item: x/y are metres * 1e4, not degrees * 1e7. Same int32
+    # field, different scale, selected by frame — the conversion the codec must
+    # branch on rather than assume.
+    fixture(
+        "mission_item_int_local_v2", 73, "MISSION_ITEM_INT", mav2,
+        lambda m: m.mission_item_int_encode(
+            target_system=255, target_component=190,
+            seq=2,
+            frame=1,     # MAV_FRAME_LOCAL_NED
+            command=16,  # MAV_CMD_NAV_WAYPOINT
+            current=0, autocontinue=1,
+            param1=0.0, param2=0.0, param3=0.0, param4=0.0,
+            x=100000, y=-50000, z=3.0,
+        ),
+        fields={
+            "seq": 2, "frame": 1, "command": 16, "autocontinue": 1,
+            "target_system": 255, "target_component": 190,
+            "x": 100000, "y": -50000, "z": 3.0,
+        },
+        expected_proto={"x": 10.0, "y": -5.0, "z": 3.0},
+        note="local frame: x/y are metres * 1e4, so 100000 is 10 m — applying the "
+             "global 1e-7 degree scale here under-reports by 1000x",
+    )
+
+    # Addressed to another ground station: same vehicle, same mission type,
+    # distinguishable only by target.
+    fixture(
+        "mission_count_foreign_v2", 44, "MISSION_COUNT", mav2,
+        lambda m: m.mission_count_encode(
+            target_system=42, target_component=99, count=5,
+        ),
+        fields={"target_system": 42, "target_component": 99, "count": 5},
+        note="foreign MISSION_COUNT; a download must not settle on this",
     )
 
     fixture(
@@ -557,6 +593,17 @@ def gen_send():
             x=LAT_E7, y=LON_E7, z=50.0,
         ),
         fields={"seq": 1, "frame": 6, "command": 16, "x": LAT_E7, "y": LON_E7, "z": 50.0},
+    )
+
+    send_fixture(
+        "mission_request_list_out", 43, "MISSION_REQUEST_LIST",
+        lambda m: m.mission_request_list_encode(
+            target_system=1, target_component=1, mission_type=0,
+        ),
+        fields={"target_system": 1, "target_component": 1, "mission_type": 0},
+        note="Opens a download. mission_type is a MAVLink 2 extension field: "
+             "a v1 sender omits it and the receiver defaults to 0 (MISSION), "
+             "so the ordinary-mission case cannot distinguish the two.",
     )
 
     send_fixture(

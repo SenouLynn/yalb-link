@@ -2,11 +2,21 @@ syntax = "proto3";
 
 package gcs.v1;
 
+import "google/protobuf/timestamp.proto";
 import "gcs/v1/types.proto";
+import "gcs/v1/vehicle.proto";
 
 option go_package = "yalb.gcs/internal/gen/gcs/v1;gcsv1";
 
 // Inbound MAVLink mission transaction payloads currently decoded by the codec.
+//
+// Each carries target_system/target_component: the ground station the vehicle
+// addressed its response to. This is not a duplicate of the envelope's
+// vehicle_id, which says who sent the response. Two ground stations downloading
+// the same mission type from the same vehicle produce responses identical on the
+// envelope and distinguishable only by target, so a coordinator that cannot read
+// it cannot tell its own transfer from a foreign one. CommandAck carries the
+// same pair for the same reason.
 message MissionItem {
   reserved 1;
   uint32 seq = 2;
@@ -18,19 +28,59 @@ message MissionItem {
   float param2 = 8;
   float param3 = 9;
   float param4 = 10;
-  double x = 11; // latitude in degrees, or local x in metres
-  double y = 12; // longitude in degrees, or local y in metres
-  float z = 13;  // altitude or local z in metres
+  // x and y are normalised from a single int32 whose wire scale depends on
+  // frame: global frames carry degrees x 1e7, local and body frames carry
+  // metres x 1e4. Frames that are not positional at all (MAV_FRAME_MISSION,
+  // and any frame this build does not recognise) carry command parameters
+  // here, not coordinates, and are passed through unscaled.
+  double x = 11; // latitude in degrees, local x in metres, or a raw parameter
+  double y = 12; // longitude in degrees, local y in metres, or a raw parameter
+  float z = 13;  // altitude or local z in metres; already float on the wire
   MavMissionType mission_type = 14;
+  uint32 target_system = 15;
+  uint32 target_component = 16;
 }
 
 message MissionCount {
   uint32 count = 1;
   MavMissionType mission_type = 2;
+  uint32 target_system = 3;
+  uint32 target_component = 4;
 }
 
 message MissionAck {
   reserved 1;
   MavMissionResult result = 2;
   MavMissionType mission_type = 3;
+  uint32 target_system = 4;
+  uint32 target_component = 5;
+}
+
+// MissionSnapshot is one completed read-only mission download: everything a
+// vehicle reported for a single mission type, at one moment.
+//
+// A snapshot only ever describes a download that finished. Transfer progress
+// and failure are not represented here — a caller either has a snapshot or has
+// an error, never a half-filled one. That is what lets `items` be trusted as
+// the whole mission rather than as however much arrived before something broke.
+message MissionSnapshot {
+  // The full identity the download was addressed to. Component ID is part of
+  // it: components sharing a system ID hold separate missions.
+  VehicleId vehicle_id = 1;
+
+  MavMissionType mission_type = 2;
+
+  // Mission items in the vehicle's own sequence order. Order is the route, so
+  // consumers must not re-sort or de-duplicate.
+  //
+  // Empty means the vehicle completed the exchange and reported no items. That
+  // is an ordinary answer, not an error and not a missing snapshot: check
+  // observed_at, which is set on every completed download, to tell an empty
+  // mission from a message nobody filled in.
+  repeated MissionItem items = 3;
+
+  // When the download completed, from the GCS clock. Vehicles report no
+  // wall-clock time for a mission, so this is the only timestamp available and
+  // it dates the observation, not the mission.
+  google.protobuf.Timestamp observed_at = 4;
 }

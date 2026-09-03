@@ -1,0 +1,13 @@
+{
+  "comp_id": 1,
+  "fields": {
+    "count": 5,
+    "target_component": 99,
+    "target_system": 42
+  },
+  "message_id": 44,
+  "message_name": "MISSION_COUNT",
+  "note": "foreign MISSION_COUNT; a download must not settle on this",
+  "seq": 42,
+  "sys_id": 1
+}

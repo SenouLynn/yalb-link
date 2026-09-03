@@ -1,4 +1,4 @@
-load("@rules_go//go:def.bzl", "go_binary", "go_library")
+load("@rules_go//go:def.bzl", "go_binary", "go_library", "go_test")
 
 go_binary(
     name = "gcs",
@@ -16,10 +16,18 @@ go_library(
         "//internal/bridge",
         "//internal/codec",
         "//internal/command",
+        "//internal/mission",
         "//internal/recording",
         "//internal/routes",
         "//internal/stream",
         "@com_github_bluenviron_gomavlib_v3//:gomavlib",
         "@org_golang_x_sync//errgroup",
     ],
+)
+
+go_test(
+    name = "gcs_test",
+    srcs = ["main_test.go"],
+    embed = [":gcs_lib"],
+    deps = ["//internal/mission"],
 )

@@ -45,10 +45,17 @@ Conversions are asserted against each fixture's `expected_proto` block.
 | NORM-ALT-REL | GLOBAL_POSITION_INT.relative_alt | int32 mm | float metres | complete |
 | NORM-VEL | GLOBAL_POSITION_INT.vx/vy/vz | int16 cm/s | float m/s | complete |
 | NORM-GPS-ALT | GPS_RAW_INT.alt | int32 mm MSL | float metres MSL | complete |
-| NORM-MISSION-XY | MISSION_ITEM_INT.x/y | int32 degE7 | double degrees | complete |
+| NORM-MISSION-XY-GLOBAL | MISSION_ITEM_INT.x/y, global frames | int32 degE7 | double degrees | complete |
+| NORM-MISSION-XY-LOCAL | MISSION_ITEM_INT.x/y, local and body frames | int32 metres x 1e4 | double metres | complete |
+| NORM-MISSION-XY-NONPOSITIONAL | MISSION_ITEM_INT.x/y, MAV_FRAME_MISSION and unknown frames | int32 command parameter | **unchanged** | complete |
 | NORM-RETAINED | GLOBAL_POSITION_INT.hdg, GPS_RAW_INT.cog/vel | centidegrees, cm/s | **unchanged** | complete |
 
 `NORM-RETAINED` preserves wire units because 65535 is the unknown sentinel.
+
+The three `NORM-MISSION-XY-*` rows are one int32 pair whose scale is selected by
+`frame`, not three fields. Fixtures `mission_item_int_v2` and
+`mission_item_int_local_v2` pin the global and local cases against the same
+decoder.
 
 ## Send (Encode)
 
@@ -60,6 +67,7 @@ Encoders return payload messages; `Node.WriteTo` selects the known link.
 | SEND-PARAM-REQUEST-READ | PARAM_REQUEST_READ | 20 | Read one parameter | contracts/mavlink/param_request_read_out.bin | complete | index -1 = look up by name |
 | SEND-PARAM-REQUEST-LIST | PARAM_REQUEST_LIST | 21 | Request full parameter set | contracts/mavlink/param_request_list_out.bin | complete | |
 | SEND-PARAM-SET | PARAM_SET | 23 | Write one parameter | contracts/mavlink/param_set_out.bin | complete | |
+| SEND-MISSION-REQUEST-LIST | MISSION_REQUEST_LIST | 43 | Open a mission download | contracts/mavlink/mission_request_list_out.bin | complete | The only encoder that starts a download; mission_type is a v2 extension, trimmed from the wire when 0 |
 | SEND-MISSION-COUNT | MISSION_COUNT | 44 | Open a mission upload | contracts/mavlink/mission_count_out.bin | complete | |
 | SEND-MISSION-CLEAR-ALL | MISSION_CLEAR_ALL | 45 | Erase a mission | contracts/mavlink/mission_clear_all_out.bin | complete | Encoder only; no UI or service calls it |
 | SEND-MISSION-ACK | MISSION_ACK | 47 | Acknowledge a transfer | contracts/mavlink/mission_ack_out.bin | complete | |

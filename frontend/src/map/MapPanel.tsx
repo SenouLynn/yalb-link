@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import type { GeoPoint } from '@/logic/geoTrack';
 import type { PositionResult } from '@/logic/position';
 import type { GeoCoordinate } from '@/logic/trajectory';
+import type { MissionGeometry } from '@/mission/model';
 
 import { DEFAULT_BASEMAP, type TileSource } from './tileSource';
 
@@ -15,6 +16,7 @@ export interface MapPanelProps {
   track: GeoPoint[];
   /** Five-second prediction; empty means the inputs are unavailable or stale. */
   trajectory?: GeoCoordinate[];
+  mission?: MissionGeometry;
   tileSource?: TileSource;
 }
 
@@ -22,6 +24,7 @@ const TRACK_SOURCE = 'track';
 const TRACK_LAYER = 'track-line';
 const TRAJECTORY_SOURCE = 'trajectory';
 const TRAJECTORY_LAYER = 'trajectory-line';
+const MISSION_SOURCE = 'mission';
 
 /** The single coordinate-order flip: this codebase is lat-first, MapLibre is lng-first. */
 export function toLngLat(latDeg: number, lonDeg: number): [number, number] {
@@ -62,6 +65,7 @@ function addFlightLayers(
   map: maplibregl.Map,
   track: GeoPoint[],
   trajectory: GeoCoordinate[],
+  mission: MissionGeometry,
 ): void {
   map.addSource(TRACK_SOURCE, { type: 'geojson', data: lineFeature(track) });
   map.addLayer({
@@ -85,6 +89,19 @@ function addFlightLayers(
       'line-dasharray': [2, 2],
     },
   });
+
+  map.addSource(MISSION_SOURCE, { type: 'geojson', data: missionFeatures(mission) });
+  map.addLayer({ id: 'mission-line', type: 'line', source: MISSION_SOURCE, filter: ['==', '$type', 'LineString'], paint: { 'line-color': '#c7f0ff', 'line-width': 3 } });
+  map.addLayer({ id: 'mission-points', type: 'circle', source: MISSION_SOURCE, filter: ['==', '$type', 'Point'], paint: { 'circle-radius': 10, 'circle-color': '#14171c', 'circle-stroke-color': '#c7f0ff', 'circle-stroke-width': 2 } });
+  map.addLayer({ id: 'mission-labels', type: 'symbol', source: MISSION_SOURCE, filter: ['==', '$type', 'Point'], layout: { 'text-field': ['get', 'label'], 'text-size': 11 }, paint: { 'text-color': '#c7f0ff' } });
+}
+
+export function missionFeatures(mission: MissionGeometry) {
+  const coordinates = mission.points.map((point) => toLngLat(point.latDeg, point.lonDeg));
+  return { type: 'FeatureCollection' as const, features: [
+    { type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates } },
+    ...mission.points.map((point) => ({ type: 'Feature' as const, properties: { label: String(point.seq) }, geometry: { type: 'Point' as const, coordinates: toLngLat(point.latDeg, point.lonDeg) } })),
+  ] };
 }
 
 function createVehicleMarkerElement(): HTMLElement {
@@ -100,6 +117,7 @@ export function MapPanel({
   position,
   track,
   trajectory = [],
+  mission = { points: [], omitted: {} },
   tileSource = DEFAULT_BASEMAP,
 }: MapPanelProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -109,9 +127,11 @@ export function MapPanel({
   const centredRef = useRef(false);
   const trackRef = useRef(track);
   const trajectoryRef = useRef(trajectory);
+  const missionRef = useRef(mission);
 
   trackRef.current = track;
   trajectoryRef.current = trajectory;
+  missionRef.current = mission;
 
   useEffect(() => {
     if (containerRef.current === null) {
@@ -129,7 +149,7 @@ export function MapPanel({
 
     map.on('load', () => {
       loadedRef.current = true;
-      addFlightLayers(map, trackRef.current, trajectoryRef.current);
+      addFlightLayers(map, trackRef.current, trajectoryRef.current, missionRef.current);
     });
 
     const observer = new ResizeObserver(() => map.resize());
@@ -156,7 +176,7 @@ export function MapPanel({
     void map.setStyle(buildStyle(tileSource));
     void map.once('styledata', () => {
       if (map.getSource(TRACK_SOURCE) === undefined) {
-        addFlightLayers(map, trackRef.current, trajectoryRef.current);
+        addFlightLayers(map, trackRef.current, trajectoryRef.current, missionRef.current);
       }
     });
   }, [tileSource]);
@@ -208,10 +228,16 @@ export function MapPanel({
     }
   }, [trajectory]);
 
+  useEffect(() => {
+    const source = mapRef.current?.getSource<maplibregl.GeoJSONSource>(MISSION_SOURCE);
+    if (loadedRef.current && source !== undefined) source.setData(missionFeatures(mission));
+  }, [mission]);
+
   return (
     <div className="map-shell">
       <div ref={containerRef} className="map-panel" aria-label="Vehicle position map" />
       {trajectory.length > 1 ? <div className="trajectory-key">5 s prediction</div> : null}
+      {mission.points.length > 0 ? <div className="mission-key">Commanded mission</div> : null}
     </div>
   );
 }

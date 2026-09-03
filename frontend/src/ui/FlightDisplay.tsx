@@ -8,6 +8,10 @@ import {
   type GeoCoordinate,
 } from '@/logic/trajectory';
 import { MapPanel } from '@/map/MapPanel';
+import { downloadMission } from '@/mission/client';
+import { MissionPanel } from '@/mission/MissionPanel';
+import { activeMissionSequence, missionGeometry } from '@/mission/model';
+import { emptyMissionState, visibleMissionState, type MissionViewState } from '@/mission/state';
 import type { ReplayEventSource } from '@/stream/replay';
 import type { StreamSource } from '@/stream/select';
 
@@ -20,6 +24,7 @@ import { Readout } from './Readout';
 import { ReplayControls } from './ReplayControls';
 import { StatusBar } from './StatusBar';
 import { VehicleSelector } from './VehicleSelector';
+import { useEffect, useRef, useState } from 'react';
 
 export interface FlightDisplayProps {
   fleet: FleetState;
@@ -47,6 +52,9 @@ export function FlightDisplay({
   }
 
   const readings = readFlight(view, nowMs);
+  const mission = useMission(view.key, view.sysId, view.compId);
+  const geometry = missionGeometry(mission.snapshot);
+  const activeSeq = activeMissionSequence(view, nowMs);
   const { position, flightPath, battery } = readings;
 
   const altitude = hasDisplayValue(position) ? position.value : null;
@@ -112,9 +120,38 @@ export function FlightDisplay({
         position={hasDisplayValue(readings.position) ? readings.position.value : null}
         track={view.track}
         trajectory={displayTrajectory(readings, view.sample)}
+        mission={geometry}
       />
+
+      <MissionPanel {...mission} geometry={geometry} activeSeq={activeSeq} />
     </div>
   );
+}
+
+function useMission(key: VehicleKey, sysId: number, compId: number) {
+  const [state, setState] = useState<MissionViewState>(() => emptyMissionState(key));
+  const request = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    request.current?.abort();
+    setState(emptyMissionState(key));
+    return () => request.current?.abort();
+  }, [key]);
+
+  const visible = visibleMissionState(state, key);
+  const onDownload = () => {
+    request.current?.abort();
+    const controller = new AbortController();
+    request.current = controller;
+    setState({ key, status: 'loading', snapshot: null, error: null });
+    void downloadMission(sysId, compId, controller.signal).then((snapshot) => {
+      if (request.current === controller) setState({ key, status: 'complete', snapshot, error: null });
+    }).catch((error: unknown) => {
+      if (request.current !== controller || controller.signal.aborted) return;
+      setState({ key, status: 'error', snapshot: null, error: error instanceof Error ? error.message : 'Mission download failed' });
+    });
+  };
+  return { ...visible, onDownload };
 }
 
 /**

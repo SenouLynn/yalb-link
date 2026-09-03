@@ -9,6 +9,7 @@ package gcsv1
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -22,23 +23,38 @@ const (
 )
 
 // Inbound MAVLink mission transaction payloads currently decoded by the codec.
+//
+// Each carries target_system/target_component: the ground station the vehicle
+// addressed its response to. This is not a duplicate of the envelope's
+// vehicle_id, which says who sent the response. Two ground stations downloading
+// the same mission type from the same vehicle produce responses identical on the
+// envelope and distinguishable only by target, so a coordinator that cannot read
+// it cannot tell its own transfer from a foreign one. CommandAck carries the
+// same pair for the same reason.
 type MissionItem struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Seq           uint32                 `protobuf:"varint,2,opt,name=seq,proto3" json:"seq,omitempty"`
-	Frame         MavFrame               `protobuf:"varint,3,opt,name=frame,proto3,enum=gcs.v1.MavFrame" json:"frame,omitempty"`
-	Command       MavCmd                 `protobuf:"varint,4,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
-	Current       bool                   `protobuf:"varint,5,opt,name=current,proto3" json:"current,omitempty"`
-	Autocontinue  bool                   `protobuf:"varint,6,opt,name=autocontinue,proto3" json:"autocontinue,omitempty"`
-	Param1        float32                `protobuf:"fixed32,7,opt,name=param1,proto3" json:"param1,omitempty"`
-	Param2        float32                `protobuf:"fixed32,8,opt,name=param2,proto3" json:"param2,omitempty"`
-	Param3        float32                `protobuf:"fixed32,9,opt,name=param3,proto3" json:"param3,omitempty"`
-	Param4        float32                `protobuf:"fixed32,10,opt,name=param4,proto3" json:"param4,omitempty"`
-	X             float64                `protobuf:"fixed64,11,opt,name=x,proto3" json:"x,omitempty"` // latitude in degrees, or local x in metres
-	Y             float64                `protobuf:"fixed64,12,opt,name=y,proto3" json:"y,omitempty"` // longitude in degrees, or local y in metres
-	Z             float32                `protobuf:"fixed32,13,opt,name=z,proto3" json:"z,omitempty"` // altitude or local z in metres
-	MissionType   MavMissionType         `protobuf:"varint,14,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state        protoimpl.MessageState `protogen:"open.v1"`
+	Seq          uint32                 `protobuf:"varint,2,opt,name=seq,proto3" json:"seq,omitempty"`
+	Frame        MavFrame               `protobuf:"varint,3,opt,name=frame,proto3,enum=gcs.v1.MavFrame" json:"frame,omitempty"`
+	Command      MavCmd                 `protobuf:"varint,4,opt,name=command,proto3,enum=gcs.v1.MavCmd" json:"command,omitempty"`
+	Current      bool                   `protobuf:"varint,5,opt,name=current,proto3" json:"current,omitempty"`
+	Autocontinue bool                   `protobuf:"varint,6,opt,name=autocontinue,proto3" json:"autocontinue,omitempty"`
+	Param1       float32                `protobuf:"fixed32,7,opt,name=param1,proto3" json:"param1,omitempty"`
+	Param2       float32                `protobuf:"fixed32,8,opt,name=param2,proto3" json:"param2,omitempty"`
+	Param3       float32                `protobuf:"fixed32,9,opt,name=param3,proto3" json:"param3,omitempty"`
+	Param4       float32                `protobuf:"fixed32,10,opt,name=param4,proto3" json:"param4,omitempty"`
+	// x and y are normalised from a single int32 whose wire scale depends on
+	// frame: global frames carry degrees x 1e7, local and body frames carry
+	// metres x 1e4. Frames that are not positional at all (MAV_FRAME_MISSION,
+	// and any frame this build does not recognise) carry command parameters
+	// here, not coordinates, and are passed through unscaled.
+	X               float64        `protobuf:"fixed64,11,opt,name=x,proto3" json:"x,omitempty"` // latitude in degrees, local x in metres, or a raw parameter
+	Y               float64        `protobuf:"fixed64,12,opt,name=y,proto3" json:"y,omitempty"` // longitude in degrees, local y in metres, or a raw parameter
+	Z               float32        `protobuf:"fixed32,13,opt,name=z,proto3" json:"z,omitempty"` // altitude or local z in metres; already float on the wire
+	MissionType     MavMissionType `protobuf:"varint,14,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
+	TargetSystem    uint32         `protobuf:"varint,15,opt,name=target_system,json=targetSystem,proto3" json:"target_system,omitempty"`
+	TargetComponent uint32         `protobuf:"varint,16,opt,name=target_component,json=targetComponent,proto3" json:"target_component,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MissionItem) Reset() {
@@ -162,12 +178,28 @@ func (x *MissionItem) GetMissionType() MavMissionType {
 	return MavMissionType_MAV_MISSION_TYPE_MISSION
 }
 
+func (x *MissionItem) GetTargetSystem() uint32 {
+	if x != nil {
+		return x.TargetSystem
+	}
+	return 0
+}
+
+func (x *MissionItem) GetTargetComponent() uint32 {
+	if x != nil {
+		return x.TargetComponent
+	}
+	return 0
+}
+
 type MissionCount struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Count         uint32                 `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
-	MissionType   MavMissionType         `protobuf:"varint,2,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Count           uint32                 `protobuf:"varint,1,opt,name=count,proto3" json:"count,omitempty"`
+	MissionType     MavMissionType         `protobuf:"varint,2,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
+	TargetSystem    uint32                 `protobuf:"varint,3,opt,name=target_system,json=targetSystem,proto3" json:"target_system,omitempty"`
+	TargetComponent uint32                 `protobuf:"varint,4,opt,name=target_component,json=targetComponent,proto3" json:"target_component,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MissionCount) Reset() {
@@ -214,12 +246,28 @@ func (x *MissionCount) GetMissionType() MavMissionType {
 	return MavMissionType_MAV_MISSION_TYPE_MISSION
 }
 
+func (x *MissionCount) GetTargetSystem() uint32 {
+	if x != nil {
+		return x.TargetSystem
+	}
+	return 0
+}
+
+func (x *MissionCount) GetTargetComponent() uint32 {
+	if x != nil {
+		return x.TargetComponent
+	}
+	return 0
+}
+
 type MissionAck struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Result        MavMissionResult       `protobuf:"varint,2,opt,name=result,proto3,enum=gcs.v1.MavMissionResult" json:"result,omitempty"`
-	MissionType   MavMissionType         `protobuf:"varint,3,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state           protoimpl.MessageState `protogen:"open.v1"`
+	Result          MavMissionResult       `protobuf:"varint,2,opt,name=result,proto3,enum=gcs.v1.MavMissionResult" json:"result,omitempty"`
+	MissionType     MavMissionType         `protobuf:"varint,3,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
+	TargetSystem    uint32                 `protobuf:"varint,4,opt,name=target_system,json=targetSystem,proto3" json:"target_system,omitempty"`
+	TargetComponent uint32                 `protobuf:"varint,5,opt,name=target_component,json=targetComponent,proto3" json:"target_component,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *MissionAck) Reset() {
@@ -266,11 +314,112 @@ func (x *MissionAck) GetMissionType() MavMissionType {
 	return MavMissionType_MAV_MISSION_TYPE_MISSION
 }
 
+func (x *MissionAck) GetTargetSystem() uint32 {
+	if x != nil {
+		return x.TargetSystem
+	}
+	return 0
+}
+
+func (x *MissionAck) GetTargetComponent() uint32 {
+	if x != nil {
+		return x.TargetComponent
+	}
+	return 0
+}
+
+// MissionSnapshot is one completed read-only mission download: everything a
+// vehicle reported for a single mission type, at one moment.
+//
+// A snapshot only ever describes a download that finished. Transfer progress
+// and failure are not represented here — a caller either has a snapshot or has
+// an error, never a half-filled one. That is what lets `items` be trusted as
+// the whole mission rather than as however much arrived before something broke.
+type MissionSnapshot struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The full identity the download was addressed to. Component ID is part of
+	// it: components sharing a system ID hold separate missions.
+	VehicleId   *VehicleId     `protobuf:"bytes,1,opt,name=vehicle_id,json=vehicleId,proto3" json:"vehicle_id,omitempty"`
+	MissionType MavMissionType `protobuf:"varint,2,opt,name=mission_type,json=missionType,proto3,enum=gcs.v1.MavMissionType" json:"mission_type,omitempty"`
+	// Mission items in the vehicle's own sequence order. Order is the route, so
+	// consumers must not re-sort or de-duplicate.
+	//
+	// Empty means the vehicle completed the exchange and reported no items. That
+	// is an ordinary answer, not an error and not a missing snapshot: check
+	// observed_at, which is set on every completed download, to tell an empty
+	// mission from a message nobody filled in.
+	Items []*MissionItem `protobuf:"bytes,3,rep,name=items,proto3" json:"items,omitempty"`
+	// When the download completed, from the GCS clock. Vehicles report no
+	// wall-clock time for a mission, so this is the only timestamp available and
+	// it dates the observation, not the mission.
+	ObservedAt    *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=observed_at,json=observedAt,proto3" json:"observed_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MissionSnapshot) Reset() {
+	*x = MissionSnapshot{}
+	mi := &file_gcs_v1_missions_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MissionSnapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MissionSnapshot) ProtoMessage() {}
+
+func (x *MissionSnapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_gcs_v1_missions_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MissionSnapshot.ProtoReflect.Descriptor instead.
+func (*MissionSnapshot) Descriptor() ([]byte, []int) {
+	return file_gcs_v1_missions_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *MissionSnapshot) GetVehicleId() *VehicleId {
+	if x != nil {
+		return x.VehicleId
+	}
+	return nil
+}
+
+func (x *MissionSnapshot) GetMissionType() MavMissionType {
+	if x != nil {
+		return x.MissionType
+	}
+	return MavMissionType_MAV_MISSION_TYPE_MISSION
+}
+
+func (x *MissionSnapshot) GetItems() []*MissionItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *MissionSnapshot) GetObservedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ObservedAt
+	}
+	return nil
+}
+
 var File_gcs_v1_missions_proto protoreflect.FileDescriptor
 
 const file_gcs_v1_missions_proto_rawDesc = "" +
 	"\n" +
-	"\x15gcs/v1/missions.proto\x12\x06gcs.v1\x1a\x12gcs/v1/types.proto\"\xfa\x02\n" +
+	"\x15gcs/v1/missions.proto\x12\x06gcs.v1\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x12gcs/v1/types.proto\x1a\x14gcs/v1/vehicle.proto\"\xca\x03\n" +
 	"\vMissionItem\x12\x10\n" +
 	"\x03seq\x18\x02 \x01(\rR\x03seq\x12&\n" +
 	"\x05frame\x18\x03 \x01(\x0e2\x10.gcs.v1.MavFrameR\x05frame\x12(\n" +
@@ -285,14 +434,27 @@ const file_gcs_v1_missions_proto_rawDesc = "" +
 	"\x01x\x18\v \x01(\x01R\x01x\x12\f\n" +
 	"\x01y\x18\f \x01(\x01R\x01y\x12\f\n" +
 	"\x01z\x18\r \x01(\x02R\x01z\x129\n" +
-	"\fmission_type\x18\x0e \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionTypeJ\x04\b\x01\x10\x02\"_\n" +
+	"\fmission_type\x18\x0e \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\x12#\n" +
+	"\rtarget_system\x18\x0f \x01(\rR\ftargetSystem\x12)\n" +
+	"\x10target_component\x18\x10 \x01(\rR\x0ftargetComponentJ\x04\b\x01\x10\x02\"\xaf\x01\n" +
 	"\fMissionCount\x12\x14\n" +
 	"\x05count\x18\x01 \x01(\rR\x05count\x129\n" +
-	"\fmission_type\x18\x02 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\"\x7f\n" +
+	"\fmission_type\x18\x02 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\x12#\n" +
+	"\rtarget_system\x18\x03 \x01(\rR\ftargetSystem\x12)\n" +
+	"\x10target_component\x18\x04 \x01(\rR\x0ftargetComponent\"\xcf\x01\n" +
 	"\n" +
 	"MissionAck\x120\n" +
 	"\x06result\x18\x02 \x01(\x0e2\x18.gcs.v1.MavMissionResultR\x06result\x129\n" +
-	"\fmission_type\x18\x03 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionTypeJ\x04\b\x01\x10\x02B$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
+	"\fmission_type\x18\x03 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\x12#\n" +
+	"\rtarget_system\x18\x04 \x01(\rR\ftargetSystem\x12)\n" +
+	"\x10target_component\x18\x05 \x01(\rR\x0ftargetComponentJ\x04\b\x01\x10\x02\"\xe6\x01\n" +
+	"\x0fMissionSnapshot\x120\n" +
+	"\n" +
+	"vehicle_id\x18\x01 \x01(\v2\x11.gcs.v1.VehicleIdR\tvehicleId\x129\n" +
+	"\fmission_type\x18\x02 \x01(\x0e2\x16.gcs.v1.MavMissionTypeR\vmissionType\x12)\n" +
+	"\x05items\x18\x03 \x03(\v2\x13.gcs.v1.MissionItemR\x05items\x12;\n" +
+	"\vobserved_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"observedAtB$Z\"yalb.gcs/internal/gen/gcs/v1;gcsv1b\x06proto3"
 
 var (
 	file_gcs_v1_missions_proto_rawDescOnce sync.Once
@@ -306,28 +468,35 @@ func file_gcs_v1_missions_proto_rawDescGZIP() []byte {
 	return file_gcs_v1_missions_proto_rawDescData
 }
 
-var file_gcs_v1_missions_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_gcs_v1_missions_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_gcs_v1_missions_proto_goTypes = []any{
-	(*MissionItem)(nil),   // 0: gcs.v1.MissionItem
-	(*MissionCount)(nil),  // 1: gcs.v1.MissionCount
-	(*MissionAck)(nil),    // 2: gcs.v1.MissionAck
-	(MavFrame)(0),         // 3: gcs.v1.MavFrame
-	(MavCmd)(0),           // 4: gcs.v1.MavCmd
-	(MavMissionType)(0),   // 5: gcs.v1.MavMissionType
-	(MavMissionResult)(0), // 6: gcs.v1.MavMissionResult
+	(*MissionItem)(nil),           // 0: gcs.v1.MissionItem
+	(*MissionCount)(nil),          // 1: gcs.v1.MissionCount
+	(*MissionAck)(nil),            // 2: gcs.v1.MissionAck
+	(*MissionSnapshot)(nil),       // 3: gcs.v1.MissionSnapshot
+	(MavFrame)(0),                 // 4: gcs.v1.MavFrame
+	(MavCmd)(0),                   // 5: gcs.v1.MavCmd
+	(MavMissionType)(0),           // 6: gcs.v1.MavMissionType
+	(MavMissionResult)(0),         // 7: gcs.v1.MavMissionResult
+	(*VehicleId)(nil),             // 8: gcs.v1.VehicleId
+	(*timestamppb.Timestamp)(nil), // 9: google.protobuf.Timestamp
 }
 var file_gcs_v1_missions_proto_depIdxs = []int32{
-	3, // 0: gcs.v1.MissionItem.frame:type_name -> gcs.v1.MavFrame
-	4, // 1: gcs.v1.MissionItem.command:type_name -> gcs.v1.MavCmd
-	5, // 2: gcs.v1.MissionItem.mission_type:type_name -> gcs.v1.MavMissionType
-	5, // 3: gcs.v1.MissionCount.mission_type:type_name -> gcs.v1.MavMissionType
-	6, // 4: gcs.v1.MissionAck.result:type_name -> gcs.v1.MavMissionResult
-	5, // 5: gcs.v1.MissionAck.mission_type:type_name -> gcs.v1.MavMissionType
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	4,  // 0: gcs.v1.MissionItem.frame:type_name -> gcs.v1.MavFrame
+	5,  // 1: gcs.v1.MissionItem.command:type_name -> gcs.v1.MavCmd
+	6,  // 2: gcs.v1.MissionItem.mission_type:type_name -> gcs.v1.MavMissionType
+	6,  // 3: gcs.v1.MissionCount.mission_type:type_name -> gcs.v1.MavMissionType
+	7,  // 4: gcs.v1.MissionAck.result:type_name -> gcs.v1.MavMissionResult
+	6,  // 5: gcs.v1.MissionAck.mission_type:type_name -> gcs.v1.MavMissionType
+	8,  // 6: gcs.v1.MissionSnapshot.vehicle_id:type_name -> gcs.v1.VehicleId
+	6,  // 7: gcs.v1.MissionSnapshot.mission_type:type_name -> gcs.v1.MavMissionType
+	0,  // 8: gcs.v1.MissionSnapshot.items:type_name -> gcs.v1.MissionItem
+	9,  // 9: gcs.v1.MissionSnapshot.observed_at:type_name -> google.protobuf.Timestamp
+	10, // [10:10] is the sub-list for method output_type
+	10, // [10:10] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_gcs_v1_missions_proto_init() }
@@ -336,13 +505,14 @@ func file_gcs_v1_missions_proto_init() {
 		return
 	}
 	file_gcs_v1_types_proto_init()
+	file_gcs_v1_vehicle_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_gcs_v1_missions_proto_rawDesc), len(file_gcs_v1_missions_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

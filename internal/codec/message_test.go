@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"go.uber.org/goleak"
+
+	gcsv1 "yalb.gcs/internal/gen/gcs/v1"
 )
 
 // TestMain asserts no goroutine leaks across the package.
@@ -473,4 +475,121 @@ func assertClose(t *testing.T, name string, got, want, tol float64) {
 	if math.Abs(got-want) > tol {
 		t.Errorf("%s = %v, want %v (tolerance %v)", name, got, want, tol)
 	}
+}
+
+// TestMissionResponsesPreserveTargetIdentity covers the field a mission
+// download needs to reject traffic that was never meant for it.
+//
+// The envelope's vehicle_id says which vehicle sent a response. It does not say
+// which ground station the vehicle was answering. Two GCSs downloading the same
+// mission type from the same vehicle produce responses that are identical on the
+// envelope and differ only here, so a coordinator that cannot read the target
+// cannot tell its own MISSION_COUNT from somebody else's. COMMAND_ACK already
+// carries this for the same reason — see internal/command/registry.go.
+func TestMissionResponsesPreserveTargetIdentity(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		target  func(Decoded) (uint32, uint32)
+		fixture string
+	}{
+		{
+			fixture: "mission_count_v2",
+			target: func(d Decoded) (uint32, uint32) {
+				m := d.Transaction.GetMissionCount()
+
+				return m.GetTargetSystem(), m.GetTargetComponent()
+			},
+		},
+		{
+			fixture: "mission_ack_v2",
+			target: func(d Decoded) (uint32, uint32) {
+				m := d.Transaction.GetMissionAck()
+
+				return m.GetTargetSystem(), m.GetTargetComponent()
+			},
+		},
+		{
+			fixture: "mission_item_int_v2",
+			target: func(d Decoded) (uint32, uint32) {
+				m := d.Transaction.GetMissionItem()
+
+				return m.GetTargetSystem(), m.GetTargetComponent()
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.fixture, func(t *testing.T) {
+			t.Parallel()
+
+			d, _ := decodeFixture(t, tc.fixture)
+
+			if d.Transaction == nil {
+				t.Fatal("expected a ProtocolEvent, got none")
+			}
+
+			sys, comp := tc.target(d)
+
+			if sys != uint32(GCSSystemID) || comp != uint32(GCSComponentID) {
+				t.Errorf("target = %d:%d, want %d:%d (this GCS)",
+					sys, comp, GCSSystemID, GCSComponentID)
+			}
+		})
+	}
+}
+
+// TestMissionResponseTargetDistinguishesAnotherGCS is the assertion that makes
+// the field useful: a response addressed elsewhere must decode to that other
+// address, not to ours and not to zero.
+func TestMissionResponseTargetDistinguishesAnotherGCS(t *testing.T) {
+	t.Parallel()
+
+	d, _ := decodeFixture(t, "mission_count_foreign_v2")
+
+	count := d.Transaction.GetMissionCount()
+	if count == nil {
+		t.Fatal("expected mission_count payload")
+	}
+
+	if count.GetTargetSystem() != 42 || count.GetTargetComponent() != 99 {
+		t.Errorf("target = %d:%d, want 42:99",
+			count.GetTargetSystem(), count.GetTargetComponent())
+	}
+}
+
+// assertMissionItemLocalFrame pins the conversion MAVLink defines per frame.
+//
+// MISSION_ITEM_INT.x/y are a single int32 whose scale depends on frame: global
+// frames carry degrees × 1e7, local frames carry metres × 1e4. Applying the
+// global scale to a local item under-reports it by a factor of 1000, which is
+// small enough to look like a plausible position rather than an obvious fault.
+func assertMissionItemLocalFrame(t *testing.T, d Decoded) {
+	t.Helper()
+
+	item := d.Transaction.GetMissionItem()
+	if item == nil {
+		t.Fatal("expected mission_item payload")
+	}
+
+	if item.GetFrame() != gcsv1.MavFrame_MAV_FRAME_LOCAL_NED {
+		t.Fatalf("frame = %v, want MAV_FRAME_LOCAL_NED", item.GetFrame())
+	}
+
+	// 100000 and -50000 on the wire are metres × 1e4.
+	assertClose(t, "x", item.GetX(), 10.0, 1e-6)
+	assertClose(t, "y", item.GetY(), -5.0, 1e-6)
+	assertClose(t, "z", float64(item.GetZ()), 3.0, 1e-5)
+}
+
+func TestDecodeMissionItemLocalFrame(t *testing.T) {
+	t.Parallel()
+
+	d, _ := decodeFixture(t, "mission_item_int_local_v2")
+
+	if d.Transaction == nil {
+		t.Fatal("expected a ProtocolEvent, got none")
+	}
+
+	assertMissionItemLocalFrame(t, d)
 }

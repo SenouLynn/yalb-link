@@ -20,6 +20,7 @@ import (
 	"yalb.gcs/internal/bridge"
 	"yalb.gcs/internal/codec"
 	"yalb.gcs/internal/command"
+	"yalb.gcs/internal/mission"
 	"yalb.gcs/internal/recording"
 	"yalb.gcs/internal/routes"
 	"yalb.gcs/internal/stream"
@@ -86,6 +87,7 @@ func run(log *slog.Logger) error {
 	defer hub.Close()
 
 	var registry *command.Registry
+	missionCoordinator := &mission.Coordinator{Log: log}
 	if bind == "" {
 		// An explicitly empty bind disables MAVLink while retaining health checks.
 		log.Warn("MAVLink socket disabled", "reason", codec.EnvUDPBind+" set to empty")
@@ -95,6 +97,8 @@ func run(log *slog.Logger) error {
 			return fmt.Errorf("gcs: opening MAVLink socket on %s: %w", bind, err)
 		}
 		table := routes.NewTable()
+		missionCoordinator.Source = node
+		missionCoordinator.Routes = table
 		if command.ResolveEnabled(os.LookupEnv(command.EnvEnabled)) {
 			publisher := bridge.MultiSink{bridge.LogSink{Log: log}, hub}
 			if store != nil {
@@ -105,13 +109,13 @@ func run(log *slog.Logger) error {
 		} else {
 			log.Info("operator commands disabled", "env", command.EnvEnabled)
 		}
-		if err := startBridge(ctx, group, log, bind, node, table, registry, hub, store); err != nil {
+		if err := startBridge(ctx, group, log, bind, node, table, registry, missionCoordinator, hub, store); err != nil {
 			_ = node.Close()
 			return err
 		}
 	}
 
-	serveHTTP(ctx, group, log, hub, store, registry)
+	serveHTTP(ctx, group, log, hub, store, registry, missionCoordinator)
 
 	if err := group.Wait(); err != nil {
 		return fmt.Errorf("gcs: backend stopped: %w", err)
@@ -129,6 +133,7 @@ func startBridge(
 	node codec.FrameSource,
 	table *routes.Table,
 	registry *command.Registry,
+	missionCoordinator *mission.Coordinator,
 	hub *stream.Hub,
 	store *recording.Store,
 ) error {
@@ -142,6 +147,7 @@ func startBridge(
 	if registry != nil {
 		sinks = append(sinks, registry)
 	}
+	sinks = append(sinks, missionCoordinator)
 	sinks = append(sinks, hub)
 	if store != nil {
 		sinks = append(sinks, &recording.Recorder{Store: store})
@@ -183,26 +189,8 @@ func startBridge(
 
 // serveHTTP runs the health and event servers and shuts them down with the
 // context.
-func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub *stream.Hub, store *recording.Store, registry *command.Registry) {
-	mux := http.NewServeMux()
-
-	// This is liveness only; it does not assert a vehicle link.
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
-
-	mux.HandleFunc("GET "+stream.Path, stream.Handler(hub, log))
-	if registry != nil {
-		mux.HandleFunc(command.ArmPattern, command.ArmHandler(registry))
-		mux.HandleFunc(command.ResolvePattern, command.ResolveHandler(registry))
-	}
-	if store != nil {
-		mux.HandleFunc("POST /api/recordings/start", recording.StartHandler(store))
-		mux.HandleFunc("POST /api/recordings/stop", recording.StopHandler(store))
-		mux.HandleFunc("GET /api/recordings", recording.ListHandler(store))
-		mux.HandleFunc(recording.DeletePattern, recording.DeleteHandler(store))
-		mux.HandleFunc(recording.EventsPattern, recording.ReplayEventsHandler(store))
-	}
+func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub *stream.Hub, store *recording.Store, registry *command.Registry, missionCoordinator *mission.Coordinator) {
+	mux := newHTTPMux(log, hub, store, registry, missionCoordinator)
 
 	srv := &http.Server{
 		Addr:              httpAddr,
@@ -241,6 +229,31 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub
 
 		return nil
 	})
+}
+
+func newHTTPMux(log *slog.Logger, hub *stream.Hub, store *recording.Store, registry *command.Registry, missionCoordinator *mission.Coordinator) *http.ServeMux {
+	mux := http.NewServeMux()
+
+	// This is liveness only; it does not assert a vehicle link.
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	mux.HandleFunc("GET "+stream.Path, stream.Handler(hub, log))
+	mux.HandleFunc(mission.DownloadPattern, mission.DownloadHandler(missionCoordinator))
+	if registry != nil {
+		mux.HandleFunc(command.ArmPattern, command.ArmHandler(registry))
+		mux.HandleFunc(command.ResolvePattern, command.ResolveHandler(registry))
+	}
+	if store != nil {
+		mux.HandleFunc("POST /api/recordings/start", recording.StartHandler(store))
+		mux.HandleFunc("POST /api/recordings/stop", recording.StopHandler(store))
+		mux.HandleFunc("GET /api/recordings", recording.ListHandler(store))
+		mux.HandleFunc(recording.DeletePattern, recording.DeleteHandler(store))
+		mux.HandleFunc(recording.EventsPattern, recording.ReplayEventsHandler(store))
+	}
+
+	return mux
 }
 
 // newLogger builds the process logger.

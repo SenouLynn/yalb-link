@@ -217,6 +217,15 @@ func TestEncodersTargetTheRequestedVehicle(t *testing.T) {
 			},
 		},
 		{
+			name: "mission_request_list",
+			msg:  EncodeMissionRequestList(target, MissionTypeMission),
+			got: func(m message.Message) (uint8, uint8) {
+				p, _ := m.(*ardupilotmega.MessageMissionRequestList)
+
+				return p.TargetSystem, p.TargetComponent
+			},
+		},
+		{
 			name: "mission_count",
 			msg:  EncodeMissionCount(target, 5, 0),
 			got: func(m message.Message) (uint8, uint8) {
@@ -276,6 +285,7 @@ func encoderMessages() map[uint32]message.Message {
 		20: EncodeParamRequestRead(target, "ARMING_CHECK", -1),
 		21: EncodeParamRequestList(target),
 		23: EncodeParamSet(target, "ARMING_CHECK", 1, 6),
+		43: EncodeMissionRequestList(target, MissionTypeMission),
 		44: EncodeMissionCount(target, 5, 0),
 		45: EncodeMissionClearAll(target, 0),
 		47: EncodeMissionAck(target, 0, 0),
@@ -308,5 +318,88 @@ func TestSendFamilyCoverage(t *testing.T) {
 	if len(built) != len(SendFamilies) {
 		t.Errorf("built %d encoder messages but SendFamilies declares %d",
 			len(built), len(SendFamilies))
+	}
+}
+
+// TestEncodeMissionRequestListOpensADownload pins the one message that lets the
+// codec start a mission download at all. Without it the existing
+// MISSION_REQUEST_INT encoder can only continue a transfer somebody else began.
+func TestEncodeMissionRequestListOpensADownload(t *testing.T) {
+	t.Parallel()
+
+	msg := EncodeMissionRequestList(Target{SystemID: 1, ComponentID: 1}, MissionTypeMission)
+
+	req, ok := msg.(*ardupilotmega.MessageMissionRequestList)
+	if !ok {
+		t.Fatalf("got %T, want MessageMissionRequestList", msg)
+	}
+
+	if got := msg.GetID(); got != 43 {
+		t.Errorf("message ID = %d, want 43 (MISSION_REQUEST_LIST)", got)
+	}
+
+	if req.MissionType != 0 {
+		t.Errorf("mission_type = %d, want 0 (MAV_MISSION_TYPE_MISSION)", req.MissionType)
+	}
+}
+
+// TestEncodeMissionRequestListCarriesMissionType guards the field that keeps a
+// flight-plan download from settling a fence or rally transfer on the same link.
+func TestEncodeMissionRequestListCarriesMissionType(t *testing.T) {
+	t.Parallel()
+
+	msg := EncodeMissionRequestList(Target{SystemID: 1, ComponentID: 1}, MissionTypeFence)
+
+	req, ok := msg.(*ardupilotmega.MessageMissionRequestList)
+	if !ok {
+		t.Fatalf("got %T, want MessageMissionRequestList", msg)
+	}
+
+	if req.MissionType != 1 {
+		t.Errorf("mission_type = %d, want 1 (MAV_MISSION_TYPE_FENCE)", req.MissionType)
+	}
+}
+
+// TestEncodeMissionRequestListMatchesGoldenFrame checks the encoder against
+// bytes an independent implementation produced.
+//
+// The other encoder tests assert on struct fields we set ourselves, which
+// cannot catch a wrong message ID, a missing extension field, or a field the
+// dialect orders differently on the wire. Decoding pymavlink's frame through
+// the real gomavlib parser and comparing the result to the encoder's output
+// checks the encoder against something that did not come from this codebase.
+func TestEncodeMissionRequestListMatchesGoldenFrame(t *testing.T) {
+	t.Parallel()
+
+	raw, meta := loadFixture(t, "mission_request_list_out")
+
+	if meta.MessageID != 43 {
+		t.Fatalf("fixture message_id = %d, want 43", meta.MessageID)
+	}
+
+	h := newHarness(t)
+
+	frame := h.feed(raw)
+	if frame == nil {
+		t.Fatal("golden MISSION_REQUEST_LIST frame produced no decoded frame")
+	}
+
+	golden, ok := frame.Message().(*ardupilotmega.MessageMissionRequestList)
+	if !ok {
+		t.Fatalf("decoded %T, want MessageMissionRequestList", frame.Message())
+	}
+
+	// The fixture is addressed to vehicle (1, 1) with the ordinary mission type;
+	// build the same request and require an identical payload.
+	built, ok := EncodeMissionRequestList(
+		Target{SystemID: 1, ComponentID: 1},
+		MissionTypeMission,
+	).(*ardupilotmega.MessageMissionRequestList)
+	if !ok {
+		t.Fatal("EncodeMissionRequestList did not return a MessageMissionRequestList")
+	}
+
+	if *built != *golden {
+		t.Errorf("encoded %+v, golden frame decodes to %+v", *built, *golden)
 	}
 }

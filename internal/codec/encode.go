@@ -21,6 +21,7 @@ var SendFamilies = []uint32{
 	20, // PARAM_REQUEST_READ
 	21, // PARAM_REQUEST_LIST
 	23, // PARAM_SET
+	43, // MISSION_REQUEST_LIST
 	44, // MISSION_COUNT
 	45, // MISSION_CLEAR_ALL
 	47, // MISSION_ACK
@@ -48,6 +49,15 @@ const ForceArmMagic = 21196
 
 // PositionOnlyTypeMask ignores velocity, acceleration, yaw, and yaw rate.
 const PositionOnlyTypeMask = 0xDF8
+
+// Mission types name MAV_MISSION_TYPE wire values. They are the discriminator
+// that keeps a flight-plan transfer from settling a geofence or rally transfer
+// sharing the same link and vehicle.
+const (
+	MissionTypeMission uint32 = 0
+	MissionTypeFence   uint32 = 1
+	MissionTypeRally   uint32 = 2
+)
 
 // FrameGlobalRelativeAltInt is MAV_FRAME_GLOBAL_RELATIVE_ALT_INT — lat/lon in
 // degE7, altitude in metres above home.
@@ -206,6 +216,20 @@ func EncodeMissionItemInt(
 		X:               int32(latDeg / degE7ToDeg),
 		Y:               int32(lonDeg / degE7ToDeg),
 		Z:               altM,
+		MissionType:     ardupilotmega.MAV_MISSION_TYPE(missionType),
+	}
+}
+
+// EncodeMissionRequestList opens a mission download by asking the vehicle to
+// report how many items it holds.
+//
+// This is the only message that begins a download. EncodeMissionRequestInt
+// continues one that is already open, so without this encoder the codec can
+// only join a transfer another ground station started.
+func EncodeMissionRequestList(target Target, missionType uint32) message.Message {
+	return &ardupilotmega.MessageMissionRequestList{
+		TargetSystem:    target.SystemID,
+		TargetComponent: target.ComponentID,
 		MissionType:     ardupilotmega.MAV_MISSION_TYPE(missionType),
 	}
 }

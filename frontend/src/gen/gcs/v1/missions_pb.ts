@@ -4,18 +4,30 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv2";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv2";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { MavCmd, MavFrame, MavMissionResult, MavMissionType } from "./types_pb";
 import { file_gcs_v1_types } from "./types_pb";
+import type { VehicleId } from "./vehicle_pb";
+import { file_gcs_v1_vehicle } from "./vehicle_pb";
 import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file gcs/v1/missions.proto.
  */
 export const file_gcs_v1_missions: GenFile = /*@__PURE__*/
-  fileDesc("ChVnY3MvdjEvbWlzc2lvbnMucHJvdG8SBmdjcy52MSKYAgoLTWlzc2lvbkl0ZW0SCwoDc2VxGAIgASgNEh8KBWZyYW1lGAMgASgOMhAuZ2NzLnYxLk1hdkZyYW1lEh8KB2NvbW1hbmQYBCABKA4yDi5nY3MudjEuTWF2Q21kEg8KB2N1cnJlbnQYBSABKAgSFAoMYXV0b2NvbnRpbnVlGAYgASgIEg4KBnBhcmFtMRgHIAEoAhIOCgZwYXJhbTIYCCABKAISDgoGcGFyYW0zGAkgASgCEg4KBnBhcmFtNBgKIAEoAhIJCgF4GAsgASgBEgkKAXkYDCABKAESCQoBehgNIAEoAhIsCgxtaXNzaW9uX3R5cGUYDiABKA4yFi5nY3MudjEuTWF2TWlzc2lvblR5cGVKBAgBEAIiSwoMTWlzc2lvbkNvdW50Eg0KBWNvdW50GAEgASgNEiwKDG1pc3Npb25fdHlwZRgCIAEoDjIWLmdjcy52MS5NYXZNaXNzaW9uVHlwZSJqCgpNaXNzaW9uQWNrEigKBnJlc3VsdBgCIAEoDjIYLmdjcy52MS5NYXZNaXNzaW9uUmVzdWx0EiwKDG1pc3Npb25fdHlwZRgDIAEoDjIWLmdjcy52MS5NYXZNaXNzaW9uVHlwZUoECAEQAkIkWiJ5YWxiLmdjcy9pbnRlcm5hbC9nZW4vZ2NzL3YxO2djc3YxYgZwcm90bzM", [file_gcs_v1_types]);
+  fileDesc("ChVnY3MvdjEvbWlzc2lvbnMucHJvdG8SBmdjcy52MSLJAgoLTWlzc2lvbkl0ZW0SCwoDc2VxGAIgASgNEh8KBWZyYW1lGAMgASgOMhAuZ2NzLnYxLk1hdkZyYW1lEh8KB2NvbW1hbmQYBCABKA4yDi5nY3MudjEuTWF2Q21kEg8KB2N1cnJlbnQYBSABKAgSFAoMYXV0b2NvbnRpbnVlGAYgASgIEg4KBnBhcmFtMRgHIAEoAhIOCgZwYXJhbTIYCCABKAISDgoGcGFyYW0zGAkgASgCEg4KBnBhcmFtNBgKIAEoAhIJCgF4GAsgASgBEgkKAXkYDCABKAESCQoBehgNIAEoAhIsCgxtaXNzaW9uX3R5cGUYDiABKA4yFi5nY3MudjEuTWF2TWlzc2lvblR5cGUSFQoNdGFyZ2V0X3N5c3RlbRgPIAEoDRIYChB0YXJnZXRfY29tcG9uZW50GBAgASgNSgQIARACInwKDE1pc3Npb25Db3VudBINCgVjb3VudBgBIAEoDRIsCgxtaXNzaW9uX3R5cGUYAiABKA4yFi5nY3MudjEuTWF2TWlzc2lvblR5cGUSFQoNdGFyZ2V0X3N5c3RlbRgDIAEoDRIYChB0YXJnZXRfY29tcG9uZW50GAQgASgNIpsBCgpNaXNzaW9uQWNrEigKBnJlc3VsdBgCIAEoDjIYLmdjcy52MS5NYXZNaXNzaW9uUmVzdWx0EiwKDG1pc3Npb25fdHlwZRgDIAEoDjIWLmdjcy52MS5NYXZNaXNzaW9uVHlwZRIVCg10YXJnZXRfc3lzdGVtGAQgASgNEhgKEHRhcmdldF9jb21wb25lbnQYBSABKA1KBAgBEAIiuwEKD01pc3Npb25TbmFwc2hvdBIlCgp2ZWhpY2xlX2lkGAEgASgLMhEuZ2NzLnYxLlZlaGljbGVJZBIsCgxtaXNzaW9uX3R5cGUYAiABKA4yFi5nY3MudjEuTWF2TWlzc2lvblR5cGUSIgoFaXRlbXMYAyADKAsyEy5nY3MudjEuTWlzc2lvbkl0ZW0SLwoLb2JzZXJ2ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQiRaInlhbGIuZ2NzL2ludGVybmFsL2dlbi9nY3MvdjE7Z2NzdjFiBnByb3RvMw", [file_google_protobuf_timestamp, file_gcs_v1_types, file_gcs_v1_vehicle]);
 
 /**
  * Inbound MAVLink mission transaction payloads currently decoded by the codec.
+ *
+ * Each carries target_system/target_component: the ground station the vehicle
+ * addressed its response to. This is not a duplicate of the envelope's
+ * vehicle_id, which says who sent the response. Two ground stations downloading
+ * the same mission type from the same vehicle produce responses identical on the
+ * envelope and distinguishable only by target, so a coordinator that cannot read
+ * it cannot tell its own transfer from a foreign one. CommandAck carries the
+ * same pair for the same reason.
  *
  * @generated from message gcs.v1.MissionItem
  */
@@ -66,21 +78,27 @@ export type MissionItem = Message<"gcs.v1.MissionItem"> & {
   param4: number;
 
   /**
-   * latitude in degrees, or local x in metres
+   * x and y are normalised from a single int32 whose wire scale depends on
+   * frame: global frames carry degrees x 1e7, local and body frames carry
+   * metres x 1e4. Frames that are not positional at all (MAV_FRAME_MISSION,
+   * and any frame this build does not recognise) carry command parameters
+   * here, not coordinates, and are passed through unscaled.
+   *
+   * latitude in degrees, local x in metres, or a raw parameter
    *
    * @generated from field: double x = 11;
    */
   x: number;
 
   /**
-   * longitude in degrees, or local y in metres
+   * longitude in degrees, local y in metres, or a raw parameter
    *
    * @generated from field: double y = 12;
    */
   y: number;
 
   /**
-   * altitude or local z in metres
+   * altitude or local z in metres; already float on the wire
    *
    * @generated from field: float z = 13;
    */
@@ -90,6 +108,16 @@ export type MissionItem = Message<"gcs.v1.MissionItem"> & {
    * @generated from field: gcs.v1.MavMissionType mission_type = 14;
    */
   missionType: MavMissionType;
+
+  /**
+   * @generated from field: uint32 target_system = 15;
+   */
+  targetSystem: number;
+
+  /**
+   * @generated from field: uint32 target_component = 16;
+   */
+  targetComponent: number;
 };
 
 /**
@@ -112,6 +140,16 @@ export type MissionCount = Message<"gcs.v1.MissionCount"> & {
    * @generated from field: gcs.v1.MavMissionType mission_type = 2;
    */
   missionType: MavMissionType;
+
+  /**
+   * @generated from field: uint32 target_system = 3;
+   */
+  targetSystem: number;
+
+  /**
+   * @generated from field: uint32 target_component = 4;
+   */
+  targetComponent: number;
 };
 
 /**
@@ -134,6 +172,16 @@ export type MissionAck = Message<"gcs.v1.MissionAck"> & {
    * @generated from field: gcs.v1.MavMissionType mission_type = 3;
    */
   missionType: MavMissionType;
+
+  /**
+   * @generated from field: uint32 target_system = 4;
+   */
+  targetSystem: number;
+
+  /**
+   * @generated from field: uint32 target_component = 5;
+   */
+  targetComponent: number;
 };
 
 /**
@@ -142,4 +190,59 @@ export type MissionAck = Message<"gcs.v1.MissionAck"> & {
  */
 export const MissionAckSchema: GenMessage<MissionAck> = /*@__PURE__*/
   messageDesc(file_gcs_v1_missions, 2);
+
+/**
+ * MissionSnapshot is one completed read-only mission download: everything a
+ * vehicle reported for a single mission type, at one moment.
+ *
+ * A snapshot only ever describes a download that finished. Transfer progress
+ * and failure are not represented here — a caller either has a snapshot or has
+ * an error, never a half-filled one. That is what lets `items` be trusted as
+ * the whole mission rather than as however much arrived before something broke.
+ *
+ * @generated from message gcs.v1.MissionSnapshot
+ */
+export type MissionSnapshot = Message<"gcs.v1.MissionSnapshot"> & {
+  /**
+   * The full identity the download was addressed to. Component ID is part of
+   * it: components sharing a system ID hold separate missions.
+   *
+   * @generated from field: gcs.v1.VehicleId vehicle_id = 1;
+   */
+  vehicleId?: VehicleId | undefined;
+
+  /**
+   * @generated from field: gcs.v1.MavMissionType mission_type = 2;
+   */
+  missionType: MavMissionType;
+
+  /**
+   * Mission items in the vehicle's own sequence order. Order is the route, so
+   * consumers must not re-sort or de-duplicate.
+   *
+   * Empty means the vehicle completed the exchange and reported no items. That
+   * is an ordinary answer, not an error and not a missing snapshot: check
+   * observed_at, which is set on every completed download, to tell an empty
+   * mission from a message nobody filled in.
+   *
+   * @generated from field: repeated gcs.v1.MissionItem items = 3;
+   */
+  items: MissionItem[];
+
+  /**
+   * When the download completed, from the GCS clock. Vehicles report no
+   * wall-clock time for a mission, so this is the only timestamp available and
+   * it dates the observation, not the mission.
+   *
+   * @generated from field: google.protobuf.Timestamp observed_at = 4;
+   */
+  observedAt?: Timestamp | undefined;
+};
+
+/**
+ * Describes the message gcs.v1.MissionSnapshot.
+ * Use `create(MissionSnapshotSchema)` to create a new message.
+ */
+export const MissionSnapshotSchema: GenMessage<MissionSnapshot> = /*@__PURE__*/
+  messageDesc(file_gcs_v1_missions, 3);
 

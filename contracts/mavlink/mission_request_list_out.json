@@ -1,0 +1,13 @@
+{
+  "comp_id": 190,
+  "fields": {
+    "mission_type": 0,
+    "target_component": 1,
+    "target_system": 1
+  },
+  "message_id": 43,
+  "message_name": "MISSION_REQUEST_LIST",
+  "note": "Opens a download. mission_type is a MAVLink 2 extension field: a v1 sender omits it and the receiver defaults to 0 (MISSION), so the ordinary-mission case cannot distinguish the two.",
+  "seq": 42,
+  "sys_id": 255
+}

@@ -147,7 +147,7 @@ func TestMatrixFamilyCounts(t *testing.T) {
 		t.Errorf("protocolDecoders has %d families, want 5", got)
 	}
 
-	if got := len(SendFamilies); got != 11 {
-		t.Errorf("SendFamilies has %d families, want 11", got)
+	if got := len(SendFamilies); got != 12 {
+		t.Errorf("SendFamilies has %d families, want 12", got)
 	}
 }

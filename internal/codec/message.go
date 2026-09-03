@@ -25,6 +25,7 @@ func (d Decoded) Handled() bool {
 // Unit conversions are applied once at the protobuf boundary.
 const (
 	degE7ToDeg  = 1e-7
+	localE4ToM  = 1e-4
 	mmToM       = 1e-3
 	cmPerSToMPS = 1e-2
 	cGToG       = 1e-2 // centi-units to whole units (load, throttle percentages)
@@ -463,6 +464,43 @@ func decodeParamValue(msg message.Message) *gcsv1.ProtocolEvent {
 	}
 }
 
+// missionXYScale returns the factor converting MISSION_ITEM_INT.x/y from their
+// wire integer into the units MissionItem documents.
+//
+// The two fields are one int32 whose meaning is selected by frame, which is the
+// part that is easy to miss: MAVLink stores global positions as degrees x 1e7
+// and local positions as metres x 1e4. Applying the global scale to a local
+// item does not produce an obviously broken value, it produces one 1000x too
+// small — a 10 m offset reads as 1 mm and still looks like a position.
+func missionXYScale(frame gcsv1.MavFrame) float64 {
+	switch frame {
+	case gcsv1.MavFrame_MAV_FRAME_GLOBAL,
+		gcsv1.MavFrame_MAV_FRAME_GLOBAL_RELATIVE_ALT,
+		gcsv1.MavFrame_MAV_FRAME_GLOBAL_INT,
+		gcsv1.MavFrame_MAV_FRAME_GLOBAL_RELATIVE_ALT_INT,
+		gcsv1.MavFrame_MAV_FRAME_GLOBAL_TERRAIN_ALT,
+		gcsv1.MavFrame_MAV_FRAME_GLOBAL_TERRAIN_ALT_INT:
+		return degE7ToDeg
+
+	case gcsv1.MavFrame_MAV_FRAME_LOCAL_NED,
+		gcsv1.MavFrame_MAV_FRAME_LOCAL_ENU,
+		gcsv1.MavFrame_MAV_FRAME_LOCAL_OFFSET_NED,
+		gcsv1.MavFrame_MAV_FRAME_BODY_NED,
+		gcsv1.MavFrame_MAV_FRAME_BODY_OFFSET_NED,
+		gcsv1.MavFrame_MAV_FRAME_BODY_FRD,
+		gcsv1.MavFrame_MAV_FRAME_LOCAL_FRD,
+		gcsv1.MavFrame_MAV_FRAME_LOCAL_FLU:
+		return localE4ToM
+
+	default:
+		// MAV_FRAME_MISSION and any frame this build does not recognise. x and y
+		// are command parameters rather than coordinates, so there is no
+		// conversion to apply and picking one would be a guess. Pass the wire
+		// value through and let the consumer see it unaltered.
+		return 1
+	}
+}
+
 func decodeMissionCount(msg message.Message) *gcsv1.ProtocolEvent {
 	m, ok := msg.(*ardupilotmega.MessageMissionCount)
 	if !ok {
@@ -474,6 +512,10 @@ func decodeMissionCount(msg message.Message) *gcsv1.ProtocolEvent {
 			MissionCount: &gcsv1.MissionCount{
 				Count:       uint32(m.Count),
 				MissionType: gcsv1.MavMissionType(m.MissionType),
+				// The ground station this response is addressed to. Not the
+				// envelope's vehicle_id, which is who sent it.
+				TargetSystem:    uint32(m.TargetSystem),
+				TargetComponent: uint32(m.TargetComponent),
 			},
 		},
 	}
@@ -488,8 +530,10 @@ func decodeMissionAck(msg message.Message) *gcsv1.ProtocolEvent {
 	return &gcsv1.ProtocolEvent{
 		Payload: &gcsv1.ProtocolEvent_MissionAck{
 			MissionAck: &gcsv1.MissionAck{
-				Result:      gcsv1.MavMissionResult(m.Type),
-				MissionType: gcsv1.MavMissionType(m.MissionType),
+				Result:          gcsv1.MavMissionResult(m.Type),
+				MissionType:     gcsv1.MavMissionType(m.MissionType),
+				TargetSystem:    uint32(m.TargetSystem),
+				TargetComponent: uint32(m.TargetComponent),
 			},
 		},
 	}
@@ -501,24 +545,31 @@ func decodeMissionItemInt(msg message.Message) *gcsv1.ProtocolEvent {
 		return nil
 	}
 
+	frame := gcsv1.MavFrame(m.Frame)
+
+	// X and Y share one wire scale chosen by frame; Z is already float metres
+	// and never converts. Only two of the three coordinates scale at all, and
+	// those two do not scale the same way for every item.
+	scale := missionXYScale(frame)
+
 	return &gcsv1.ProtocolEvent{
 		Payload: &gcsv1.ProtocolEvent_MissionItem{
 			MissionItem: &gcsv1.MissionItem{
-				Seq:          uint32(m.Seq),
-				Frame:        gcsv1.MavFrame(m.Frame),
-				Command:      gcsv1.MavCmd(m.Command),
-				Current:      m.Current != 0,
-				Autocontinue: m.Autocontinue != 0,
-				Param1:       m.Param1,
-				Param2:       m.Param2,
-				Param3:       m.Param3,
-				Param4:       m.Param4,
-				// X and Y are degE7 and convert; Z is already float metres and
-				// does not. Only two of the three coordinates scale.
-				X:           float64(m.X) * degE7ToDeg,
-				Y:           float64(m.Y) * degE7ToDeg,
-				Z:           m.Z,
-				MissionType: gcsv1.MavMissionType(m.MissionType),
+				Seq:             uint32(m.Seq),
+				Frame:           frame,
+				Command:         gcsv1.MavCmd(m.Command),
+				Current:         m.Current != 0,
+				Autocontinue:    m.Autocontinue != 0,
+				Param1:          m.Param1,
+				Param2:          m.Param2,
+				Param3:          m.Param3,
+				Param4:          m.Param4,
+				X:               float64(m.X) * scale,
+				Y:               float64(m.Y) * scale,
+				Z:               m.Z,
+				MissionType:     gcsv1.MavMissionType(m.MissionType),
+				TargetSystem:    uint32(m.TargetSystem),
+				TargetComponent: uint32(m.TargetComponent),
 			},
 		},
 	}

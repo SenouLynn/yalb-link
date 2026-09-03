@@ -10,6 +10,8 @@
     "command": 16,
     "frame": 6,
     "seq": 1,
+    "target_component": 190,
+    "target_system": 255,
     "x": 476062000,
     "y": -1223321000,
     "z": 50.0
