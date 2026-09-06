@@ -10,7 +10,8 @@ accepted API contracts. Updated 2026-09-05.
    These planning documents belong in this checkout. The older `ligma-gcs`
    directory is a separate checkout and must not receive implementation changes
    for this work.
-2. Read this file, the selected task, and applicable repository instructions.
+2. Read this file, the selected task, its CODE Lab source chapters, and applicable
+   repository instructions.
 3. Implement the selected task through its acceptance checks. Report what is
    implemented, what was tested, and any remaining model limitations.
 
@@ -22,6 +23,19 @@ Suggested continuation prompt:
 
 ## User intent and settled direction
 
+- **Interaction model: an OpenSCAD-like parametric design flow.** The complete
+  supported design process is expressed through named parameters, explicit
+  relationships and reproducible evaluation. Geometry, mass placement, flight
+  cases, requirements, analysis, visuals and CAD handoff derive from the same
+  authoritative design definition. Editing a field or dragging a component edits
+  that definition and reevaluates its dependencies. This describes the workflow;
+  it does not require OpenSCAD syntax, a new scripting language or a CSG engine.
+- Base the calculator's engineering methodology on the CODE Lab Aircraft Design
+  book linked below. Use its methods and worked examples throughout the tasks.
+- **Target aircraft:** fixed-wing RC drones/UAVs, including autopilot-equipped
+  conventional aircraft, V-tails and flying wings. Prioritize unmanned missions,
+  payload, electric propulsion, avionics and control-actuator integration.
+  Multirotor/VTOL sizing and transition flight require additional models.
 - A compact, informative RC aircraft design worksheet, visually inspired by
   Dear ImGui. Trust the builder; provide useful explanations without modal-heavy
   flows, dramatic warnings, or a universal aircraft/handling score.
@@ -40,6 +54,15 @@ Suggested continuation prompt:
 - “Maximum length” in the original geometry example means **maximum wingspan**.
 - Log the equations and actual substitutions; keep implementations readable and
   reasonably tested. Define and test workflow behavior before implementing UI.
+- Provide a visual mass-placement worksheet: move battery, motor, avionics and
+  payload on aircraft views and see CG, aerodynamic reference markers and supported
+  lift/trim effects update alongside loading and stall results. Task 07 establishes
+  the view; Tasks 08 and 09 connect handling and component/power models.
+- **Sketch-ready geometry:** values must be usable in Fusion 360 sketches. Show
+  named dimensions, datums, construction lines and the formulas linking them;
+  connect each worksheet field to its visual dimension and CAD parameter. Task 03
+  defines the relationships, Task 07 explains them visually, and Task 11 verifies
+  the actual Fusion parameter/expression and sketch workflow.
 - An optional **MCP sidecar** should expose the same calculations and curated,
   versioned (“blessed”) workflows. It must not duplicate the calculation engine.
 - Eventually hand dimensions and requirements to Fusion 360, XFLR5/flow5, and a
@@ -60,6 +83,76 @@ Suggested continuation prompt:
 
 UI explanations and next actions depend on the entry point. All views use the
 same design state, not duplicate sets of area, mass, and speed fields.
+The worksheet is an interactive editor for that parametric definition. A saved
+definition plus its model/evidence revisions must reproduce the supported results
+without depending on hidden UI state or the sequence of edits used to create it.
+
+## RC drone and autopilot scope
+
+Adapt the book's methodology to the aircraft being built. Use explicit RC-scale
+geometry, Reynolds conditions and component evidence; do not inherit its example
+aircraft's empirical constants, passenger assumptions or piston-engine sizing.
+
+Model the autopilot, receiver, telemetry, navigation sensors, power electronics,
+wiring, servos and payload as mass/position and electrical-budget contributors.
+Describe mission cases such as launch, climb, cruise, loiter, return and recovery
+with named assumptions and quantitative requirements. An entered mission power
+estimate does not establish launch, landing or maneuver feasibility.
+
+Record intended manual/stabilized/autonomous operation, commanded speed/bank or
+load-factor limits, control mixing, actuator travel/rate and relevant power limits.
+Evaluate only cases supported by the implemented airframe and propulsion models;
+autopilot presence does not establish trim, control authority or dynamic stability.
+Any relaxed-static-stability design needs a separate supported closed-loop model
+before a handling claim can be made.
+
+The calculator supports airframe/mission design for autopilot use. Flight-control
+firmware, gain tuning, live vehicle commands, automatic parameter uploads and
+closed-loop/SITL validation are additional work. Keep platform-specific parameter
+mapping in an explicit future adapter with named firmware/version and verified
+units, axes and mixing semantics; the Go calculator remains independent of GCS.
+
+## Engineering foundation — CODE Lab Aircraft Design
+
+The [Aircraft Design book](https://computationaldesignlab.github.io/aircraft-design/intro.html)
+is the primary engineering reference for this entire plan. It is a Python-based
+conceptual design resource from Purdue's CODE Lab. Port applicable calculations
+into the Go core and build the worksheet around their inputs, outputs and design
+iteration. Python notebooks are reference material, not a runtime dependency.
+
+Use this chapter map when implementing; the existing task numbers remain the
+software delivery order, with alternate user entry points into the same methods.
+
+| Tasks | Book basis and application |
+|---|---|
+| 02 | [Lift](https://computationaldesignlab.github.io/aircraft-design/aerodynamics/lift_curve.html): coefficient evidence and applicability; initial lift inversions remain the first subset |
+| 03 | [Wing Planform Sizing](https://computationaldesignlab.github.io/aircraft-design/wing_layout.html): geometry, reference dimensions and airfoil context |
+| 04, 06 | [Matching process](https://computationaldesignlab.github.io/aircraft-design/constraint_analysis/final.html): intersect requirements, explain active constraints and deliberately select a candidate |
+| 07 | Matching-process plots and the book's Trade study chapters: visualize supported constraints and design changes |
+| 08 | [Tail Sizing](https://computationaldesignlab.github.io/aircraft-design/tail_sizing.html), [Static Margin](https://computationaldesignlab.github.io/aircraft-design/long_stability/static_margin.html), [Trim Analysis](https://computationaldesignlab.github.io/aircraft-design/long_stability/trim.html), and their Weight and Balance prerequisites |
+| 09 | [Drag Polar](https://computationaldesignlab.github.io/aircraft-design/aerodynamics/drag_polar_induced_drag.html), [Engine and Propeller Selection](https://computationaldesignlab.github.io/aircraft-design/powerplant/engine_propeller.html), [Mission analysis](https://computationaldesignlab.github.io/aircraft-design/performance/mission_analysis.html), and Initial Weight Estimation/Weight and Balance |
+| 01, 05, 10, 11 | Package, expose and preserve these same methods and their provenance; these are application tasks, not additional aerodynamic models |
+
+For each implemented method, record the chapter/section URL, access date and
+upstream revision if available, original notation/units, assumptions, applicability,
+and any adaptation. Reproduce a relevant worked example in its original units and
+SI where available, alongside independently calculated fixtures. Check equations
+against the displayed code and results; document discrepancies and the chosen
+interpretation rather than copying a suspected error or rounded intermediate.
+
+Treat the book as the methodological foundation, with an explicit coverage record:
+implemented book method, documented RC adaptation, or deferred/unsupported method.
+Its example propulsion uses piston engines and its mission analysis uses fuel
+weight fractions. Electric power, battery energy, V-tail mixing and flying-wing
+handling must have explicit applicability/evidence before being claimed supported.
+Example empirical constants are example inputs, not universal RC defaults. Follow
+the book's own cited references when more detail is needed; supplementary sources
+serve documented gaps and external-tool interfaces, not competing design recipes.
+
+The book's full contents do not automatically expand the first release. Record
+unimplemented takeoff/landing, fuselage, landing gear, structural/load-envelope,
+cost and other analyses as deferred. A supported subset must not imply completion
+of the whole book or whole-aircraft validation.
 
 ## Rules every task must preserve
 
@@ -70,8 +163,12 @@ same design state, not duplicate sets of area, mass, and speed fields.
   distinct meanings. Do not implement “any three fields editable” globally.
 - A computable candidate can violate requirements. Report `met`, `unmet`, or
   `unknown` separately from numeric validity and evidence quality.
+- Combine all applicable required flight cases as specified in Task 04; show
+  controlling cases and partial bounds when evidence is missing.
 - Never silently relax constraints, overwrite drivers, invent missing polar
   data, or show stale outputs as current. Preserve saveable draft designs.
+- Evaluation identities are never restored by undo/redo. Version saved drafts
+  from Task 06 onward and validate compatibility before adopting loaded state.
 - Distinguish alternate algebraic entry points from physical design iteration.
   The former needs explicit solve modes; the latter needs user revision or a
   bounded solver with explicit convergence/failure results.
@@ -82,15 +179,15 @@ same design state, not duplicate sets of area, mass, and speed fields.
 
 | Task | Outcome | Dependencies |
 |---|---|---|
-| [01 — Project boundaries](01-project-boundaries.md) | Independent Go core, API/frontend seams, reproducible local checks | None |
+| [01 — Project boundaries](01-project-boundaries.md) | Independent Go core, API/frontend seams, reproducible local and CI checks | None |
 | [02 — Equations and lift](02-equations-and-lift.md) | Unit-safe, logged forward/inverse lift calculations | 01 |
 | [03 — Geometry and configurations](03-geometry-and-configurations.md) | Planform, MAC, dihedral, Reynolds and configuration contracts | 02 |
 | [04 — Workflow engine](04-workflow-engine.md) | Tested driver selection, requirements, inversions and recovery | 02, 03 |
 | [05 — HTTP boundary](05-http-boundary.md) | Thin, validated API over the same Go core | 04 |
-| [06 — Worksheet UI](06-worksheet-ui.md) | Standalone Vite/React sizing workflows | 05 |
+| [06 — Worksheet UI](06-worksheet-ui.md) | Standalone sizing workflows and versioned draft persistence | 05 |
 | [07 — Tradeoff visuals](07-tradeoff-visuals.md) | Explain the effects of changing one driver | 04, 06 |
-| [08 — Stability and controls](08-stability-and-controls.md) | Configuration-specific tail/control and handling checks | 03–06 |
-| [09 — Power and mission](09-power-and-mission.md) | Weight/power path, battery/motor feedback, energy budget | 02–06 |
+| [08 — Stability and controls](08-stability-and-controls.md) | Book-based conventional trim/static-margin assessment in the UI; explicit configuration coverage | 03–06 |
+| [09 — Power and mission](09-power-and-mission.md) | Tested power-first UI, battery/motor feedback, energy budget | 02–06 |
 | [10 — MCP sidecar](10-mcp-sidecar.md) | Calculations and curated patterns available through MCP | 04; expose later models as they exist |
 | [11 — External handoff](11-external-handoff.md) | Reproducible export and analysis feedback | 04–06; relevant model tasks |
 
@@ -99,17 +196,22 @@ move earlier if agent access becomes a driver. This table is a dependency map,
 not authorization to spawn parallel agents.
 
 The first useful sizing release ends at Task 06. Configuration choices already
-exist, but handling remains explicitly unknown until Task 08. Task 07 adds the
-requested explanatory visuals. A complete power-first workflow arrives in Task 09.
+exist, but handling remains explicitly unknown until Task 08's supported assessment.
+V-tail/flying-wing handling remains unknown until its extension is validated.
+Task 07 adds the requested explanatory visuals. A complete power-first workflow
+arrives in Task 09.
 
 ## Open decisions, resolved when they become relevant
 
-- A real aircraft/example dataset for comparison beyond synthetic arithmetic.
-- Quantitative handling targets: approach trim/CG range, roll rate at a specified
-  speed, remaining pitch moment, yaw/sideslip control, or other selected outcomes.
+- An RC comparison dataset beyond the book's worked examples and synthetic fixtures.
+- Additional quantitative handling targets beyond Task 08's minimum: roll rate at
+  a specified speed, remaining pitch moment, yaw/sideslip control, or other outcomes.
   “Gentle/sport/aerobatic” can name transparent presets, not universal constants.
 - Target NASA tool, versions and desired handoff format.
-- Persistence/export schema and specific API/MCP transport: decide in their tasks.
+- Target autopilot platform/firmware and mission/control limits if a platform
+  adapter is added; do not assume a platform from the existing GCS checkout.
+- Minimal snapshot schema/version handling in Task 06; external export extensions
+  in Task 11. Specific API/MCP transport is decided in its adapter task.
 - If the UI choice is revisited, do so before Task 06 without moving physics out
   of Go. Compare a representative driver swap and sensitivity chart, not a demo form.
 

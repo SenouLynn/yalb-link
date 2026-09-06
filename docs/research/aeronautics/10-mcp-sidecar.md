@@ -6,6 +6,9 @@ Dependency: [04](04-workflow-engine.md); expose later models only when implement
 
 ## Work
 
+- Preserve the [handoff's book-method mappings](README.md), source metadata and
+  RC adaptations in discovery and results. An agent sees the same implemented
+  subset and unsupported-method states as the worksheet.
 - At implementation time, verify current MCP SDK/transport guidance and select
   an appropriate Go adapter. Keep protocol types and lifecycle out of the core.
 - Expose discovery of supported equation and workflow revisions, evaluation,

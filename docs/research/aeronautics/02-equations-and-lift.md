@@ -5,12 +5,19 @@ traceable formulas, and checked numerical examples. Dependency: [01](01-project-
 
 ## Work
 
+- Follow the [handoff's source rules](README.md), starting with the book's
+  [Lift chapter](https://computationaldesignlab.github.io/aircraft-design/aerodynamics/lift_curve.html).
+  Map implemented equations and derived inversions to their source basis. Keep
+  aircraft lift-curve/CLmax estimation distinct from the initial supplied-CLmax
+  inversions; implement later estimation methods when their required evidence exists.
 - Define quantities/units so mass (kg), weight (N), lengths (m), areas (m²), true
   speed (m/s), angles, power and energy cannot be casually interchanged. Use SI
   internally and test supported boundary conversions; never round intermediates.
 - Each implemented equation has an ID/revision, expression, input/output units,
   source and assumptions. Each evaluation returns actual substitutions and output
   for an inspectable log. Keep logging free of implicit I/O and timestamps.
+  Record source section/access date or upstream revision, original units and
+  documented adaptations; distinguish book methods from supplementary extensions.
 - Return typed missing/invalid/unsupported results with field-specific issues.
   Validate finite inputs and output; detect zero divisors and overflow/underflow.
   Ordinary invalid user data must not become panics or successful NaN values.
@@ -35,6 +42,7 @@ Use true airspeed with local density and an explicitly positive load factor.
 This is a lumped lift model, without separately solved wing/tail trim loads.
 The mass ceiling is aerodynamic for the selected case, not a structural rating.
 A stall ceiling produces an area lower bound; it does not choose actual area.
+Supplementary identity reference:
 [NASA lift equation](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/lift-equation/).
 
 ## Acceptance checks

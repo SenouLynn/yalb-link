@@ -5,6 +5,9 @@ from the GCS frontend. Dependency: [05](05-http-boundary.md).
 
 ## Work
 
+- Present the supported book-based design methods from the [handoff](README.md)
+  through the selected user journeys. Show chapter references and adaptations in
+  equation details; keep unimplemented book analyses visibly outside current coverage.
 - Use compact aligned fields, collapsible sections, readable numeric output and
   an always-visible results/requirements summary. Borrow Dear ImGui's directness
   while using accessible browser controls.
@@ -24,11 +27,24 @@ from the GCS frontend. Dependency: [05](05-http-boundary.md).
 - Preserve previous results for comparison but label their input revision. During
   requests, distinguish pending from current; discard stale responses. Handle
   unavailable backend and retry without losing the user's draft.
+  Use Task 04's fresh evaluation identities across undo/redo, history branches
+  and draft loading; cancellation alone does not establish response freshness.
 - Expose equation/substitution traces and assumptions through progressive detail.
   Avoid routine confirmation dialogs. A violated requirement does not disable
   unrelated panels or prevent saving a clearly identified draft.
 - Keep a single canonical design state; UI components contain no aerodynamic
   formulas. Choose draft persistence/export mechanics when implementing, then test.
+- Establish the minimal versioned snapshot contract before saving the first draft.
+  Include schema version, relevant model/equation revisions, authoritative inputs,
+  units, driver roles, requirements, cases and provenance. Preserve unfinished
+  editor text separately from committed values; cached results are nonauthoritative.
+  Keep storage I/O outside the Go core and use Go to validate physical content.
+- Validate a loaded snapshot before replacing the current candidate. Define
+  explicit supported migrations or reject incompatible schema versions without
+  data loss. On model revision changes, invalidate cached results/evidence as
+  appropriate and reevaluate supported inputs; show unsupported results as unknown.
+  Tasks 07–09 must extend this contract with compatibility checks as needed;
+  Task 11 reuses it for external handoff.
 
 ## Acceptance checks
 
@@ -37,8 +53,17 @@ from the GCS frontend. Dependency: [05](05-http-boundary.md).
 - Keyboard-only editing, focus after validation, explicit driver swaps,
   undo/redo, units, draft retention and required/preferred checks work.
 - A failed/out-of-order request never replaces current results or erases input.
+- Browser tests delay a response across edit → undo → different edit, redo and
+  draft loading. Only the current evaluation can update current results.
+- Save/reopen complete and invalid/incomplete drafts, preserving physical inputs,
+  roles, requirements, provenance and unfinished text. Load an older model revision
+  and verify reevaluation without displaying cached outputs as current. Malformed
+  snapshots and unsupported schema versions leave the current draft intact;
+  any supported migration has a fixture from its prior schema.
 - Tests cover descriptive invalid-input recovery and the Task 04 infeasible-wing
   example. State text communicates status without relying on color.
+- Show Task 04's controlling cases, partial bounds and aggregate requirement
+  status; browser coverage includes a missing required case and a preferred case.
 - Conventional, V-tail and flying-wing selection works; missing handling analysis
   is clearly unknown and does not block wing sizing.
 - Frontend typecheck, lint, build and relevant UI tests pass. Only claim behavior
