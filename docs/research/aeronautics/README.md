@@ -1,8 +1,9 @@
 # Aeronautics calculator — task handoff
 
-Status: **planning only; no calculator implementation is included in this plan.**
-These tasks record the user's requested future work, not existing capabilities or
-accepted API contracts. Updated 2026-09-05.
+Status: **implementation in progress in `aeronautics/`.** The user authorized
+all eleven tasks on 2026-09-05. Task descriptions are acceptance targets, not
+claims of completed capabilities. See the [implementation log](../../reference/aeronautics-implementation.md)
+for checked behavior, decisions and outstanding verification.
 
 ## Start here in a fresh session
 
@@ -66,8 +67,8 @@ Suggested continuation prompt:
 - An optional **MCP sidecar** should expose the same calculations and curated,
   versioned (“blessed”) workflows. It must not duplicate the calculation engine.
 - Eventually hand dimensions and requirements to Fusion 360, XFLR5/flow5, and a
-  NASA analysis tool. The NASA tool is **unconfirmed**; do not assume OpenVSP,
-  VSPAERO, or FUN3D interchangeably.
+  NASA's **OpenVSP**, selected by the user on 2026-09-05. Verify the target version
+  and handoff format during Task 11; VSPAERO analysis is a separate capability.
 
 ## Primary user journeys
 
@@ -207,7 +208,7 @@ arrives in Task 09.
 - Additional quantitative handling targets beyond Task 08's minimum: roll rate at
   a specified speed, remaining pitch moment, yaw/sideslip control, or other outcomes.
   “Gentle/sport/aerobatic” can name transparent presets, not universal constants.
-- Target NASA tool, versions and desired handoff format.
+- OpenVSP target version and desired handoff format.
 - Target autopilot platform/firmware and mission/control limits if a platform
   adapter is added; do not assume a platform from the existing GCS checkout.
 - Minimal snapshot schema/version handling in Task 06; external export extensions
@@ -215,6 +216,6 @@ arrives in Task 09.
 - If the UI choice is revisited, do so before Task 06 without moving physics out
   of Go. Compare a representative driver swap and sensitivity chart, not a demo form.
 
-Prior work produced only temporary experiments outside this checkout. Treat task
-implementations as unstarted; do not assume the TypeScript or Go calculator code
-mentioned earlier in the conversation exists or has passed tests.
+Prior work produced temporary experiments outside this checkout. Implementation
+and verification claims now come from this checkout and its implementation log;
+do not infer them from those earlier experiments.

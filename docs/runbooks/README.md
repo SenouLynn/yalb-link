@@ -13,3 +13,4 @@ Recorded validation procedures and results (raw captures are optional):
 
 See the [temporary artifact workflow](../temp/README.md) for capture and cleanup.
 Reusable mission validation helpers live in `scripts/validation/`.
+- [aeronautics.md](aeronautics.md) — standalone calculator checks in `aeronautics/`

@@ -1,0 +1,47 @@
+name: aeronautics
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  standalone:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: aeronautics
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: aeronautics/go.mod
+          cache: false # No external Go dependencies yet.
+      - run: go build ./...
+      - run: go vet ./...
+      - run: go test -race -timeout=2m ./...
+      - uses: golangci/golangci-lint-action@v9
+        with:
+          version: v2.12.2
+          working-directory: aeronautics
+          args: --config .golangci.yml
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: aeronautics/frontend/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: aeronautics/frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: aeronautics/frontend
+      - run: pnpm typecheck
+        working-directory: aeronautics/frontend
+      - run: pnpm lint
+        working-directory: aeronautics/frontend
+      - run: pnpm test
+        working-directory: aeronautics/frontend
+      - run: pnpm build
+        working-directory: aeronautics/frontend

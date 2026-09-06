@@ -11,4 +11,7 @@ load("@gazelle//:def.bzl", "gazelle")
 # Gazelle is Go-only here; frontend/BUILD.bazel is maintained separately.
 # gazelle:exclude frontend
 
+# The standalone calculator is checked by its own Go/frontend CI job.
+# gazelle:exclude aeronautics
+
 gazelle(name = "gazelle")

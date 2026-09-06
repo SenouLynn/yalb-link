@@ -76,6 +76,8 @@ database file does not shrink automatically.
 
 No project license has been selected or committed.
 
+The independent [aeronautics calculator](aeronautics/README.md) currently provides a standalone Go/React shell with its own checks.
+
 ### Next demonstrable outcome
 
 The intended first hardware milestone is trustworthy **read-only observation**

@@ -12,3 +12,5 @@ frontend/*.tsbuildinfo
 # The locally built backend binary (see .gitignore). Copying a host-built
 # darwin/arm64 executable into a linux image is a confusing way to fail.
 /gcs
+# The standalone calculator is not part of the GCS image.
+aeronautics

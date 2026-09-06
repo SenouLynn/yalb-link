@@ -40,4 +40,4 @@ Keep results and repeatable procedures in maintained documentation so they remai
 useful after raw captures are pruned.
 ## Planned work
 
-- [Aeronautics calculator task plan](research/aeronautics/README.md): user-requested future tasks, dependencies, and acceptance checks; no calculator implementation is included.
+- [Aeronautics calculator task plan](research/aeronautics/README.md): delivery targets and acceptance checks; current progress is recorded in the [implementation log](reference/aeronautics-implementation.md).

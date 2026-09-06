@@ -50,7 +50,8 @@ the geometry/control/power models used by each adapter.
   do not by themselves create a mass-accurate CAD assembly.
 - Verify XFLR5/flow5 versions and supported geometry/data formats before writing
   adapters. Check station, airfoil, control, mass, axes and coefficient references.
-- Confirm the NASA tool first. OpenVSP is a geometry environment and VSPAERO a
+- The user selected OpenVSP on 2026-09-05. Verify its version and geometry handoff.
+  OpenVSP is a geometry environment and VSPAERO a
   potential-flow analysis tool; FUN3D is a distinct CFD toolchain. They are not
   interchangeable assumptions about “dynamic flow testing.”
   [NASA OpenVSP](https://www.nasa.gov/software/openvsp-ground-school/),
