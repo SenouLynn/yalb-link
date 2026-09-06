@@ -38,3 +38,6 @@ for broken local links and references to deleted files.
 Validation captures follow the [temporary artifact workflow](temp/README.md).
 Keep results and repeatable procedures in maintained documentation so they remain
 useful after raw captures are pruned.
+## Planned work
+
+- [Aeronautics calculator task plan](research/aeronautics/README.md): user-requested future tasks, dependencies, and acceptance checks; no calculator implementation is included.
