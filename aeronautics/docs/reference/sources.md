@@ -67,6 +67,45 @@ equation cannot quietly acquire the attribution, and an existing one cannot
 quietly lose it. `TestLiftSubsetDoesNotClaimBookProvenance` keeps the Task 02
 family off it entirely.
 
+## What the Matching process chapter actually contains
+
+The [Matching process chapter](https://computationaldesignlab.github.io/aircraft-design/constraint_analysis/final.html)
+was read on 2026-09-05, before Task 04 was implemented. Like the Lift chapter,
+the reading changed what the implementation may claim:
+
+- It plots **four** constraints against wing loading: takeoff distance (a
+  quadratic in the takeoff parameter, `a = 0.009`, `b = 4.9`, for a 1500 ft
+  requirement), landing distance, one-engine-inoperative climb gradient at
+  5000 ft against a 0.015 gradient, and cruise speed at 8000 ft at an 80% power
+  setting.
+- Its axes are `W/S` against `W/P`, **power** loading for a piston engine, not
+  the electric propulsion this project targets.
+- It reduces the constraints with a logical AND to shade a feasible region, then
+  selects a design point **by visual inspection** inside it, at `W/S = 40 lb/ft²`
+  and `W/P = 9.25 lb/hp`.
+- It contains **no independent stall-speed constraint.** Stall speed appears only
+  inside the landing-distance relation, as `v_sL = (s_lgr/0.265)^0.5` in knots.
+
+**Consequence for attribution.** Task 04 implements no equation from this
+chapter, and adds no equation to the registry at all: its bounds come from the
+Task 02 stall-speed inversions, which are already recorded above as derived. All
+four of the chapter's constraints need a propulsion model, a drag polar and
+empirical constants that do not exist in this package, and its example values are
+inputs for a manned piston aircraft, not RC defaults.
+
+What the chapter does contribute is the *shape* of the workflow, and that is
+recorded as methodology rather than as a ported equation: constraints are
+intersected rather than averaged, the binding one is identified, and the design
+point is **chosen** by the builder inside the feasible region rather than solved
+for. `SizeAtStallLimit` follows exactly that: it reports a bound, and only sits
+on it when the builder asks it to. The one deliberate departure is that this
+package names the controlling case numerically instead of leaving the reader to
+find it by eye on a plot.
+
+A stall-only subset is therefore **not** the chapter's matching plot, and nothing
+in this package presents it as one. `TestBookProvenanceIsLimitedToCheckedChapterMethods`
+still holds the same seven geometry equations and no others.
+
 ## Implemented methods
 
 All are in `yalb.aero/calculator`, each with an equation ID, revision, expression,
@@ -151,7 +190,9 @@ it does not choose an area.
 | Airfoil polar import, interpolation or extrapolation | Unsupported. Task 12 generates coordinates only: a generated section establishes geometry, never lift, drag, moment or a section clmax |
 | Wing fuel volume (Torenbeek) | Not implemented: an electric RC wing carries no fuel |
 | Kinked, cranked, elliptical or multi-panel planforms | Unsupported; reported as unsupported rather than solved approximately |
-| Matching process, supported requirement intersection | Deferred to Task 04 |
+| Requirement intersection over required cases, controlling case and deliberate candidate selection | **Implemented as a stall-only subset** (Task 04). The book's four-constraint matching plot is not delivered by it and is not claimed |
+| Takeoff, landing, OEI climb-gradient and cruise-speed constraints | Unsupported. Each needs a propulsion model, a drag polar and empirical constants this package does not have; they enter through the same case engine when Task 09 supplies them |
+| Numerical solvers, convergence budgets and discrete component search | Unsupported. Task 04 treats feedback loops as explicit builder revisions; no iterate is produced, so none can be mislabelled converged |
 | Weight/balance, conventional static margin and trim | Deferred to Tasks 07–08 |
 | Drag and electric propulsion/mission adaptations | Deferred to Task 09 |
 | Carbon spar geometric fit under taper, twist and varying section | Deferred to Task 13 |

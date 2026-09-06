@@ -143,10 +143,11 @@ func requireCheck(t *testing.T, checks calculator.RequirementChecks, name, caseN
 	direction calculator.BoundDirection,
 ) calculator.RequirementCheck {
 	t.Helper()
+	matching := checks.Named(name).ForCase(caseName)
 	var found []calculator.RequirementCheck
-	for _, c := range checks.Named(name).ForCase(caseName) {
-		if c.Direction == direction {
-			found = append(found, c)
+	for n := range matching {
+		if matching[n].Direction == direction {
+			found = append(found, matching[n])
 		}
 	}
 	if len(found) != 1 {
@@ -201,11 +202,12 @@ func mustDo(t *testing.T, s *calculator.Session, cmd calculator.Command) {
 	}
 }
 
-// sameWithin reports whether two float64 values agree to the given relative
-// tolerance, treating an exact zero as requiring an exact match.
-func sameWithin(got, want, rel float64) bool {
+// sameWithin reports whether two float64 values agree to floatNoise, the
+// relative tolerance this package uses for a value computed twice by different
+// routes. An exact zero requires an exact match.
+func sameWithin(got, want float64) bool {
 	if want == 0 {
 		return got == 0
 	}
-	return math.Abs(got-want) <= rel*math.Abs(want)
+	return math.Abs(got-want) <= floatNoise*math.Abs(want)
 }

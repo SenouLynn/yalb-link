@@ -10,7 +10,7 @@ decisions. All thirteen tasks are authorized: the original eleven on
 | 01 — Boundaries | Complete | Module checks and frontend checks run and pass; runbook recorded. One acceptance check is not satisfiable, see "GCS gates" below |
 | 02 — Lift | Complete | Units, registry, traces, typed issues and the lift inversions implemented; fixtures match to the quoted precision |
 | 03 — Geometry | Complete | Planform, MAC, dihedral planes, coordinates, parameters, Reynolds coverage and configuration contracts implemented; 69 tests pass, 185 including subtests; the book's worked example reproduces. A plane-blind limits check was found and fixed post-review, see below |
-| 04 — Workflows | Pending | No workflow engine implemented |
+| 04 — Workflows | Complete | Design definition, commands with undo/redo, requirement intersection, controlling cases, conflicts with offered alternatives, request identity and curated patterns implemented; 120 tests pass, 258 including subtests. The Matching process chapter was read and Task 04 claims no equation from it, see below |
 | 05 — HTTP | Pending | No API implemented |
 | 06 — Worksheet | Pending | Static shell only |
 | 07 — Visuals | Pending | No mass placement or sensitivity view |
@@ -211,6 +211,114 @@ MAC and tip rather than the MAC alone — is recorded as this project's adaptati
   `EvaluationOrder` fails on a cycle or a dangling edge, and the cycle detection
   is checked against a hand-built cyclic set rather than assumed.
 
+## Task 04 verification
+
+Run on 2026-09-05 from `aeronautics/`: `go build ./...`, `go vet ./...`,
+`go test -race -timeout=2m ./...` and `golangci-lint run` (0 issues) all pass,
+with no lint relaxation added. The calculator package now holds 120 top-level
+tests, 258 counting subtests, up from 69 and 185 at the end of Task 03. The
+core's import closure is unchanged: `go list -deps yalb.aero/calculator` still
+resolves to the module plus `math`, `sort`, `strconv` and `errors`. No frontend
+file was touched, and no equation was added to the registry.
+
+**Every acceptance value reproduces.** The nine checks' expected numbers were
+recomputed independently at 50 significant digits from the closed forms, not read
+back from the package: area 0.24 m², stall speeds 10.544501312841112 and
+14.912176765080807 m/s, minimum areas 0.41694940476190476 and
+0.83389880952380952 m², mass ceilings 1.1512188158035619 and 0.57560940790178093
+kg, and — for "size at the stall limit, keep span" — aspect ratio
+3.4536564474106856, root chord 0.34745783730158730 m and the conditional
+alternative span 1.5816751969261668 m. The fixtures and their derivations are
+recorded in `calculator/workflow_helpers_test.go`; the task quotes several to
+fewer places, and the tolerances are stated from the quoted precision rather than
+from display rounding.
+
+**The Matching process chapter was read, and Task 04 claims nothing from it.**
+Reading it on 2026-09-05 changed the record. Its four constraints are takeoff
+distance, landing distance, OEI climb gradient and cruise speed; its axes are
+`W/S` against **power** loading `W/P` for a piston engine; its design point is
+picked by visual inspection at `W/S = 40 lb/ft²`, `W/P = 9.25 lb/hp`; and it has
+**no independent stall-speed constraint** — stall appears only inside its
+landing-distance relation. So the stall-only subset implemented here is not one
+of the chapter's constraints, no Task 04 equation carries `SourceBook`, and the
+registry gained no equations at all. What the chapter contributes is the shape of
+the workflow: intersect rather than average, identify the binding constraint, and
+let the builder choose the point. Details in
+[sources.md](../../aeronautics/docs/reference/sources.md).
+
+**Design decisions taken during implementation.**
+
+- *One definition, edited only by commands.* `Design` is the authoritative
+  parametric definition and is a plain value; every edit is a `Command`, and the
+  `Command` interface has an unexported method so the supported edits stay a
+  curated set rather than arbitrary caller code. That is the task's "curated
+  relationships initially" requirement expressed in the type system.
+- *Promotion is atomic and normally ambiguous.* A planform holds exactly two size
+  drivers and all six pairs are supported solve paths, so promoting a third value
+  always has two valid releases. `PromoteDriver` without a named release returns
+  the offer rather than choosing; `SetDriver` on a derived value refuses and names
+  the same swaps. Nothing infers precedence from edit order.
+- *Priority is carried by both a case and a requirement.* A bound contributes to
+  the intersected required bounds only when the case and the requirement are both
+  required. Either one being preferred removes the contribution and keeps the
+  assessment, which is what acceptance check 7's final clause asks for.
+- *An unknown contribution makes a bound partial, not smaller.* Withdrawing a
+  case's CLmax leaves `SizingBound.Partial` set with the remaining value, so a
+  bound that is missing evidence never reads as a complete feasible interval.
+- *Ties are reported, not broken.* `SizingBound.Controlling` is a list. Two cases
+  that produce the same bound are both named rather than one arbitrarily winning.
+- *A conflicting group is known, not minimal.* `Conflict` says so in its own
+  `Detail`, because identifying a minimal infeasible set is a solver result and no
+  solver runs here.
+- *Alternatives are commands, unapplied.* Each `Alternative` carries the `Command`
+  that would resolve the conflict, so accepting one is the builder's edit. The
+  span alternative also states that the maximum-span requirement would then be
+  unmet, rather than presenting a change that quietly breaks another bound.
+- *Identity is a counter, and the session is single-goroutine.* `RequestID` is a
+  session-scoped sequence. The core reaches neither a clock nor `sync/atomic`, and
+  the Task 01 boundary work made admitting `sync/atomic` and `context` a decision
+  rather than an accident; that decision is not to admit them. A transport serving
+  several callers owns its own serialization, outside this package.
+- *Every design change retires the current request.* `Do`, `Undo`, `Redo` and
+  `Load` all clear the current identity, so no restored design can accept a result
+  computed before it. This matters in the one case an input snapshot cannot catch:
+  undoing back to the exact design a held result was computed from.
+- *Staleness replaces statuses rather than annotating them.* `Evaluation.Stale`
+  turns every check unknown, because showing a previously met requirement against
+  edited inputs would present a stale output as a current one.
+- *Power-first is listed, not omitted.* `PatternPowerFirst` is registered with
+  `Supported: false` and never offered for a design, so its absence is a stated
+  gap. No sizing formula was fabricated for it.
+- *The area a sizing action writes stays in its own plane.* Under
+  `DihedralHoldPanel` with a nonzero dihedral the area driver is a panel-plane
+  construction area, so `SizeAtStallLimit` converts the plan-view bound through
+  the existing `geometry.panel-area` relation instead of writing a projected
+  number into a panel driver.
+
+**Tests verified by mutation.** Twenty-three deliberate breaks were introduced
+one at a time and the suite rerun for each: inverting the bound intersection,
+letting a preferred case or a preferred requirement tighten the required bounds,
+dropping a failed contribution instead of marking the bound partial, making an
+unknown check outrank a known failure, treating an empty required set as passing,
+widening the boundary tolerance to 1e-3, recording a margin without applying it,
+holding both drivers through a sizing action, writing the projected area into a
+panel-plane driver, committing a preview, leaving requirement statuses standing
+under `Stale`, dropping the aspect ratio from the derived area ceiling and from
+the span alternative, reporting a conflict when the bounds agree, accepting a
+per-case requirement with no cases, ignoring the case scope, accepting a
+promotion release that is not a driver, and omitting the case priority from the
+snapshot. Every one failed a test. Two initially did not and were fixed by adding
+the missing tests rather than by accepting the gap:
+
+- Making `Session.invalidateRequest` a no-op still passed, because `Accept` also
+  compares the input snapshot and every existing test changed the inputs.
+  `TestUndoingBackToAnEvaluatedStateDoesNotRestoreItsIdentity` closes it: the
+  inputs match again after the undo and the result is still refused.
+- Accepting any named driver release still passed, because no test named an
+  invalid one. `TestPromotionRefusesToReleaseSomethingThatIsNotADriver` closes it
+  and checks the design is unchanged afterwards, which is the three-driver state
+  the atomic swap exists to prevent.
+
 ## Post-review corrections (2026-09-05)
 
 Findings from an adversarial review of the Task 01–03 commits, fixed in place.
@@ -279,6 +387,20 @@ with no lint relaxation added. The calculator package holds 69 top-level tests,
 - The lift model is lumped: no separate wing and tail trim loads. Handling,
   stability and control remain entirely unimplemented, and no configuration
   (conventional, V-tail or flying wing) has a supported handling assessment.
+- The workflow engine's constraint set is stall-only. Requirement subjects cover
+  stall speed, span, area, mass, aspect ratio and mass wing loading — the
+  quantities the implemented models produce — and nothing else. The book's
+  takeoff, landing, climb-gradient and cruise-speed constraints, and any handling
+  or power requirement, are absent until the models behind them exist.
+- No solver runs. Feedback loops are explicit builder revisions: `SizeAtStallLimit`
+  is a closed-form bound, not an iteration, so there is no iterate that could be
+  mislabelled converged and no residual or budget to report. A conflicting group
+  is reported as known rather than minimal for the same reason.
+- A `Session` is single-goroutine. Concurrency belongs to whatever serves it.
+- Component placements, mass items and mission cases are not expressible in a
+  `Design` yet; they arrive with Tasks 07 and 09. Draft versioning and load-time
+  compatibility checks arrive with Task 06, so a draft is currently adopted as
+  given.
 - No method estimates a lift coefficient; `CLmax` is always supplied evidence.
   Task 03 supplies the geometry the book's CLmax estimation needs, but no airfoil
   polar evidence exists, so nothing estimates a coefficient yet.

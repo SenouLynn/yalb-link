@@ -1,15 +1,16 @@
 # YALB Aero
 
 Independent fixed-wing RC aircraft calculator project. The current implementation
-is a transport-free Go library covering units, the initial lift calculations and
-wing geometry, a version-only executable, and a static Vite/React page. No HTTP
-service, sizing workflow, handling prediction, power model or external-tool
-adapter is implemented yet, and the frontend does not yet display any calculation.
+is a transport-free Go library covering units, the initial lift calculations,
+wing geometry and a sizing workflow engine, a version-only executable, and a
+static Vite/React page. No HTTP service, handling prediction, power model or
+external-tool adapter is implemented yet, and the frontend does not yet display
+any calculation.
 
 ## What the library does
 
 `yalb.aero/calculator` provides dimensioned quantities, an equation registry, the
-first lift calculations and the wing geometry model:
+first lift calculations, the wing geometry model and the sizing workflow engine:
 
 - **Units.** A `Quantity` holds a finite value in SI with its `Dimension`.
   Mass, weight, area, speed, density, wing loading, angle, power and energy are
@@ -69,6 +70,63 @@ when the extra values agree and as conflicting when they do not.
   V-tail records panel area and cant rather than imaginary independent surfaces.
   All of this is geometry: `Handling` reports unsupported for every configuration.
 
+## Sizing workflows
+
+A `Design` is the authoritative parametric definition: named inputs, the two size
+drivers the builder chose, the flight cases the candidate must hold, and the
+requirements it is judged against. Nothing else owns a second copy of a value
+that appears in it, and every edit goes through a `Command`, so history, driver
+roles and evaluation identity cannot disagree about what happened. The `Command`
+interface has an unexported method: the supported edits are a curated set, not a
+general-purpose expression language or arbitrary caller code.
+
+- **Drivers move atomically.** `PromoteDriver` makes a derived value a driver and
+  releases a named existing one in the same edit. A planform holds exactly two
+  size drivers and every pair is a supported solve path, so a promotion is
+  normally ambiguous; without a named release it returns the valid swaps rather
+  than picking one, and `SetDriver` on a derived value refuses and names the same
+  swaps. Nothing infers precedence from edit order.
+- **Requirements are not drivers.** A `Requirement` bounds a subject — stall
+  speed in a named case, span, area, mass, aspect ratio or mass wing loading —
+  with a minimum, a maximum, an optional relative margin and a priority. Its
+  outcome (`met`, `unmet`, `unknown`) is reported separately from whether the
+  model produced the number at all (`computed`, `missing`, `invalid`, `stale`)
+  and from how good the evidence behind it is (`assumed`, `measured`,
+  `simulated`).
+- **Bounds intersect and name their controlling case.** `AreaLowerBound` takes
+  the largest lower bound over the required cases and `MassUpperBound` the
+  smallest upper bound, both listing every contribution and every controlling
+  source, ties included. A required case that could not contribute marks the
+  bound `Partial`: missing evidence permits a labeled partial bound and never a
+  complete feasible interval. A preferred case or a preferred requirement is
+  assessed and contributes nothing. An empty required set makes no feasibility
+  claim; it is not a passing one.
+- **A mass range needs both ends.** A stall ceiling bounds mass from above and
+  justifies no nonzero lower bound; a component minimum or a minimum wing loading
+  supplies one, and an empty interval is detected and explained.
+- **Conflicts are reported with alternatives, not resolved.** A required area
+  minimum above a required area maximum — including the maximum implied by a
+  span limit with an aspect-ratio target — is reported as a *known* conflicting
+  group, explicitly not a minimal one, since no solver runs. Each `Alternative`
+  carries the `Command` that would resolve it, unapplied, and says what it would
+  cost.
+- **Evaluation identity is separate from history.** Every `Session.Evaluate`
+  mints a fresh `RequestID`. `Do`, `Undo`, `Redo` and `Load` all retire the
+  current identity, so a result computed before a branch can never be accepted
+  after it — including when an undo restores the exact inputs the result came
+  from. A `Session` is single-goroutine: the core reaches neither a clock nor
+  `sync/atomic`, and serialization belongs to whatever serves it.
+- **Curated patterns, including the one that is missing.** `Patterns()` returns
+  the span-first, mass-and-performance-first, mass-and-size-first and
+  existing-design workflows with their rationale, required inputs, active
+  drivers, outcome and validity limits. The power-first journey is registered as
+  unsupported and is never offered: power alone cannot determine a wing, and no
+  sizing formula was invented for it.
+
+The constraint set is stall-only. This is not the book's takeoff, climb and
+cruise matching plot, and nothing here presents it as one; later constraints
+enter through the same case engine as their models arrive.
+
 ## Boundaries
 
 The domain package is `yalb.aero/calculator`. Application binaries live in `cmd/`;
@@ -83,16 +141,20 @@ without its generated-GCS-code exclusion. No `wrapcheck` or `funlen` relaxation 
 in effect. Frontend strict TypeScript configuration is entirely module-local.
 
 `boundary/imports_test.go` inspects production transitive imports using `go list
--deps`. The named stdlib allowlist (`math`, `fmt`, `errors`, `strconv`, `sort`,
-`testing`) includes their toolchain implementation dependencies; the explicit
-`net`, `os`, `database/sql` and `time` bans override that expansion, including
-subpackages. Thus importing `fmt` into the core is currently disallowed because
-its closure reaches `os`, which is why the core formats numbers with `strconv`.
-The test runner's own I/O lives outside the core.
+-deps`. The allowlist is the toolchain closure of the four packages the core may
+actually reach — `math`, `errors`, `strconv` and `sort` — and the explicit `net`,
+`os`, `database/sql` and `time` bans override that expansion, including
+subpackages. Thus importing `fmt` into the core is disallowed because its closure
+reaches `os`, which is why the core formats numbers with `strconv`. The test
+runner's own I/O lives outside the core.
 
-One weakness is worth knowing: because `testing` is on the allowlist, its closure
-also admits pure packages such as `strings`. The core does not rely on that, but
-the allowlist would not stop it today.
+Task 01 names `fmt` and `testing` as well, and both are deliberately left out of
+the seed: `testing` is a dependency of the tests rather than of the non-test
+closure this check reads, and seeding either widened the allowlist from 38
+packages to 71, quietly admitting `strings`, `bytes`, `io`, `reflect`, `context`,
+`sync/atomic`, `flag` and `path/filepath`.
+`TestAllowlistDoesNotAdmitTestOnlyPackages` pins that narrowing, so admitting any
+of them into the core is a decision rather than an accident.
 
 Run the executable from this directory with `go run ./cmd/aero`; it prints
 `yalb.aero 0.0.0` and exits. The frontend starts independently with `pnpm dev` from

@@ -4,6 +4,9 @@ package boundary_test
 import (
 	"encoding/json"
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"os/exec"
 	"strings"
@@ -133,4 +136,81 @@ func listPackages(t *testing.T, patterns ...string) []listedPackage {
 		}
 		packages = append(packages, pkg)
 	}
+}
+
+// TestApplicationBoundaryDoesNotDependOnHTTP holds the seam Task 05 is about:
+// the application boundary is transport-neutral, so an MCP sidecar can reuse it
+// directly instead of making loopback HTTP calls, and the calculation core does
+// not know either of them exists.
+func TestApplicationBoundaryDoesNotDependOnHTTP(t *testing.T) {
+	for _, tc := range []struct {
+		pkg       string
+		forbidden []string
+	}{
+		{
+			pkg:       "yalb.aero/api",
+			forbidden: []string{"net/http", "net", "yalb.aero/httpapi", "os", "database/sql"},
+		},
+		{
+			pkg:       "yalb.aero/calculator",
+			forbidden: []string{"yalb.aero/api", "yalb.aero/httpapi", "encoding/json", "context"},
+		},
+	} {
+		t.Run(tc.pkg, func(t *testing.T) {
+			banned := make(map[string]bool, len(tc.forbidden))
+			for _, path := range tc.forbidden {
+				banned[path] = true
+			}
+			for _, pkg := range listPackages(t, tc.pkg) {
+				if banned[pkg.ImportPath] {
+					t.Errorf("%s reaches %s, which its seam forbids", tc.pkg, pkg.ImportPath)
+				}
+			}
+		})
+	}
+}
+
+// TestTransportDoesNotReimplementTheCore holds that the boundary packages carry
+// no arithmetic. Multiplication, division, subtraction and remainder are how a
+// unit conversion or a formula gets copied into a transport, where it would then
+// be free to disagree with the core; string concatenation and comparison stay
+// allowed because those are what building a message and checking a shape are
+// made of.
+//
+// Every number a response carries therefore came out of yalb.aero/calculator.
+func TestTransportDoesNotReimplementTheCore(t *testing.T) {
+	for _, dir := range []string{"../api", "../httpapi"} {
+		t.Run(dir, func(t *testing.T) {
+			fset := token.NewFileSet()
+			packages, err := parser.ParseDir(fset, dir, nil, 0)
+			if err != nil {
+				t.Fatalf("parsing %s: %v", dir, err)
+			}
+			for _, pkg := range packages {
+				for name, file := range pkg.Files {
+					if strings.HasSuffix(name, "_test.go") {
+						continue
+					}
+					checkNoArithmetic(t, fset, file)
+				}
+			}
+		})
+	}
+}
+
+func checkNoArithmetic(t *testing.T, fset *token.FileSet, file *ast.File) {
+	t.Helper()
+	ast.Inspect(file, func(node ast.Node) bool {
+		binary, ok := node.(*ast.BinaryExpr)
+		if !ok {
+			return true
+		}
+		switch binary.Op {
+		case token.MUL, token.QUO, token.SUB, token.REM:
+			t.Errorf("%s: %s is arithmetic; every number the boundary reports must come from the core",
+				fset.Position(binary.Pos()), binary.Op)
+		default:
+		}
+		return true
+	})
 }

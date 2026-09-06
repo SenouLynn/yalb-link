@@ -19,9 +19,12 @@ for checked behavior, decisions and outstanding verification.
 
 Suggested continuation prompt:
 
-> Read docs/research/aeronautics/README.md and implement Task 01 only, including
+> Read docs/research/aeronautics/README.md and implement Task 05 only, including
 > its checks. Keep the calculator independent of the existing GCS frontend and
 > services. Do not start another task automatically.
+
+Tasks 01 to 04 are complete; the [implementation log](../../reference/aeronautics-implementation.md)
+records what each one actually checks and where it stops.
 
 ## User intent and settled direction
 

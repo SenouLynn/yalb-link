@@ -249,6 +249,33 @@ var dimensionSIUnits = [...]Unit{
 // Unit.
 var ErrUnknownUnit = errors.New("unknown unit")
 
+// Units returns every supported unit, in table order. It exists so that a
+// transport or a CAD adapter can list what a builder may enter without keeping
+// a second copy of the unit table, which is exactly how a mistyped conversion
+// factor gets into a system twice.
+func Units() []Unit {
+	units := make([]Unit, 0, len(unitTable)-1)
+	for u := UnitInvalid + 1; int(u) < len(unitTable); u++ {
+		units = append(units, u)
+	}
+	return units
+}
+
+// ParseUnit returns the unit with the given symbol. Symbols are the printed
+// forms in the unit table, so "m/s", "dm^2" and "oz/ft^2" all resolve, and an
+// unrecognised symbol is refused rather than defaulting to an SI unit.
+func ParseUnit(symbol string) (Unit, error) {
+	if symbol == "" {
+		return UnitInvalid, ErrUnknownUnit
+	}
+	for u := UnitInvalid + 1; int(u) < len(unitTable); u++ {
+		if unitTable[u].symbol == symbol {
+			return u, nil
+		}
+	}
+	return UnitInvalid, ErrUnknownUnit
+}
+
 func lookupUnit(u Unit) (unitDef, error) {
 	if u == UnitInvalid || int(u) >= len(unitTable) {
 		return unitDef{}, ErrUnknownUnit

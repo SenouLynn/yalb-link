@@ -195,3 +195,43 @@ func TestDimensionlessValueRendersWithoutASymbol(t *testing.T) {
 		t.Errorf("area String() = %q, want %q", got, "0.24 m^2")
 	}
 }
+
+// TestEverySupportedUnitParsesBackFromItsSymbol holds that the unit table is the
+// single authority a transport can read: every listed unit has a symbol, and
+// that symbol resolves back to the same unit, so no adapter needs its own copy.
+func TestEverySupportedUnitParsesBackFromItsSymbol(t *testing.T) {
+	units := calculator.Units()
+	if len(units) < 20 {
+		t.Fatalf("Units() returned %d units, which is fewer than the table holds", len(units))
+	}
+	seen := make(map[string]calculator.Unit, len(units))
+	for _, u := range units {
+		symbol := u.Symbol()
+		if symbol == "" {
+			t.Errorf("unit %d has no symbol", u)
+			continue
+		}
+		if previous, duplicate := seen[symbol]; duplicate {
+			t.Errorf("units %d and %d share the symbol %q", previous, u, symbol)
+		}
+		seen[symbol] = u
+		parsed, err := calculator.ParseUnit(symbol)
+		if err != nil {
+			t.Errorf("ParseUnit(%q): %v", symbol, err)
+			continue
+		}
+		if parsed != u {
+			t.Errorf("ParseUnit(%q) = %d, want %d", symbol, parsed, u)
+		}
+	}
+}
+
+// TestParseUnitRefusesWhatItDoesNotKnow holds that an unrecognised symbol is a
+// failure rather than a silent fall back to an SI unit.
+func TestParseUnitRefusesWhatItDoesNotKnow(t *testing.T) {
+	for _, symbol := range []string{"", "furlong", "M", "m^2 ", "kg/m2"} {
+		if u, err := calculator.ParseUnit(symbol); err == nil {
+			t.Errorf("ParseUnit(%q) = %v, want an error", symbol, u)
+		}
+	}
+}
