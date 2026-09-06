@@ -411,6 +411,136 @@ trailing JSON after the body, dropping the identity header, turning a not-found
 equation into a success, and skipping the content-type check. Every one failed a
 test.
 
+## Task 06 verification
+
+Run on 2026-09-06 from `aeronautics/`: `go build ./...`, `go vet ./...`,
+`go test -race -timeout=3m ./...` and `golangci-lint run` (0 issues) all pass,
+with no lint relaxation added. From `aeronautics/frontend/`: `pnpm typecheck`,
+`pnpm lint`, `pnpm test` and `pnpm build` all pass. The Go module holds 166
+top-level tests, 374 counting subtests: 129 in `calculator`, 18 in `api`, 14 in
+`httpapi` and 5 in `boundary`. The frontend holds 61 tests across six files: 17
+journey tests, 9 request-ordering tests, 10 reducer, 10 draft, 9 response
+validation and 6 field-editing tests.
+
+**The core gained commands and one published factor, and no equation.** Nothing
+in the frontend computes: it added no equation, no constant and no conversion of
+its own, and every number on the page came back from the service. What the
+worksheet needed from Go was the vocabulary to express a builder's edits.
+
+- *Withdrawing a value is not entering zero.* `SetDriver` and `SetMass` accept
+  the zero `Quantity` to take a value back, and `SetDriver` refuses to withdraw
+  where there is nothing to withdraw. This is what stands behind the brief's
+  "empty input never becomes zero": clearing a field asserts nothing, where a
+  typed zero would be refused as an impossible span.
+- *Filling an empty slot is not a promotion.* Below two held drivers `SetDriver`
+  now fills a slot, because nothing is being given up and there is no choice for
+  the builder to make. Only at two does setting a third become a swap, which
+  still releases another driver in the same edit.
+- *A mass may arrive before its provenance.* `SetMass` no longer refuses an
+  empty basis at the keystroke; `Design.Validate` reports it where the design is
+  judged. The requirement is not relaxed, it is enforced somewhere that lets a
+  builder type the number and the basis in either order.
+- *Three edits bundle values that constrain each other.* `SetPlanformShape`
+  carries shape and taper ratio, `SetWingAngles` every stated angle, and
+  `SetConfiguration` the layout together with its tail description. Each pair
+  would otherwise put the design through a state that is neither of the two —
+  a rectangle with a taper, a wing with one angle unset and so unable to solve
+  for a reason nobody chose, a flying wing still holding a tail.
+- *`Unit.FactorToSI` is published in the discovery document.* A display layer can
+  then render a stored SI value in the unit a builder chose without keeping a
+  second copy of the conversion table, which is exactly how a mistyped factor
+  gets into a system twice. Converting an *input* remains the service's job,
+  which is why a request carries the unit symbol and not a converted number.
+- *Array fields are never null.* `encodeIssues`, `encodeSolvedWing`, `encodeKeys`
+  and `encodeConflicts` emit `[]` rather than a nil slice, because the generated
+  contract declares those fields as arrays and a client that trusted the
+  declared type would iterate over `null`. `TestArrayFieldsAreNeverNull` holds it.
+
+These are covered by seven new `calculator` tests and two in `api`, including
+`TestWithdrawingADriverIsNotEnteringZero`, `TestTheFirstDriversFillEmptySlots`,
+`TestSettingTheAnglesDemandsAllOfThem` and
+`TestTheWorksheetCommandsCrossTheBoundary`. The generated TypeScript was
+regenerated for the new `Angles` type and `TestGeneratedTypeScriptMatchesTheCheckedInFile`
+passes, so the checked-in contract is not drifting from the Go types.
+
+**The journey tests run against the real Go service, not a transcript.**
+`vitest.globalSetup.ts` starts `go run ./cmd/aero serve` on a free port and
+provides its base URL to the suite. A recorded stub would drift from the core
+the moment an equation changed, and a journey test asserting against a stub
+would prove only that the stub was consistent with itself. The consequence is
+that the frontend suite needs a Go toolchain; the request-ordering tests are the
+exception and use a transport whose promises the test settles by hand, because
+there the question is which answer is accepted rather than what is in it.
+
+**The design is never edited in the browser.** Every edit becomes a curated
+command, the boundary answers with the edited design and its evaluation
+together, and the reducer decides whether that answer is still wanted. There is
+no local code that could disagree with the core about what a driver swap means.
+Unit selection is the one piece of arithmetic in the UI, and it runs on the
+service's own published factor table: it changes what is shown and never what is
+stored or evaluated.
+
+**Freshness is decided by request identity, not by cancellation.** Every design
+change retires the outstanding identity, undo, redo and draft loading included,
+so a slow answer cannot land on a branch the builder has left — including after
+an undo back to the exact design that answer was computed from. Three browser
+tests delay a response across edit → undo → different edit, across redo, and
+across draft loading; a fourth settles two evaluations out of order. Loading a
+draft never restores its cached result as current: the snapshot records the
+equation revisions that produced its numbers rather than the numbers, and
+reopening it recalculates.
+
+**Four defects were found and fixed while finishing the task.** The first two
+were in the worksheet and reachable by an ordinary builder.
+
+- *Blur re-sent an edit that was already in flight.* A commit is a request, and
+  the draft text has to outlive it, because a refused edit must keep what was
+  typed. Between pressing Enter and the answer arriving, the field therefore
+  still held text differing from the committed value — so blurring it, by
+  clicking Undo or any other control, sent the same edit a second time. The
+  field now remembers the text it last sent and blur will not repeat it. Enter
+  stays exempt: it is a deliberate act, so pressing it again after a refusal
+  retries rather than doing nothing. `QuantityField` and `TextField` both.
+- *Recalculate was disabled while a request was outstanding.* Nothing in the
+  transport times a request out, so one call that never returned left the
+  worksheet with no way to ask again. Correctness here belongs to the identity
+  check — a late answer is discarded because it is not the outstanding one — not
+  to preventing a second ask, so the button now stays live and the headline says
+  "Calculating…" meanwhile.
+
+The other two were in the request-ordering tests, which had been asserting less
+than they appeared to.
+
+- *Every branch answered with the same mass.* The fake boundary's design helper
+  set a distinct `name` but a fixed mass of 2 kg, while the assertions read the
+  mass field. Branch A, branch B and the answer that was supposed to be
+  discarded were indistinguishable on the page, so the assertions would have
+  held whether or not a late answer landed. Each branch now answers with its own
+  mass and a discarded answer carries one no branch ever asked for.
+- *A "half-typed" entry contradicted the specified behaviour.* One test typed
+  into the span and moved to the mass field expecting the span to stay
+  uncommitted, but blur commits, by design and by this task's brief. That test
+  now sends the span through the boundary first and covers survival of a refusal
+  with the refused entry itself, which is genuinely uncommitted: the design
+  never took it.
+
+**Tests verified by mutation.** Each fix was reverted one at a time and the suite
+rerun. Removing the blur guard fails four tests, including the one named for it.
+Extending the guard to Enter as well fails the retry test. Restoring
+`disabled={api.pending}` on Recalculate fails the out-of-order test. All three
+were caught.
+
+**What Task 06 does not establish.** Drafts live in the browser's storage,
+injected so a test can hand in an in-memory one; there is no export file, no
+sharing and no server-side persistence, and clearing site data clears them.
+Task 11 owns external handoff. `SCHEMA_VERSION` is 1 and `MIGRATIONS` is empty,
+so an unknown or older schema is refused rather than migrated — the mechanism is
+in place and the refusal is tested, but no migration path has been exercised
+because none exists yet. The sections a builder can see are the wing sizing,
+requirements and cases of Tasks 02–04: choosing a conventional tail, a V-tail or
+a flying wing works and none of them reports a handling result, which is the
+honest state rather than a gap in the page.
+
 ## Post-review corrections (2026-09-05)
 
 Findings from an adversarial review of the Task 01–03 commits, fixed in place.
@@ -466,9 +596,10 @@ with no lint relaxation added. The calculator package holds 69 top-level tests,
   exception. `wrapcheck` and `funlen` remain enabled without relaxation.
 - **Frontend baseline:** pinned versions start from the existing checkout's
   dependency versions; no GCS components, configuration inheritance or runtime
-  dependencies are reused. The shell test checks static rendering only. The
-  frontend is still the Task 01 shell: it has no calculation backend and does not
-  yet display any Task 02 result.
+  dependencies are reused. Task 06 replaced the Task 01 shell and its
+  static-rendering test with the worksheet: the journey tests now drive it
+  against a real `go run ./cmd/aero serve`, so the frontend suite needs a Go
+  toolchain.
 - **External tools:** OpenVSP was confirmed by the user. No Fusion, OpenVSP or
   XFLR5/flow5 application verification has yet been performed.
 
@@ -490,16 +621,20 @@ with no lint relaxation added. The calculator package holds 69 top-level tests,
   is reported as known rather than minimal for the same reason.
 - A `Session` is single-goroutine. Concurrency belongs to whatever serves it;
   the HTTP boundary avoids the question entirely by holding no session.
-- The API is the Task 04 workflow and nothing more. There is no persistence, no
-  authentication, no rate limiting and no CORS handling: the dev server proxies
-  same-origin, and a deployment that needs any of those adds them outside these
-  packages. Draft storage arrives with Task 06.
+- The API is the Task 04 workflow and nothing more. The service is stateless and
+  has no persistence, no authentication, no rate limiting and no CORS handling:
+  the dev server proxies same-origin, and a deployment that needs any of those
+  adds them outside these packages. Task 06's drafts are held in the browser's
+  own storage and never reach the service, so they are per-browser and are lost
+  with site data; an export format is Task 11's.
 - The generated TypeScript is types only. It disappears at run time and does not
   validate an untrusted response; a client that parses one still has to check it.
 - Component placements, mass items and mission cases are not expressible in a
-  `Design` yet; they arrive with Tasks 07 and 09. Draft versioning and load-time
-  compatibility checks arrive with Task 06, so a draft is currently adopted as
-  given.
+  `Design` yet; they arrive with Tasks 07 and 09. Task 06 added draft versioning
+  and load-time compatibility checks: a draft records its contract, schema and
+  equation revisions, and an unreadable or unknown-schema one is refused with the
+  open design left untouched. `MIGRATIONS` is still empty, so an older schema is
+  refused rather than migrated and no migration path has been exercised.
 - No method estimates a lift coefficient; `CLmax` is always supplied evidence.
   Task 03 supplies the geometry the book's CLmax estimation needs, but no airfoil
   polar evidence exists, so nothing estimates a coefficient yet.

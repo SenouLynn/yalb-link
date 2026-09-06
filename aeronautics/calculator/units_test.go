@@ -235,3 +235,29 @@ func TestParseUnitRefusesWhatItDoesNotKnow(t *testing.T) {
 		}
 	}
 }
+
+// TestEveryUnitPublishesAnExactSIFactor holds that the conversion table is
+// readable from outside for display, and that reading it back reproduces the
+// package's own conversion exactly. A display layer that had to guess a factor
+// would be a second copy of this table.
+func TestEveryUnitPublishesAnExactSIFactor(t *testing.T) {
+	for _, u := range calculator.Units() {
+		factor := u.FactorToSI()
+		if factor <= 0 {
+			t.Errorf("%s publishes factor %v, want a positive one", u.Symbol(), factor)
+			continue
+		}
+		q, err := calculator.NewQuantity(3, u)
+		if err != nil {
+			t.Errorf("NewQuantity(3, %s): %v", u.Symbol(), err)
+			continue
+		}
+		if q.SI() != 3*factor {
+			t.Errorf("%s: 3 converts to %v but the published factor gives %v",
+				u.Symbol(), q.SI(), 3*factor)
+		}
+	}
+	if calculator.UnitInvalid.FactorToSI() != 0 {
+		t.Error("an unsupported unit must publish no factor")
+	}
+}

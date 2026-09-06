@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"math"
 	"os"
 	"testing"
@@ -452,8 +453,8 @@ func TestCommandsMustMatchTheirKind(t *testing.T) {
 			field: "commands[0].hold",
 		},
 		"missing field": {
-			command: api.Command{Kind: api.CmdSetMass, Mass: &api.Quantity{Value: 1.5, Unit: "kg"}},
-			field:   "commands[0].basis",
+			command: api.Command{Kind: api.CmdSetRequirementPriority, Name: "Stall ceiling"},
+			field:   "commands[0].priority",
 		},
 		"unknown kind": {
 			command: api.Command{Kind: "set-everything"},
@@ -632,4 +633,135 @@ func contains(haystack, needle string) bool {
 		}
 	}
 	return false
+}
+
+// TestTheWorksheetCommandsCrossTheBoundary covers the three edits the worksheet
+// needs beyond the sizing ones: the planform shape with its taper ratio, every
+// wing angle at once, and the layout with its tail description. Each is one
+// command because its parts constrain each other, and the boundary refuses a
+// half-stated one rather than letting the design pass through a state that is
+// neither thing.
+func TestTheWorksheetCommandsCrossTheBoundary(t *testing.T) {
+	service := api.NewService()
+	angles := &api.Angles{
+		Sweep:          &api.Quantity{Value: 5, Unit: "deg"},
+		Dihedral:       &api.Quantity{Value: 4, Unit: "deg"},
+		Twist:          &api.Quantity{Value: -2, Unit: "deg"},
+		Incidence:      &api.Quantity{Value: 1, Unit: "deg"},
+		SweepReference: 0.25,
+		DihedralMode:   "hold-projected",
+	}
+	response, err := service.Apply(t.Context(), api.ApplyRequest{
+		Request: identity(),
+		Design:  wireDesign(),
+		Commands: []api.Command{
+			{Kind: api.CmdSetPlanformShape, Shape: "trapezoid", Ratio: 0.5},
+			{Kind: api.CmdSetWingAngles, Angles: angles},
+			{Kind: api.CmdSetConfiguration, Configuration: "flying-wing"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	if len(response.Applied) != 3 {
+		t.Fatalf("applied = %v, want all three", response.Applied)
+	}
+	if response.Design.Wing.Shape != "trapezoid" || response.Design.Wing.TaperRatio != 0.5 {
+		t.Errorf("shape = %+v, want a trapezoid at 0.5", response.Design.Wing)
+	}
+	if response.Design.Wing.Dihedral == nil || response.Design.Wing.Dihedral.Value == 0 {
+		t.Errorf("dihedral = %+v, want the 4 degrees that were set", response.Design.Wing.Dihedral)
+	}
+	if response.Evaluation.Geometry != "computed" {
+		t.Fatalf("geometry = %q: %+v", response.Evaluation.Geometry, response.Evaluation.GeometryIssues)
+	}
+
+	for name, tc := range map[string]struct {
+		field   string
+		command api.Command
+	}{
+		"a rectangle cannot taper": {
+			field:   "taper_ratio",
+			command: api.Command{Kind: api.CmdSetPlanformShape, Shape: "rectangle", Ratio: 0.5},
+		},
+		"a trapezoid needs its taper": {
+			field:   "commands[0].ratio",
+			command: api.Command{Kind: api.CmdSetPlanformShape, Shape: "trapezoid"},
+		},
+		"an unnamed layout is refused": {
+			field:   "commands[0].configuration",
+			command: api.Command{Kind: api.CmdSetConfiguration},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, applyErr := service.Apply(t.Context(), api.ApplyRequest{
+				Request: identity(), Design: wireDesign(), Commands: []api.Command{tc.command},
+			})
+			wantIssueOn(t, wantFailure(t, applyErr, api.FailureInvalid), tc.field)
+		})
+	}
+
+	t.Run("a partly stated angle set is refused", func(t *testing.T) {
+		_, applyErr := service.Apply(t.Context(), api.ApplyRequest{
+			Request: identity(), Design: wireDesign(),
+			Commands: []api.Command{{
+				Kind: api.CmdSetWingAngles,
+				Angles: &api.Angles{
+					Sweep: &api.Quantity{Value: 0, Unit: "deg"}, SweepReference: 0.25,
+				},
+			}},
+		})
+		wantIssueOn(t, wantFailure(t, applyErr, api.FailureInvalid), "incidence")
+	})
+}
+
+// wantArrays asserts that each named field marshalled as a JSON array.
+func wantArrays(t *testing.T, decoded map[string]any, prefix string, fields ...string) {
+	t.Helper()
+	for _, field := range fields {
+		value, present := decoded[field]
+		if !present {
+			t.Errorf("%s%s is absent, but the contract declares it as an array", prefix, field)
+			continue
+		}
+		if _, ok := value.([]any); !ok {
+			t.Errorf("%s%s marshalled as %T, want an array", prefix, field, value)
+		}
+	}
+}
+
+// TestArrayFieldsAreNeverNull holds a property the generated TypeScript quietly
+// depends on. A Go nil slice marshals to JSON null, and the contract declares
+// these fields as arrays; a client that trusted the declared type would then
+// iterate over null. The worst case is the emptiest design, where every slice
+// that could be nil is.
+func TestArrayFieldsAreNeverNull(t *testing.T) {
+	empty := api.EvaluateRequest{
+		Request: identity(),
+		Design:  api.Design{Name: "empty", Configuration: "flying-wing"},
+	}
+	for name, request := range map[string]api.EvaluateRequest{
+		"an empty design": empty,
+		"the fixture":     evaluateRequest(),
+	} {
+		t.Run(name, func(t *testing.T) {
+			evaluation, err := api.NewService().Evaluate(t.Context(), request)
+			if err != nil {
+				t.Fatalf("evaluate: %v", err)
+			}
+			encoded, err := json.Marshal(evaluation)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+			var decoded map[string]any
+			if err := json.Unmarshal(encoded, &decoded); err != nil {
+				t.Fatalf("unmarshal: %v", err)
+			}
+			wantArrays(t, decoded, "", "checks", "conflicts", "patterns",
+				"definitionIssues", "geometryIssues", "configurationIssues")
+			if wing, ok := decoded["wing"].(map[string]any); ok {
+				wantArrays(t, wing, "wing.", "drivers", "parameters", "outline")
+			}
+		})
+	}
 }

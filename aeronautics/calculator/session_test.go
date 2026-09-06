@@ -220,7 +220,6 @@ func TestRejectedCommandsChangeNothing(t *testing.T) {
 	revisions := s.Revisions()
 	for _, cmd := range []calculator.Command{
 		calculator.SetMass{Mass: mustQ(t, 2, calculator.SquareMeter), Basis: "wrong dimension"},
-		calculator.SetMass{Mass: mustQ(t, 2, calculator.Kilogram)},
 		calculator.RemoveRequirement{Name: "no such requirement"},
 		calculator.SetCasePriority{Name: caseNameN1},
 		calculator.SetTaperRatio{Value: -1},
@@ -286,5 +285,35 @@ func TestPreviewLeavesTheSessionAlone(t *testing.T) {
 	}
 	if len(preview.Changes) == 0 {
 		t.Error("dropping the mass to 1.1 kg meets the stall ceiling and should show as a change")
+	}
+}
+
+// TestAMassWithoutItsBasisIsRecordedAndReported holds where that requirement
+// lives. Entering a mass before saying where it came from is an ordinary order
+// to work in, so the edit is accepted; the design then reports the missing
+// provenance every time it is validated, which is what keeps a target mass from
+// being read as a measured one.
+func TestAMassWithoutItsBasisIsRecordedAndReported(t *testing.T) {
+	s := calculator.NewSession("basis", baseDesign(t))
+	mustDo(t, s, calculator.SetMass{Mass: mustQ(t, 1.6, calculator.Kilogram)})
+
+	d := s.Design()
+	wantSI(t, "mass", d.Mass, 1.6)
+	detail := wantIssue(t, d.Validate(), "mass", calculator.IssueMissing)
+	if !containsSubstring(detail, "came from") {
+		t.Errorf("the issue %q should ask where the mass came from", detail)
+	}
+	e := s.Evaluate()
+	if e.DefinitionIssues == nil {
+		t.Error("every evaluation of that design should carry the missing basis")
+	}
+	// It blocks nothing: the wing still solves and the bounds still hold.
+	if e.Geometry != calculator.ResultComputed {
+		t.Fatalf("the wing should still solve: %v", e.GeometryIssues)
+	}
+
+	mustDo(t, s, calculator.SetMass{Mass: mustQ(t, 1.6, calculator.Kilogram), Basis: "measured on the bench"})
+	if err := s.Design().Validate(); err != nil {
+		t.Errorf("with the basis stated the design validates: %v", err)
 	}
 }

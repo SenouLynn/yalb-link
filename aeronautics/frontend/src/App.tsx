@@ -1,25 +1,16 @@
-export function App() {
-  return (
-    <main>
-      <header>
-        <span className="wordmark">YALB / AERO</span>
-        <span className="status">Project shell</span>
-      </header>
-      <section aria-labelledby="title">
-        <p className="eyebrow">Fixed-wing RC aircraft</p>
-        <h1 id="title">Aircraft design worksheet</h1>
-        <p>
-          The worksheet is under development. Calculations and editable design
-          parameters are not available yet.
-        </p>
-        <p>
-          The planned methods follow the{' '}
-          <a href="https://computationaldesignlab.github.io/aircraft-design/intro.html">
-            CODE Lab Aircraft Design book
-          </a>
-          .
-        </p>
-      </section>
-    </main>
-  )
+import type { ReactNode } from 'react'
+import { useMemo } from 'react'
+import { httpTransport } from './api/client.ts'
+import { Worksheet } from './Worksheet.tsx'
+
+/**
+ * App wires the worksheet to the running service. The base URL is empty because
+ * the dev server proxies /api to it and a deployment serves both from one
+ * origin; a static host on its own answers nothing, because it does not run the
+ * calculation core.
+ */
+export function App(): ReactNode {
+  const transport = useMemo(() => httpTransport(''), [])
+  const session = useMemo(() => `worksheet-${String(Date.now())}`, [])
+  return <Worksheet transport={transport} session={session} />
 }

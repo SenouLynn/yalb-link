@@ -30,9 +30,12 @@ func requireQuantity(q calculator.Quantity) Quantity {
 // encodeIssues renders a core error's field issues. A non-Issues error becomes
 // a single issue rather than a bare string, so the shape of a failure does not
 // depend on which layer produced it.
+// The empty slice rather than nil matters: the contract declares these fields
+// as arrays, and a nil slice marshals to null, which a client that trusted the
+// declared type would then iterate over. TestArrayFieldsAreNeverNull holds it.
 func encodeIssues(err error) []Issue {
 	if err == nil {
-		return nil
+		return []Issue{}
 	}
 	issues, ok := calculator.AsIssues(err)
 	if !ok {
@@ -219,7 +222,12 @@ func patternIDsFor(d calculator.Design) []string {
 }
 
 func encodeSolvedWing(d calculator.Design, w calculator.Wing) *SolvedWing {
-	out := &SolvedWing{Datum: calculator.DatumWingRoot}
+	out := &SolvedWing{
+		Datum:      calculator.DatumWingRoot,
+		Drivers:    []string{},
+		Parameters: []Parameter{},
+		Outline:    []Point{},
+	}
 	if mode, err := d.SolveMode(); err == nil {
 		out.SolveMode = solveModes.format(mode)
 	}
@@ -250,9 +258,6 @@ func encodeSolvedWing(d calculator.Design, w calculator.Wing) *SolvedWing {
 }
 
 func encodeKeys(keys []calculator.ParameterKey) []string {
-	if len(keys) == 0 {
-		return nil
-	}
 	out := make([]string, 0, len(keys))
 	for _, key := range keys {
 		out = append(out, string(key))
@@ -321,9 +326,10 @@ func encodeConflicts(conflicts []calculator.Conflict) []Conflict {
 	for n := range conflicts {
 		c := &conflicts[n]
 		conflict := Conflict{
-			Summary: c.Summary,
-			Detail:  c.Detail,
-			Group:   append([]string(nil), c.Group...),
+			Summary:      c.Summary,
+			Detail:       c.Detail,
+			Group:        append([]string{}, c.Group...),
+			Alternatives: []Alternative{},
 		}
 		for _, alternative := range c.Alternatives {
 			command, ok := encodeCommand(alternative.Command)

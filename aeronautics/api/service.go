@@ -186,9 +186,10 @@ func (s *Service) Units() []UnitInfo {
 	for _, u := range units {
 		dimension := u.Dimension()
 		out = append(out, UnitInfo{
-			Symbol:    u.Symbol(),
-			Dimension: dimensions.format(dimension),
-			SI:        dimension.SIUnit() == u,
+			Symbol:     u.Symbol(),
+			Dimension:  dimensions.format(dimension),
+			FactorToSI: u.FactorToSI(),
+			SI:         dimension.SIUnit() == u,
 		})
 	}
 	sort.SliceStable(out, func(i, j int) bool {

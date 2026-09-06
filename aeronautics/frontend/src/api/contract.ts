@@ -33,11 +33,14 @@ export type CommandKind =
   "set-case" |
   "set-case-clmax" |
   "set-case-priority" |
+  "set-configuration" |
   "set-driver" |
   "set-mass" |
+  "set-planform-shape" |
   "set-requirement" |
   "set-requirement-priority" |
   "set-taper-ratio" |
+  "set-wing-angles" |
   "size-at-stall-limit";
 
 export type Configuration =
@@ -159,6 +162,7 @@ export interface Vocabulary {
 export interface UnitInfo {
   symbol: string;
   dimension: string;
+  factorToSi: number;
   si: boolean;
 }
 
@@ -351,6 +355,8 @@ export interface Command {
   case?: Case | null;
   clmax?: CLmax | null;
   scope?: Scope | null;
+  angles?: Angles | null;
+  tail?: Tail | null;
   kind: string;
   basis?: string;
   key?: string;
@@ -359,12 +365,23 @@ export interface Command {
   name?: string;
   priority?: string;
   hold?: string;
+  shape?: string;
+  configuration?: string;
   ratio?: number;
 }
 
 export interface Scope {
   kind: string;
   case?: string;
+}
+
+export interface Angles {
+  sweep?: Quantity | null;
+  dihedral?: Quantity | null;
+  twist?: Quantity | null;
+  incidence?: Quantity | null;
+  dihedralMode?: string;
+  sweepReference: number;
 }
 
 export interface SolvedWing {

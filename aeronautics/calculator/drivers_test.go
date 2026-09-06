@@ -296,3 +296,192 @@ func containsSubstring(haystack, needle string) bool {
 	}
 	return false
 }
+
+// TestSettingTheShapeCarriesItsTaperRatio holds that the shape and the taper
+// ratio move together, so the design never passes through a state that is
+// neither a rectangle nor a stated trapezoid.
+func TestSettingTheShapeCarriesItsTaperRatio(t *testing.T) {
+	s := calculator.NewSession("shape", baseDesign(t))
+	for _, cmd := range []calculator.SetPlanformShape{
+		{Shape: calculator.ShapeRectangle, TaperRatio: 0.6},
+		{Shape: calculator.ShapeTrapezoid, TaperRatio: 0},
+		{Shape: calculator.ShapeTrapezoid, TaperRatio: -0.5},
+		{Shape: calculator.ShapeUnknown, TaperRatio: 1},
+	} {
+		if err := s.Do(cmd); err == nil {
+			t.Errorf("%s should have been refused", cmd.Label())
+		}
+	}
+
+	mustDo(t, s, calculator.SetPlanformShape{Shape: calculator.ShapeTrapezoid, TaperRatio: 0.5})
+	e := s.Evaluate()
+	if e.Geometry != calculator.ResultComputed {
+		t.Fatalf("the tapered wing should solve: %v", e.GeometryIssues)
+	}
+	// A taper ratio of 0.5 on the 1.2 m, aspect-ratio-6 fixture keeps the area
+	// at 0.24 m^2 and puts the tip chord at a third of the root chord.
+	wantSI(t, "area", e.Wing.Projected.Area, fixtureArea)
+	if e.Wing.Planform.TipChord.SI() >= e.Wing.Planform.RootChord.SI() {
+		t.Errorf("tip chord %v should be below the root chord %v",
+			e.Wing.Planform.TipChord, e.Wing.Planform.RootChord)
+	}
+}
+
+// TestSettingTheAnglesDemandsAllOfThem holds that every angle is stated in one
+// edit, because a partly stated wing fails to solve for a reason the builder
+// did not choose.
+func TestSettingTheAnglesDemandsAllOfThem(t *testing.T) {
+	s := calculator.NewSession("angles", baseDesign(t))
+	zero := mustQ(t, 0, calculator.Degree)
+
+	err := s.Do(calculator.SetWingAngles{Sweep: zero, Dihedral: zero, Twist: zero})
+	wantIssue(t, err, "incidence", calculator.IssueMissing)
+	err = s.Do(calculator.SetWingAngles{
+		Sweep: zero, Dihedral: zero, Twist: zero, Incidence: zero, SweepReference: 2,
+	})
+	wantIssue(t, err, "sweep_reference", calculator.IssueInvalid)
+
+	mustDo(t, s, calculator.SetWingAngles{
+		Sweep:          mustQ(t, 5, calculator.Degree),
+		Dihedral:       mustQ(t, 4, calculator.Degree),
+		Twist:          mustQ(t, -2, calculator.Degree),
+		Incidence:      mustQ(t, 1, calculator.Degree),
+		SweepReference: 0.25,
+		DihedralMode:   calculator.DihedralHoldProjected,
+	})
+	e := s.Evaluate()
+	if e.Geometry != calculator.ResultComputed {
+		t.Fatalf("the swept, dihedralled wing should solve: %v", e.GeometryIssues)
+	}
+	if e.Wing.TipRise.SI() <= 0 {
+		t.Errorf("tip rise = %v, want a positive rise under 4 degrees of dihedral", e.Wing.TipRise)
+	}
+	if e.Wing.LeadingEdgeSweep.SI() <= 0 {
+		t.Errorf("leading-edge sweep = %v, want it aft of the quarter-chord sweep",
+			e.Wing.LeadingEdgeSweep)
+	}
+}
+
+// TestSettingTheConfigurationCarriesItsTail holds that a layout and its tail
+// description are one edit, and that the handling assessment stays unknown for
+// every one of them.
+func TestSettingTheConfigurationCarriesItsTail(t *testing.T) {
+	s := calculator.NewSession("configuration", baseDesign(t))
+	if err := s.Do(calculator.SetConfiguration{}); err == nil {
+		t.Error("an unnamed configuration should be refused")
+	}
+
+	conventional := calculator.TailGeometry{
+		Horizontal: calculator.TailSurface{
+			Area: mustQ(t, 0.05, calculator.SquareMeter),
+			Span: mustQ(t, 0.45, calculator.Meter),
+			Arm:  mustQ(t, 0.6, calculator.Meter),
+		},
+		Vertical: calculator.TailSurface{
+			Area: mustQ(t, 0.025, calculator.SquareMeter),
+			Span: mustQ(t, 0.2, calculator.Meter),
+			Arm:  mustQ(t, 0.62, calculator.Meter),
+		},
+	}
+	mustDo(t, s, calculator.SetConfiguration{
+		Configuration: calculator.ConfigurationConventionalTail,
+		Tail:          conventional,
+	})
+	e := s.Evaluate()
+	if e.ConfigurationIssues != nil {
+		t.Errorf("a complete conventional tail should validate: %v", e.ConfigurationIssues)
+	}
+	if e.Geometry != calculator.ResultComputed {
+		t.Fatalf("the wing should still solve: %v", e.GeometryIssues)
+	}
+
+	// Switching to a flying wing drops the tail in the same edit, so the design
+	// never holds a flying wing that still has one.
+	mustDo(t, s, calculator.SetConfiguration{Configuration: calculator.ConfigurationFlyingWing})
+	flying := s.Evaluate()
+	if flying.ConfigurationIssues != nil {
+		t.Errorf("a flying wing is complete without a tail: %v", flying.ConfigurationIssues)
+	}
+	if flying.Design.Tail != (calculator.TailGeometry{}) {
+		t.Error("switching to a flying wing should have dropped the tail description")
+	}
+
+	// And no configuration has a supported handling assessment.
+	for _, configuration := range []calculator.Configuration{
+		calculator.ConfigurationConventionalTail,
+		calculator.ConfigurationVTail,
+		calculator.ConfigurationFlyingWing,
+	} {
+		airframe := calculator.Airframe{Configuration: configuration}
+		if err := airframe.Handling(); err == nil {
+			t.Errorf("%v must not report a handling result", configuration)
+		}
+	}
+}
+
+// TestTheFirstDriversFillEmptySlots holds that entering a size value into a
+// planform that does not yet hold two is an ordinary edit. Nothing is given up,
+// so there is no swap to choose; only once two are held does a third become one.
+func TestTheFirstDriversFillEmptySlots(t *testing.T) {
+	empty := baseDesign(t)
+	empty.Wing.Drivers.Span = calculator.Quantity{}
+	empty.Wing.Drivers.AspectRatio = 0
+	if drivers := empty.DriverKeys(); len(drivers) != 0 {
+		t.Fatalf("the fixture should hold no drivers, got %v", drivers)
+	}
+
+	s := calculator.NewSession("empty", empty)
+	mustDo(t, s, calculator.SetDriver{
+		Key: calculator.ParamSpanProjected, Value: mustQ(t, 1.2, calculator.Meter),
+	})
+	if e := s.Evaluate(); e.Geometry == calculator.ResultComputed {
+		t.Fatal("one driver is not enough to solve a planform")
+	}
+	mustDo(t, s, calculator.SetDriver{
+		Key: calculator.ParamAreaReference, Value: mustQ(t, 0.24, calculator.SquareMeter),
+	})
+	e := s.Evaluate()
+	if e.Geometry != calculator.ResultComputed {
+		t.Fatalf("two drivers should solve: %v", e.GeometryIssues)
+	}
+	wantSI(t, "area", e.Wing.Projected.Area, fixtureArea)
+
+	// With two held, a third is a swap again and is offered as one.
+	err := s.Do(calculator.SetDriver{
+		Key: calculator.ParamAspectRatio, Value: mustQ(t, 6, calculator.One),
+	})
+	detail := wantIssue(t, err, string(calculator.ParamAspectRatio), calculator.IssueInvalid)
+	if !containsSubstring(detail, "swap") {
+		t.Errorf("the refusal %q should name the swaps", detail)
+	}
+}
+
+// TestWithdrawingADriverIsNotEnteringZero holds the difference between taking a
+// value back and asserting that it is nought. A withdrawn driver leaves the
+// planform under-determined and says so; a zero would be an impossible span.
+func TestWithdrawingADriverIsNotEnteringZero(t *testing.T) {
+	s := calculator.NewSession("withdraw", baseDesign(t))
+	if err := s.Do(calculator.SetDriver{
+		Key: calculator.ParamSpanProjected, Value: mustQ(t, 0, calculator.Meter),
+	}); err == nil {
+		t.Error("a zero span is not a wing and must be refused")
+	}
+
+	mustDo(t, s, calculator.SetDriver{Key: calculator.ParamSpanProjected})
+	if drivers := s.Design().DriverKeys(); len(drivers) != 1 {
+		t.Fatalf("drivers after withdrawing the span = %v, want only the aspect ratio", drivers)
+	}
+	e := s.Evaluate()
+	if e.Geometry == calculator.ResultComputed {
+		t.Fatal("one driver cannot solve a planform")
+	}
+	detail := wantIssue(t, e.GeometryIssues, "drivers", calculator.IssueMissing)
+	if !containsSubstring(detail, "exactly two") {
+		t.Errorf("the issue %q should say a planform needs exactly two drivers", detail)
+	}
+
+	// Withdrawing something that is not there says so rather than pretending.
+	if err := s.Do(calculator.SetDriver{Key: calculator.ParamSpanProjected}); err == nil {
+		t.Error("withdrawing an absent driver should be refused")
+	}
+}

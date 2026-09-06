@@ -19,12 +19,16 @@ for checked behavior, decisions and outstanding verification.
 
 Suggested continuation prompt:
 
-> Read docs/research/aeronautics/README.md and implement Task 06 only, including
+> Read docs/research/aeronautics/README.md and implement Task 07 only, including
 > its checks. Keep the calculator independent of the existing GCS frontend and
 > services. Do not start another task automatically.
 
-Tasks 01 to 05 are complete; the [implementation log](../../reference/aeronautics-implementation.md)
-records what each one actually checks and where it stops.
+Tasks 01 to 06 are complete; the [implementation log](../../reference/aeronautics-implementation.md)
+records what each one actually checks and where it stops. Task 06 finished the
+first useful sizing release: the worksheet drives the span-first and both
+weight-first journeys against the running Go service, and versioned drafts save
+and reopen. Tasks 07, 08 and 09 are all schedulable now; Task 07 adds
+the explanatory visuals the brief calls for and is the natural next one.
 
 ## User intent and settled direction
 
@@ -209,8 +213,9 @@ Tasks 12 and 13 were added after the original eleven. They depend only on 03 and
 on each other, so they are schedulable independently of 04–11, but their worksheet
 surface arrives with Tasks 06 and 07 and their export surface with Task 11.
 
-The first useful sizing release ends at Task 06. Configuration choices already
-exist, but handling remains explicitly unknown until Task 08's supported assessment.
+The first useful sizing release ends at Task 06 and has been delivered.
+Configuration choices already exist, but handling remains explicitly unknown
+until Task 08's supported assessment.
 V-tail/flying-wing handling remains unknown until its extension is validated.
 Task 07 adds the requested explanatory visuals. A complete power-first workflow
 arrives in Task 09.

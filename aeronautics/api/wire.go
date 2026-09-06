@@ -202,6 +202,8 @@ type Command struct {
 	Case        *Case        `json:"case,omitempty"`
 	CLmax       *CLmax       `json:"clmax,omitempty"`
 	Scope       *Scope       `json:"scope,omitempty"`
+	Angles      *Angles      `json:"angles,omitempty"`
+	Tail        *Tail        `json:"tail,omitempty"`
 
 	// Kind selects the edit.
 	Kind string `json:"kind"`
@@ -213,9 +215,28 @@ type Command struct {
 	Name     string `json:"name,omitempty"`
 	Priority string `json:"priority,omitempty"`
 	Hold     string `json:"hold,omitempty"`
+	// Shape is the planform shape, for the shape edit.
+	Shape string `json:"shape,omitempty"`
+	// Configuration is the airframe layout, for the configuration edit.
+	Configuration string `json:"configuration,omitempty"`
 
-	// Ratio is the taper ratio, for the taper-ratio edit.
+	// Ratio is the taper ratio, for the shape and taper-ratio edits.
 	Ratio float64 `json:"ratio,omitempty"`
+}
+
+// Angles is every stated wing angle. They travel together because the geometry
+// model requires all of them: an unstated sweep is a missing field rather than
+// zero, so setting one and leaving another unset would produce a wing that
+// cannot solve for a reason the builder did not choose.
+type Angles struct {
+	Sweep     *Quantity `json:"sweep"`
+	Dihedral  *Quantity `json:"dihedral"`
+	Twist     *Quantity `json:"twist"`
+	Incidence *Quantity `json:"incidence"`
+	// DihedralMode may be empty only at zero dihedral, where the planes coincide.
+	DihedralMode string `json:"dihedralMode,omitempty"`
+	// SweepReference is the chord fraction Sweep is measured at.
+	SweepReference float64 `json:"sweepReference"`
 }
 
 // Substitution is one input value an evaluation actually used.
@@ -440,6 +461,12 @@ type Pattern struct {
 type UnitInfo struct {
 	Symbol    string `json:"symbol"`
 	Dimension string `json:"dimension"`
+	// FactorToSI converts a value in this unit to the dimension's SI unit by a
+	// single multiplication. It is published so a display layer can render a
+	// stored SI value in a chosen unit without keeping its own conversion table;
+	// converting an *input* is the service's job, which is why a request carries
+	// the unit symbol rather than a converted number.
+	FactorToSI float64 `json:"factorToSi"`
 	// SI reports whether the symbol is the dimension's own SI unit.
 	SI bool `json:"si"`
 }

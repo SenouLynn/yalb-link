@@ -21,6 +21,9 @@ const (
 	CmdSetCasePriority        = "set-case-priority"
 	CmdSetCaseCLmax           = "set-case-clmax"
 	CmdSizeAtStallLimit       = "size-at-stall-limit"
+	CmdSetPlanformShape       = "set-planform-shape"
+	CmdSetWingAngles          = "set-wing-angles"
+	CmdSetConfiguration       = "set-configuration"
 )
 
 // commandField names one field of the flat Command union. The names are the
@@ -43,6 +46,10 @@ const (
 	fieldCLmax       commandField = "clmax"
 	fieldScope       commandField = "scope"
 	fieldRatio       commandField = "ratio"
+	fieldAngles      commandField = "angles"
+	fieldTail        commandField = "tail"
+	fieldShape       commandField = "shape"
+	fieldConfig      commandField = "configuration"
 )
 
 // commandSpec lists the fields one kind uses. A field outside the list is
@@ -58,8 +65,13 @@ type commandSpec struct {
 }
 
 var commandSpecs = map[string]commandSpec{
-	CmdSetMass:                {Fields: []commandField{fieldMass, fieldBasis}},
-	CmdSetDriver:              {Fields: []commandField{fieldKey, fieldValue}},
+	// Both are optional: the basis is reported by the design's own validation
+	// rather than at the keystroke, so the number and its provenance can be
+	// typed in either order, and an absent mass withdraws it.
+	CmdSetMass: {Fields: []commandField{fieldMass, fieldBasis}, Optional: []commandField{fieldMass, fieldBasis}},
+	// An absent value withdraws the driver, which is a different act from
+	// entering zero and is how a value is taken back.
+	CmdSetDriver:              {Fields: []commandField{fieldKey, fieldValue}, Optional: []commandField{fieldValue}},
 	CmdPromoteDriver:          {Fields: []commandField{fieldPromote, fieldRelease, fieldValue}, Optional: []commandField{fieldRelease}},
 	CmdSetTaperRatio:          {Fields: []commandField{fieldRatio}},
 	CmdSetRequirement:         {Fields: []commandField{fieldRequirement}},
@@ -72,6 +84,10 @@ var commandSpecs = map[string]commandSpec{
 	// edit, and it is what makes the results resting on it unknown.
 	CmdSetCaseCLmax:     {Fields: []commandField{fieldName, fieldCLmax}, Optional: []commandField{fieldCLmax}},
 	CmdSizeAtStallLimit: {Fields: []commandField{fieldHold, fieldScope}},
+	CmdSetPlanformShape: {Fields: []commandField{fieldShape, fieldRatio}},
+	CmdSetWingAngles:    {Fields: []commandField{fieldAngles}},
+	// A flying wing carries no tail, so the description may be absent.
+	CmdSetConfiguration: {Fields: []commandField{fieldConfig, fieldTail}, Optional: []commandField{fieldTail}},
 }
 
 // commandKinds lists the accepted kinds in sorted order.
@@ -101,6 +117,10 @@ func (c Command) present() map[commandField]bool {
 		fieldCLmax:       c.CLmax != nil,
 		fieldScope:       c.Scope != nil,
 		fieldRatio:       c.Ratio != 0,
+		fieldAngles:      c.Angles != nil,
+		fieldTail:        c.Tail != nil,
+		fieldShape:       c.Shape != "",
+		fieldConfig:      c.Configuration != "",
 	}
 	return carried
 }
@@ -204,8 +224,38 @@ func (d *decoder) buildCaseCommand(field string, c Command) calculator.Command {
 		hold, issue := parseDriverKey(field+".hold", c.Hold)
 		d.take(issue)
 		return calculator.SizeAtStallLimit{Hold: hold, Scope: d.scope(field+".scope", c.Scope)}
+	case CmdSetPlanformShape:
+		return calculator.SetPlanformShape{
+			Shape:      enumOrEmpty(d, shapes, field+".shape", c.Shape),
+			TaperRatio: d.number(field+".ratio", c.Ratio),
+		}
+	case CmdSetWingAngles:
+		return d.setWingAngles(field, c)
+	case CmdSetConfiguration:
+		cmd := calculator.SetConfiguration{
+			Configuration: enumOrEmpty(d, configurations, field+".configuration", c.Configuration),
+		}
+		if c.Tail != nil {
+			cmd.Tail = d.tail(*c.Tail)
+		}
+		return cmd
 	default:
 		return nil
+	}
+}
+
+func (d *decoder) setWingAngles(field string, c Command) calculator.Command {
+	if c.Angles == nil {
+		return nil
+	}
+	angles := *c.Angles
+	return calculator.SetWingAngles{
+		Sweep:          d.quantity(field+".angles.sweep", angles.Sweep),
+		Dihedral:       d.quantity(field+".angles.dihedral", angles.Dihedral),
+		Twist:          d.quantity(field+".angles.twist", angles.Twist),
+		Incidence:      d.quantity(field+".angles.incidence", angles.Incidence),
+		SweepReference: d.number(field+".angles.sweepReference", angles.SweepReference),
+		DihedralMode:   enumOrEmpty(d, dihedralModes, field+".angles.dihedralMode", angles.DihedralMode),
 	}
 }
 

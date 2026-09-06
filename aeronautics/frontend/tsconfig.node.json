@@ -25,5 +25,5 @@
     "allowUnreachableCode": false,
     "allowUnusedLabels": false
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "vitest.globalSetup.ts", "vitest.setup.ts", "vitest.provided.d.ts"]
 }

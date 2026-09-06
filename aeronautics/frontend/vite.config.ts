@@ -19,7 +19,9 @@ export default defineConfig({
     proxy: { '/api': { target: apiTarget, changeOrigin: false } },
   },
   test: {
-    environment: 'node',
+    environment: 'jsdom',
+    globalSetup: ['./vitest.globalSetup.ts'],
+    setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
   },
 })

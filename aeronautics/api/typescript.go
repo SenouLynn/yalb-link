@@ -23,7 +23,7 @@ var tsRoots = []any{
 	EvaluateRequest{}, BatchEvaluateRequest{}, BatchEvaluateResponse{},
 	ApplyRequest{}, ApplyResponse{}, PreviewRequest{}, PreviewResponse{},
 	Evaluation{}, Design{}, Wing{}, Airfoil{}, Tail{}, Surface{}, VTail{},
-	Case{}, CLmax{}, Requirement{}, Command{}, Scope{},
+	Case{}, CLmax{}, Requirement{}, Command{}, Scope{}, Angles{},
 	SolvedWing{}, Parameter{}, Point{}, Check{}, Bound{}, Contribution{},
 	MassRange{}, Conflict{}, Alternative{}, Change{}, Trace{}, Substitution{},
 	Quantity{}, Issue{}, Request{},

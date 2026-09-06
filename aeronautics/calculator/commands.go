@@ -21,10 +21,16 @@ func commandIssue(field string, kind IssueKind, detail string) error {
 }
 
 // SetMass sets the all-up mass and the basis it came from.
+//
+// An empty basis is accepted here and reported by Design.Validate instead. The
+// requirement that a mass say where it came from is not relaxed by that: it is
+// enforced where the design is judged rather than at the keystroke, so a
+// builder can type the number and the provenance in either order without the
+// first of the two being refused for the absence of the second.
 type SetMass struct {
 	// Basis states where the mass came from.
 	Basis string
-	// Mass is the new all-up mass.
+	// Mass is the new all-up mass. The zero Quantity withdraws it.
 	Mass Quantity
 }
 
@@ -32,13 +38,9 @@ type SetMass struct {
 func (c SetMass) Label() string { return "set all-up mass to " + c.Mass.String() }
 
 func (c SetMass) apply(d Design) (Design, error) {
-	if c.Mass.dim != DimMass {
+	if c.Mass.supplied() && c.Mass.dim != DimMass {
 		return Design{}, commandIssue("mass", IssueInvalid,
 			"expected a mass but received "+c.Mass.dim.String())
-	}
-	if c.Basis == "" {
-		return Design{}, commandIssue("mass", IssueMissing,
-			"state where the mass came from, so a target mass is not read as a measured one")
 	}
 	out := d.clone()
 	out.Mass = c.Mass
@@ -46,13 +48,19 @@ func (c SetMass) apply(d Design) (Design, error) {
 	return out, nil
 }
 
-// SetDriver changes the value of a size driver the design already holds. It
-// refuses to turn a derived value into a driver: that is a promotion, which
+// SetDriver changes the value of a size driver the design already holds, or
+// fills an empty slot when fewer than two are held. It refuses to turn a
+// derived value into a driver once two are held: that is a promotion, which
 // releases another driver in the same edit and is a different decision.
+//
+// The zero Quantity withdraws the driver. Withdrawing is how a builder takes a
+// value back without asserting anything in its place, and it is a different act
+// from entering zero, which the solver would refuse as an impossible span.
 type SetDriver struct {
 	// Key names the driver, in either plane.
 	Key ParameterKey
-	// Value is its new value. An aspect ratio is a dimensionless Quantity.
+	// Value is its new value, or the zero Quantity to withdraw it. An aspect
+	// ratio is a dimensionless Quantity.
 	Value Quantity
 }
 
@@ -65,7 +73,11 @@ func (c SetDriver) apply(d Design) (Design, error) {
 		return Design{}, commandIssue(string(c.Key), IssueUnsupported,
 			"only span, wing area, aspect ratio and root chord are size drivers")
 	}
-	if !d.holdsDriver(key) {
+	// A planform that does not yet hold two drivers has an empty slot, and
+	// filling one is not a promotion: nothing is being given up, and there is no
+	// choice for the builder to make. Only once two are held does setting a
+	// third become a swap.
+	if !d.holdsDriver(key) && len(d.DriverKeys()) >= plainformDriverCount {
 		swaps, err := d.ValidSwaps(c.Key)
 		if err != nil {
 			return Design{}, err
@@ -74,8 +86,13 @@ func (c SetDriver) apply(d Design) (Design, error) {
 			"this value is derived, not a driver. Promoting it releases one existing driver in the "+
 				"same edit; the valid swaps are "+joinKeys(swaps))
 	}
-	if err := checkDriverValue(key, c.Value); err != nil {
-		return Design{}, err
+	if c.Value.supplied() {
+		if err := checkDriverValue(key, c.Value); err != nil {
+			return Design{}, err
+		}
+	} else if !d.holdsDriver(key) {
+		return Design{}, commandIssue(string(c.Key), IssueInvalid,
+			"there is no value here to withdraw")
 	}
 	out := d.clone()
 	out.setSizeDriver(key, c.Value)
@@ -127,6 +144,10 @@ func (c PromoteDriver) apply(d Design) (Design, error) {
 	out.setSizeDriver(promote, c.Value)
 	return out, nil
 }
+
+// plainformDriverCount is how many size drivers a planform holds. Below it
+// there is an empty slot to fill; at it, adding another is a swap.
+const plainformDriverCount = 2
 
 // checkDriverValue rejects a driver value of the wrong dimension, and a
 // non-positive one, before it reaches the solver.
@@ -434,4 +455,136 @@ func (d Design) areaDriverFor(projected Quantity) (Quantity, error) {
 		return Quantity{}, err
 	}
 	return result.Value, nil
+}
+
+// SetPlanformShape changes the plan-view shape and the taper ratio together.
+// They are one edit because they constrain each other: a rectangle has taper
+// ratio 1, and a trapezoid needs one stated. Setting them separately would put
+// the design through a state that is neither.
+type SetPlanformShape struct {
+	// Shape is the new shape.
+	Shape PlanformShape
+	// TaperRatio is lambda = c_tip/c_root. It must be 1 for a rectangle.
+	TaperRatio float64
+}
+
+// Label names the edit.
+func (c SetPlanformShape) Label() string {
+	return "set the planform shape to " + c.Shape.String()
+}
+
+func (c SetPlanformShape) apply(d Design) (Design, error) {
+	switch c.Shape {
+	case ShapeRectangle:
+		if c.TaperRatio != 1 {
+			return Design{}, commandIssue(portTaperRatio.Name, IssueInvalid,
+				"a rectangle has taper ratio 1; choose the trapezoid shape to taper the wing")
+		}
+	case ShapeTrapezoid:
+		if !isFinite(c.TaperRatio) || c.TaperRatio <= 0 {
+			return Design{}, commandIssue(portTaperRatio.Name, IssueInvalid,
+				"a trapezoid needs a positive taper ratio; a pointed tip is not supported")
+		}
+	case ShapeUnknown:
+		return Design{}, commandIssue("shape", IssueMissing,
+			"choose a planform shape: a rectangle and a trapezoid do not have the same "+
+				"independent values")
+	default:
+		return Design{}, commandIssue("shape", IssueUnsupported,
+			"only a rectangle and a symmetric trapezoid are implemented")
+	}
+	out := d.clone()
+	out.Wing.Drivers.Shape = c.Shape
+	out.Wing.Drivers.TaperRatio = c.TaperRatio
+	return out, nil
+}
+
+// SetWingAngles replaces every stated angle at once. They travel together
+// because the geometry model requires all of them: an unstated sweep is a
+// missing field rather than zero, so an edit that set one and left another
+// unset would produce a wing that cannot solve for a reason the builder did not
+// choose.
+type SetWingAngles struct {
+	// Sweep is the sweep angle at SweepReference, positive aft.
+	Sweep Quantity
+	// Dihedral is the uniform dihedral angle, positive tips up.
+	Dihedral Quantity
+	// Twist is the geometric twist from root to tip; washout is negative.
+	Twist Quantity
+	// Incidence is the root incidence against the fuselage reference line.
+	Incidence Quantity
+	// SweepReference is the chord fraction Sweep is measured at.
+	SweepReference float64
+	// DihedralMode states which dimensions stay fixed as dihedral changes. It
+	// may be left unknown only at zero dihedral, where the planes coincide.
+	DihedralMode DihedralMode
+}
+
+// Label names the edit.
+func (c SetWingAngles) Label() string { return "set the wing angles" }
+
+func (c SetWingAngles) apply(d Design) (Design, error) {
+	rs := &resultSet{}
+	for _, angle := range []struct {
+		field string
+		value Quantity
+	}{
+		{"sweep", c.Sweep}, {"dihedral", c.Dihedral},
+		{"twist", c.Twist}, {"incidence", c.Incidence},
+	} {
+		if !angle.value.supplied() {
+			rs.add(angle.field, IssueMissing,
+				"state the "+angle.field+" angle, using 0 where there is none")
+			continue
+		}
+		if angle.value.dim != DimAngle {
+			rs.add(angle.field, IssueInvalid, "expected an angle but received "+angle.value.dim.String())
+		}
+	}
+	if c.SweepReference < 0 || c.SweepReference > 1 {
+		rs.add("sweep_reference", IssueInvalid,
+			"the sweep reference is a chord fraction between 0 and 1, received "+
+				formatFloat(c.SweepReference))
+	}
+	if len(rs.issues) > 0 {
+		return Design{}, rs.issues
+	}
+	out := d.clone()
+	out.Wing.Sweep = c.Sweep
+	out.Wing.Dihedral = c.Dihedral
+	out.Wing.Twist = c.Twist
+	out.Wing.Incidence = c.Incidence
+	out.Wing.SweepReference = c.SweepReference
+	out.Wing.DihedralMode = c.DihedralMode
+	return out, nil
+}
+
+// SetConfiguration changes the airframe layout and its tail description
+// together. The two are one edit because a layout without its matching
+// description is not a design any check can read: a flying wing with a tail and
+// a conventional aircraft without one are both incomplete rather than merely
+// unsaved.
+type SetConfiguration struct {
+	// Tail is the description the configuration calls for. A flying wing takes
+	// the zero value.
+	Tail TailGeometry
+	// Configuration names the layout.
+	Configuration Configuration
+}
+
+// Label names the edit.
+func (c SetConfiguration) Label() string {
+	return "set the configuration to " + c.Configuration.String()
+}
+
+func (c SetConfiguration) apply(d Design) (Design, error) {
+	if c.Configuration == ConfigurationUnknown {
+		return Design{}, commandIssue("configuration", IssueMissing,
+			"choose the configuration: conventional, V-tail and flying wing do not share a tail "+
+				"description or a handling model")
+	}
+	out := d.clone()
+	out.Configuration = c.Configuration
+	out.Tail = c.Tail
+	return out, nil
 }

@@ -293,6 +293,22 @@ func (u Unit) Symbol() string {
 	return def.symbol
 }
 
+// FactorToSI returns the exact factor that converts a value in this unit to the
+// dimension's SI unit by a single multiplication, or zero for an unsupported
+// unit.
+//
+// It exists so that a presentation layer outside this package can render a
+// stored SI value in the unit a builder chose without keeping its own copy of
+// the conversion table. Converting for display is formatting; converting an
+// input is this package's job, through NewQuantity.
+func (u Unit) FactorToSI() float64 {
+	def, err := lookupUnit(u)
+	if err != nil {
+		return 0
+	}
+	return def.factor
+}
+
 // Dimension returns the unit's physical dimension. An unsupported unit reports
 // Dimensionless, so callers must check support with a constructor.
 func (u Unit) Dimension() Dimension {
