@@ -69,34 +69,34 @@ type Airfoil struct {
 // a different answer from a supplied zero: an unstated sweep is a missing field
 // and a stated zero is an unswept wing.
 type Wing struct {
-	Name string `json:"name"`
-	// Shape is "rectangle" or "trapezoid".
-	Shape string `json:"shape"`
 	// Span, Area and RootChord are size drivers. Exactly two of these three and
 	// AspectRatio may be supplied.
 	Span      *Quantity `json:"span,omitempty"`
 	Area      *Quantity `json:"area,omitempty"`
 	RootChord *Quantity `json:"rootChord,omitempty"`
-	// AspectRatio is a size driver; zero means it is not one.
-	AspectRatio float64 `json:"aspectRatio"`
-	// TaperRatio is lambda = c_tip/c_root, required for a trapezoid.
-	TaperRatio float64 `json:"taperRatio"`
 	// Sweep, Dihedral, Twist and Incidence must be stated, with zero spelled out.
 	Sweep     *Quantity `json:"sweep,omitempty"`
 	Dihedral  *Quantity `json:"dihedral,omitempty"`
 	Twist     *Quantity `json:"twist,omitempty"`
 	Incidence *Quantity `json:"incidence,omitempty"`
 	// BodyWidth is optional; without it no exposed area is reported.
-	BodyWidth *Quantity `json:"bodyWidth,omitempty"`
-	// SweepReference is the chord fraction Sweep is measured at.
-	SweepReference float64 `json:"sweepReference"`
+	BodyWidth   *Quantity `json:"bodyWidth,omitempty"`
+	RootAirfoil *Airfoil  `json:"rootAirfoil,omitempty"`
+	TipAirfoil  *Airfoil  `json:"tipAirfoil,omitempty"`
+	Name        string    `json:"name"`
+	// Shape is "rectangle" or "trapezoid".
+	Shape string `json:"shape"`
 	// AreaBasis states what a supplied area measures.
 	AreaBasis string `json:"areaBasis"`
 	// DihedralMode states which dimensions stay fixed as dihedral changes. It
 	// may be empty only at zero dihedral, where the two planes coincide.
-	DihedralMode string   `json:"dihedralMode,omitempty"`
-	RootAirfoil  *Airfoil `json:"rootAirfoil,omitempty"`
-	TipAirfoil   *Airfoil `json:"tipAirfoil,omitempty"`
+	DihedralMode string `json:"dihedralMode,omitempty"`
+	// AspectRatio is a size driver; zero means it is not one.
+	AspectRatio float64 `json:"aspectRatio"`
+	// TaperRatio is lambda = c_tip/c_root, required for a trapezoid.
+	TaperRatio float64 `json:"taperRatio"`
+	// SweepReference is the chord fraction Sweep is measured at.
+	SweepReference float64 `json:"sweepReference"`
 }
 
 // Surface is one conventional tail surface.
@@ -152,16 +152,16 @@ type Case struct {
 // Requirement is a bound the candidate is judged against. It is not a driver:
 // a maximum span does not set the span.
 type Requirement struct {
-	Name string `json:"name"`
+	Minimum *Quantity `json:"minimum,omitempty"`
+	Maximum *Quantity `json:"maximum,omitempty"`
+	Name    string    `json:"name"`
 	// Subject names the bounded quantity.
 	Subject string `json:"subject"`
 	// Priority is "required" or "preferred".
 	Priority string `json:"priority"`
 	Basis    string `json:"basis"`
 	// Cases names the flight cases a per-case requirement applies to.
-	Cases   []string  `json:"cases,omitempty"`
-	Minimum *Quantity `json:"minimum,omitempty"`
-	Maximum *Quantity `json:"maximum,omitempty"`
+	Cases []string `json:"cases,omitempty"`
 	// Margin is a relative safety margin that tightens both bounds.
 	Margin float64 `json:"margin"`
 }
@@ -169,14 +169,14 @@ type Requirement struct {
 // Design is the authoritative parametric definition on the wire. It is the
 // whole request state: the service holds none of it between calls.
 type Design struct {
+	Mass          *Quantity     `json:"mass,omitempty"`
+	Tail          *Tail         `json:"tail,omitempty"`
 	Name          string        `json:"name"`
 	Configuration string        `json:"configuration"`
 	MassBasis     string        `json:"massBasis"`
-	Mass          *Quantity     `json:"mass,omitempty"`
-	Wing          Wing          `json:"wing"`
-	Tail          *Tail         `json:"tail,omitempty"`
 	Cases         []Case        `json:"cases,omitempty"`
 	Requirements  []Requirement `json:"requirements,omitempty"`
+	Wing          Wing          `json:"wing"`
 }
 
 // Scope names the cases an action covers. It is required rather than defaulted:
@@ -196,6 +196,13 @@ type Scope struct {
 // decode pass can reject an unknown field, and so that the per-kind field rules
 // can name exactly which field does not belong. commandSpecs holds those rules.
 type Command struct {
+	Mass        *Quantity    `json:"mass,omitempty"`
+	Value       *Quantity    `json:"value,omitempty"`
+	Requirement *Requirement `json:"requirement,omitempty"`
+	Case        *Case        `json:"case,omitempty"`
+	CLmax       *CLmax       `json:"clmax,omitempty"`
+	Scope       *Scope       `json:"scope,omitempty"`
+
 	// Kind selects the edit.
 	Kind string `json:"kind"`
 
@@ -206,14 +213,6 @@ type Command struct {
 	Name     string `json:"name,omitempty"`
 	Priority string `json:"priority,omitempty"`
 	Hold     string `json:"hold,omitempty"`
-
-	Mass  *Quantity `json:"mass,omitempty"`
-	Value *Quantity `json:"value,omitempty"`
-
-	Requirement *Requirement `json:"requirement,omitempty"`
-	Case        *Case        `json:"case,omitempty"`
-	CLmax       *CLmax       `json:"clmax,omitempty"`
-	Scope       *Scope       `json:"scope,omitempty"`
 
 	// Ratio is the taper ratio, for the taper-ratio edit.
 	Ratio float64 `json:"ratio,omitempty"`
@@ -286,9 +285,9 @@ type Check struct {
 	// Evidence grades the case evidence behind Actual.
 	Evidence string    `json:"evidence,omitempty"`
 	Detail   string    `json:"detail,omitempty"`
-	Bound    Quantity  `json:"bound"`
 	Actual   *Quantity `json:"actual,omitempty"`
 	Trace    *Trace    `json:"trace,omitempty"`
+	Bound    Quantity  `json:"bound"`
 	// Margin is the achieved relative room inside the bound.
 	Margin float64 `json:"margin"`
 }
@@ -296,10 +295,10 @@ type Check struct {
 // Contribution is one case's or requirement's contribution to an intersected
 // bound.
 type Contribution struct {
-	Source string    `json:"source"`
-	Detail string    `json:"detail,omitempty"`
 	Value  *Quantity `json:"value,omitempty"`
 	Trace  *Trace    `json:"trace,omitempty"`
+	Source string    `json:"source"`
+	Detail string    `json:"detail,omitempty"`
 	// Known reports whether the source contributed a value.
 	Known bool `json:"known"`
 }
@@ -307,13 +306,13 @@ type Contribution struct {
 // Bound is an intersected sizing bound: the largest lower bound or the smallest
 // upper bound over the applicable sources.
 type Bound struct {
-	Subject   string `json:"subject"`
-	Direction string `json:"direction"`
-	Detail    string `json:"detail,omitempty"`
+	Value     *Quantity `json:"value,omitempty"`
+	Subject   string    `json:"subject"`
+	Direction string    `json:"direction"`
+	Detail    string    `json:"detail,omitempty"`
 	// Controlling names the sources that set Value. More than one means a tie.
 	Controlling   []string       `json:"controlling,omitempty"`
 	Contributions []Contribution `json:"contributions,omitempty"`
-	Value         *Quantity      `json:"value,omitempty"`
 	Known         bool           `json:"known"`
 	// Partial reports that an applicable source could not contribute, so the
 	// bound does not establish a complete feasible interval.
@@ -364,25 +363,25 @@ type Change struct {
 // Evaluation is one complete assessment, tied to the request identity it
 // answers and the input snapshot it was computed from.
 type Evaluation struct {
-	Request  Request `json:"request"`
-	Snapshot string  `json:"snapshot"`
+	Wing     *SolvedWing `json:"wing,omitempty"`
+	Snapshot string      `json:"snapshot"`
 	// Geometry is "computed", "missing", "invalid" or "stale".
 	Geometry string `json:"geometry"`
 	// Aggregate is the combined status of the required checks. It makes no
 	// feasibility claim when HasRequired is false: an empty required set is not
 	// a passing one.
-	Aggregate           string      `json:"aggregate"`
-	Wing                *SolvedWing `json:"wing,omitempty"`
-	Checks              []Check     `json:"checks"`
-	AreaLower           Bound       `json:"areaLower"`
-	AreaUpper           Bound       `json:"areaUpper"`
-	Mass                MassRange   `json:"mass"`
-	Conflicts           []Conflict  `json:"conflicts"`
-	Patterns            []string    `json:"patterns"`
-	DefinitionIssues    []Issue     `json:"definitionIssues"`
-	GeometryIssues      []Issue     `json:"geometryIssues"`
-	ConfigurationIssues []Issue     `json:"configurationIssues"`
-	HasRequired         bool        `json:"hasRequired"`
+	Aggregate           string     `json:"aggregate"`
+	Checks              []Check    `json:"checks"`
+	Conflicts           []Conflict `json:"conflicts"`
+	Patterns            []string   `json:"patterns"`
+	DefinitionIssues    []Issue    `json:"definitionIssues"`
+	GeometryIssues      []Issue    `json:"geometryIssues"`
+	ConfigurationIssues []Issue    `json:"configurationIssues"`
+	Request             Request    `json:"request"`
+	AreaLower           Bound      `json:"areaLower"`
+	AreaUpper           Bound      `json:"areaUpper"`
+	Mass                MassRange  `json:"mass"`
+	HasRequired         bool       `json:"hasRequired"`
 }
 
 // Port names one input or output of an equation and fixes its dimension.
@@ -410,13 +409,15 @@ type Source struct {
 
 // Equation is one implemented calculation's published definition.
 type Equation struct {
-	ID          string   `json:"id"`
-	Revision    string   `json:"revision"`
-	Expression  string   `json:"expression"`
-	Inputs      []Port   `json:"inputs"`
-	Output      Port     `json:"output"`
+	ID         string `json:"id"`
+	Revision   string `json:"revision"`
+	Expression string `json:"expression"`
+	Source     Source `json:"source"`
+	Output     Port   `json:"output"`
+	Inputs     []Port `json:"inputs"`
+	// Assumptions are the stated conditions the equation holds under. They
+	// travel with it, because a relation without them is an unqualified claim.
 	Assumptions []string `json:"assumptions"`
-	Source      Source   `json:"source"`
 }
 
 // Pattern is a curated workflow with its rationale, inputs, drivers, outcome
@@ -494,9 +495,9 @@ type BatchEvaluateResponse struct {
 // ApplyRequest applies commands to a design and evaluates the result. The
 // service holds no history: undo belongs to the client that owns the design.
 type ApplyRequest struct {
+	Commands []Command `json:"commands"`
 	Request  Request   `json:"request"`
 	Design   Design    `json:"design"`
-	Commands []Command `json:"commands"`
 }
 
 // ApplyResponse returns the edited design and its evaluation. A command that
@@ -509,16 +510,16 @@ type ApplyResponse struct {
 
 // PreviewRequest asks what a command would do without applying it.
 type PreviewRequest struct {
+	Command Command `json:"command"`
 	Request Request `json:"request"`
 	Design  Design  `json:"design"`
-	Command Command `json:"command"`
 }
 
 // PreviewResponse is the before-and-after of an unapplied command. Neither
 // evaluation describes a design the client currently holds.
 type PreviewResponse struct {
 	Command string     `json:"command"`
+	Changes []Change   `json:"changes"`
 	Before  Evaluation `json:"before"`
 	After   Evaluation `json:"after"`
-	Changes []Change   `json:"changes"`
 }

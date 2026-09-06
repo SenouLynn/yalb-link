@@ -177,6 +177,15 @@ func (d *decoder) buildCommand(field string, c Command) calculator.Command {
 			Name:     c.Name,
 			Priority: enumOrEmpty(d, priorities, field+".priority", c.Priority),
 		}
+	default:
+		return d.buildCaseCommand(field, c)
+	}
+}
+
+// buildCaseCommand maps the edits that name a case, keeping buildCommand within
+// a readable size rather than growing one switch until nothing can be followed.
+func (d *decoder) buildCaseCommand(field string, c Command) calculator.Command {
+	switch c.Kind {
 	case CmdSetCase:
 		if c.Case == nil {
 			return nil

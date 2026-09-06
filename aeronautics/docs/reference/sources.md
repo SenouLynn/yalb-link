@@ -191,6 +191,7 @@ it does not choose an area.
 | Wing fuel volume (Torenbeek) | Not implemented: an electric RC wing carries no fuel |
 | Kinked, cranked, elliptical or multi-panel planforms | Unsupported; reported as unsupported rather than solved approximately |
 | Requirement intersection over required cases, controlling case and deliberate candidate selection | **Implemented as a stall-only subset** (Task 04). The book's four-constraint matching plot is not delivered by it and is not claimed |
+| Discovery and evaluation over HTTP, with the source records preserved | **Implemented** (Task 05). An application task: it adds no equation and no solver decision, and `TestTransportDoesNotReimplementTheCore` fails on any arithmetic in the boundary packages |
 | Takeoff, landing, OEI climb-gradient and cruise-speed constraints | Unsupported. Each needs a propulsion model, a drag polar and empirical constants this package does not have; they enter through the same case engine when Task 09 supplies them |
 | Numerical solvers, convergence budgets and discrete component search | Unsupported. Task 04 treats feedback loops as explicit builder revisions; no iterate is produced, so none can be mislabelled converged |
 | Weight/balance, conventional static margin and trim | Deferred to Tasks 07–08 |

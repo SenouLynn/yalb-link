@@ -1,6 +1,7 @@
 package api_test
 
 import (
+	"math"
 	"testing"
 
 	"yalb.aero/api"
@@ -16,15 +17,37 @@ import (
 //	reference area 0.24 m^2, stall speed 10.544501312841112 m/s
 //	minimum area at an 8 m/s ceiling 0.41694940476190476 m^2
 const (
-	fixtureArea      = 0.24
-	fixtureStall     = 10.544501312841112
-	fixtureMinArea   = 0.41694940476190476
-	fixtureCaseName  = "n=1 level"
-	fixtureStallReq  = "stall ceiling"
+	fixtureArea       = 0.24
+	fixtureStall      = 10.544501312841112
+	fixtureMinArea    = 0.41694940476190476
+	fixtureCaseName   = "n=1 level"
+	fixtureStallReq   = "stall ceiling"
 	fixtureClmaxBasis = "synthetic fixture assumption, not a recommended default"
 )
 
-func degrees(v float64) *api.Quantity { return &api.Quantity{Value: v, Unit: "deg"} }
+// fixtureTolerance is the relative agreement required between a value this
+// package computes in float64 and a fixture computed independently in decimal.
+// The two differ in the last unit in the last place, which is float64 rounding
+// rather than a discrepancy; the core-versus-boundary comparisons in the same
+// tests are exact, because there the same float64 must survive the trip.
+const fixtureTolerance = 1e-15
+
+func wantValue(t *testing.T, label string, got *api.Quantity, want float64, unit string) {
+	t.Helper()
+	if got == nil {
+		t.Fatalf("%s is absent, want %v %s", label, want, unit)
+	}
+	if got.Unit != unit {
+		t.Errorf("%s is in %q, want %q", label, got.Unit, unit)
+	}
+	if math.Abs(got.Value-want) > fixtureTolerance*math.Abs(want) {
+		t.Errorf("%s = %v, want %v", label, got.Value, want)
+	}
+}
+
+// zeroDegrees is the explicitly stated zero every angle a wing definition
+// carries must be given as: an unstated sweep is a missing field, not zero.
+func zeroDegrees() *api.Quantity { return &api.Quantity{Value: 0, Unit: "deg"} }
 
 func wireDesign() api.Design {
 	return api.Design{
@@ -37,11 +60,11 @@ func wireDesign() api.Design {
 			Shape:          "rectangle",
 			Span:           &api.Quantity{Value: 1.2, Unit: "m"},
 			AspectRatio:    6,
-			Sweep:          degrees(0),
+			Sweep:          zeroDegrees(),
 			SweepReference: 0.25,
-			Dihedral:       degrees(0),
-			Twist:          degrees(0),
-			Incidence:      degrees(0),
+			Dihedral:       zeroDegrees(),
+			Twist:          zeroDegrees(),
+			Incidence:      zeroDegrees(),
 			AreaBasis:      "reference-trapezoid",
 		},
 		Cases: []api.Case{{
@@ -137,7 +160,10 @@ func evaluateRequest() api.EvaluateRequest {
 }
 
 // wantFailure asserts a call failed with the given kind and returns the failure.
-func wantFailure(t *testing.T, err error, kind api.FailureKind) *api.Failure {
+// It returns the issues rather than the failure itself: *api.Failure satisfies
+// error, and a discarded one would read as an unchecked error at every call
+// site that only cares about the kind.
+func wantFailure(t *testing.T, err error, kind api.FailureKind) []api.Issue {
 	t.Helper()
 	if err == nil {
 		t.Fatalf("expected a %v failure, got no error", kind)
@@ -149,13 +175,16 @@ func wantFailure(t *testing.T, err error, kind api.FailureKind) *api.Failure {
 	if failure.Kind != kind {
 		t.Fatalf("failure kind = %v, want %v (%v)", failure.Kind, kind, failure)
 	}
-	return failure
+	if failure.Message == "" {
+		t.Error("a refusal should explain itself")
+	}
+	return failure.Issues
 }
 
 // wantIssueOn asserts the failure carries an issue on the named field.
-func wantIssueOn(t *testing.T, failure *api.Failure, field string) api.Issue {
+func wantIssueOn(t *testing.T, issues []api.Issue, field string) api.Issue {
 	t.Helper()
-	for _, issue := range failure.Issues {
+	for _, issue := range issues {
 		if issue.Field == field {
 			if issue.Detail == "" {
 				t.Errorf("issue on %q has no detail", field)
@@ -163,8 +192,8 @@ func wantIssueOn(t *testing.T, failure *api.Failure, field string) api.Issue {
 			return issue
 		}
 	}
-	fields := make([]string, 0, len(failure.Issues))
-	for _, issue := range failure.Issues {
+	fields := make([]string, 0, len(issues))
+	for _, issue := range issues {
 		fields = append(fields, issue.Field)
 	}
 	t.Fatalf("expected an issue on %q, got issues on %v", field, fields)

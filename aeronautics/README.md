@@ -2,10 +2,10 @@
 
 Independent fixed-wing RC aircraft calculator project. The current implementation
 is a transport-free Go library covering units, the initial lift calculations,
-wing geometry and a sizing workflow engine, a version-only executable, and a
-static Vite/React page. No HTTP service, handling prediction, power model or
-external-tool adapter is implemented yet, and the frontend does not yet display
-any calculation.
+wing geometry and a sizing workflow engine; a JSON HTTP boundary over it; an
+executable that serves that boundary; and a static Vite/React page that compiles
+against the generated contract types but does not yet display any calculation.
+No handling prediction, power model or external-tool adapter is implemented.
 
 ## What the library does
 
@@ -127,10 +127,54 @@ The constraint set is stall-only. This is not the book's takeoff, climb and
 cruise matching plot, and nothing here presents it as one; later constraints
 enter through the same case engine as their models arrive.
 
+## The HTTP boundary
+
+`yalb.aero/api` is the application boundary: the wire contract and the
+translation between it and the core. `yalb.aero/httpapi` serves that boundary
+over HTTP. The split is the point — `api` imports no `net/http`, so a future MCP
+sidecar reuses it directly instead of making loopback calls, and the calculator
+knows about neither.
+
+- **The service is stateless.** A request carries the whole design; the design
+  history, undo and the evaluation request stream belong to the client that owns
+  them. Session state on the server would make two clients of one design fight
+  over a single history and put a second authoritative copy of the definition
+  somewhere the builder cannot see.
+- **Identity crosses the boundary intact.** Every call carries the client's
+  `{session, sequence}`, the response echoes it in the body and in the
+  `X-Aero-Request` and `X-Aero-Sequence` headers, and it carries the input
+  snapshot the service computed. A client can therefore discard a late answer
+  without decoding it.
+- **Strict decoding.** The body must be `application/json` and hold exactly one
+  value; unknown fields are refused rather than ignored, because a client's typo
+  that is silently dropped looks like a call that succeeded and quietly did
+  something else. Bodies are capped at 1 MiB, and the case, requirement, command
+  and batch counts are capped in the `api` package so every adapter is bounded
+  the same way. The limits are published in the discovery document.
+- **Statuses distinguish the kinds of failure.** A malformed or invalid request
+  is 400, an unregistered equation or path is 404, an input outside the
+  implemented models is 422, an oversized body is 413. A design that does not
+  *solve* is none of these: it comes back 200 with the core's typed issues,
+  because an unfinished candidate is still editable and a worksheet has to show
+  it.
+- **The Go types are the one contract authority.** `go run ./cmd/aero contract`
+  regenerates `frontend/src/api/contract.ts` from them, and a test fails when the
+  checked-in file drifts. Those are types, not validation: they vanish at run
+  time and do not check that an untrusted body has the shape they describe.
+
+Routes live under `/api/v1`: `GET discovery`, `GET equations`,
+`GET equations/{id}`, `GET patterns`, `GET units`, and `POST evaluate`,
+`evaluate-batch`, `apply` and `preview`.
+
+Run it with `go run ./cmd/aero serve` (default `127.0.0.1:8081`); `pnpm dev` in
+`frontend/` proxies `/api` to it. A deployment needs this process as well as the
+static assets — a static host serves the page but does not execute the core.
+
 ## Boundaries
 
-The domain package is `yalb.aero/calculator`. Application binaries live in `cmd/`;
-transport and storage belong outside that package. There is no `go.work`, root
+The domain package is `yalb.aero/calculator`. The application boundary is
+`yalb.aero/api` and its HTTP transport is `yalb.aero/httpapi`; application
+binaries live in `cmd/`. Storage belongs outside all of them. There is no `go.work`, root
 pnpm workspace, GCS package import or GCS frontend dependency. Go is pinned to
 1.25.0 in `go.mod`; CI uses that version. Frontend dependencies have their own
 `pnpm-lock.yaml`. `go.sum` is empty: the module uses only the standard library,
@@ -156,9 +200,18 @@ packages to 71, quietly admitting `strings`, `bytes`, `io`, `reflect`, `context`
 `TestAllowlistDoesNotAdmitTestOnlyPackages` pins that narrowing, so admitting any
 of them into the core is a decision rather than an accident.
 
-Run the executable from this directory with `go run ./cmd/aero`; it prints
-`yalb.aero 0.0.0` and exits. The frontend starts independently with `pnpm dev` from
-`frontend/` at <http://127.0.0.1:5173>. It has no calculation backend to start yet.
+`boundary/imports_test.go` also holds the Task 05 seams: `yalb.aero/api` may not
+reach `net/http`, and `yalb.aero/calculator` may not reach `api`, `httpapi`,
+`encoding/json` or `context`. `TestTransportDoesNotReimplementTheCore` parses the
+two boundary packages and fails on any multiplication, division, subtraction or
+remainder in them, so every number a response carries came out of the core rather
+than from a unit conversion copied into a transport.
+
+Run the executable from this directory: `go run ./cmd/aero` prints the version
+and the contract version, `go run ./cmd/aero contract` prints the TypeScript
+contract, and `go run ./cmd/aero serve` serves the API. The frontend starts
+independently with `pnpm dev` from `frontend/` at <http://127.0.0.1:5173> and
+proxies `/api` to the server.
 
 Root `make` and `bazel test //...` do **not** check this nested module. Its own
 [CI workflow](../.github/workflows/aeronautics.yml) runs Go build, vet, race tests

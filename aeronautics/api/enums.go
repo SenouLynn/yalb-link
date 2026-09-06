@@ -14,8 +14,8 @@ import (
 // TestEveryCoreConstantHasAWireToken holds that the tables stay complete, so a
 // new core constant cannot reach the boundary without one.
 type enumEntry[T comparable] struct {
-	token string
 	value T
+	token string
 }
 
 // enumTable maps wire tokens onto a core constant set in both directions.
@@ -83,156 +83,156 @@ var (
 	configurations = enumTable[calculator.Configuration]{
 		field: "configuration",
 		entries: []enumEntry[calculator.Configuration]{
-			{"conventional-tail", calculator.ConfigurationConventionalTail},
-			{"v-tail", calculator.ConfigurationVTail},
-			{"flying-wing", calculator.ConfigurationFlyingWing},
+			{calculator.ConfigurationConventionalTail, "conventional-tail"},
+			{calculator.ConfigurationVTail, "v-tail"},
+			{calculator.ConfigurationFlyingWing, "flying-wing"},
 		},
 	}
 	shapes = enumTable[calculator.PlanformShape]{
 		field: "planform shape",
 		entries: []enumEntry[calculator.PlanformShape]{
-			{"rectangle", calculator.ShapeRectangle},
-			{"trapezoid", calculator.ShapeTrapezoid},
+			{calculator.ShapeRectangle, "rectangle"},
+			{calculator.ShapeTrapezoid, "trapezoid"},
 		},
 	}
 	areaBases = enumTable[calculator.AreaBasis]{
 		field: "area basis",
 		entries: []enumEntry[calculator.AreaBasis]{
-			{"reference-trapezoid", calculator.AreaBasisReferenceTrapezoid},
-			{"exposed-panels", calculator.AreaBasisExposedPanels},
+			{calculator.AreaBasisReferenceTrapezoid, "reference-trapezoid"},
+			{calculator.AreaBasisExposedPanels, "exposed-panels"},
 		},
 	}
 	dihedralModes = enumTable[calculator.DihedralMode]{
 		field: "dihedral mode",
 		entries: []enumEntry[calculator.DihedralMode]{
-			{"hold-panel", calculator.DihedralHoldPanel},
-			{"hold-projected", calculator.DihedralHoldProjected},
+			{calculator.DihedralHoldPanel, "hold-panel"},
+			{calculator.DihedralHoldProjected, "hold-projected"},
 		},
 	}
 	coefficientScopes = enumTable[calculator.CoefficientScope]{
 		field: "coefficient scope",
 		entries: []enumEntry[calculator.CoefficientScope]{
-			{"aircraft", calculator.ScopeAircraft},
-			{"airfoil-section", calculator.ScopeAirfoilSection},
+			{calculator.ScopeAircraft, "aircraft"},
+			{calculator.ScopeAirfoilSection, "airfoil-section"},
 		},
 	}
 	priorities = enumTable[calculator.Priority]{
 		field: "priority",
 		entries: []enumEntry[calculator.Priority]{
-			{"required", calculator.PriorityRequired},
-			{"preferred", calculator.PriorityPreferred},
+			{calculator.PriorityRequired, "required"},
+			{calculator.PriorityPreferred, "preferred"},
 		},
 	}
 	evidenceGrades = enumTable[calculator.EvidenceQuality]{
 		field: "evidence quality",
 		entries: []enumEntry[calculator.EvidenceQuality]{
-			{"assumed", calculator.EvidenceAssumed},
-			{"measured", calculator.EvidenceMeasured},
-			{"simulated", calculator.EvidenceSimulated},
+			{calculator.EvidenceAssumed, "assumed"},
+			{calculator.EvidenceMeasured, "measured"},
+			{calculator.EvidenceSimulated, "simulated"},
 		},
 	}
 	subjects = enumTable[calculator.RequirementSubject]{
 		field: "requirement subject",
 		entries: []enumEntry[calculator.RequirementSubject]{
-			{"stall-speed", calculator.SubjectStallSpeed},
-			{"wing-area", calculator.SubjectWingArea},
-			{"span", calculator.SubjectSpan},
-			{"mass", calculator.SubjectMass},
-			{"aspect-ratio", calculator.SubjectAspectRatio},
-			{"mass-wing-loading", calculator.SubjectWingLoadingMass},
+			{calculator.SubjectStallSpeed, "stall-speed"},
+			{calculator.SubjectWingArea, "wing-area"},
+			{calculator.SubjectSpan, "span"},
+			{calculator.SubjectMass, "mass"},
+			{calculator.SubjectAspectRatio, "aspect-ratio"},
+			{calculator.SubjectWingLoadingMass, "mass-wing-loading"},
 		},
 	}
 	directions = enumTable[calculator.BoundDirection]{
 		field: "bound direction",
 		entries: []enumEntry[calculator.BoundDirection]{
-			{"minimum", calculator.BoundLower},
-			{"maximum", calculator.BoundUpper},
+			{calculator.BoundLower, "minimum"},
+			{calculator.BoundUpper, "maximum"},
 		},
 	}
 	limitStatuses = enumTable[calculator.LimitStatus]{
 		field: "requirement status",
 		entries: []enumEntry[calculator.LimitStatus]{
-			{"unknown", calculator.LimitUnknown},
-			{"met", calculator.LimitMet},
-			{"unmet", calculator.LimitUnmet},
+			{calculator.LimitUnknown, "unknown"},
+			{calculator.LimitMet, "met"},
+			{calculator.LimitUnmet, "unmet"},
 		},
 	}
 	resultStatuses = enumTable[calculator.ResultStatus]{
 		field: "result status",
 		entries: []enumEntry[calculator.ResultStatus]{
-			{"missing", calculator.ResultMissing},
-			{"computed", calculator.ResultComputed},
-			{"invalid", calculator.ResultInvalid},
-			{"stale", calculator.ResultStale},
+			{calculator.ResultMissing, "missing"},
+			{calculator.ResultComputed, "computed"},
+			{calculator.ResultInvalid, "invalid"},
+			{calculator.ResultStale, "stale"},
 		},
 	}
 	issueKinds = enumTable[calculator.IssueKind]{
 		field: "issue kind",
 		entries: []enumEntry[calculator.IssueKind]{
-			{"missing", calculator.IssueMissing},
-			{"invalid", calculator.IssueInvalid},
-			{"unsupported", calculator.IssueUnsupported},
+			{calculator.IssueMissing, "missing"},
+			{calculator.IssueInvalid, "invalid"},
+			{calculator.IssueUnsupported, "unsupported"},
 		},
 	}
 	sourceKinds = enumTable[calculator.SourceKind]{
 		field: "source kind",
 		entries: []enumEntry[calculator.SourceKind]{
-			{"book", calculator.SourceBook},
-			{"supplementary", calculator.SourceSupplementary},
-			{"derived", calculator.SourceDerived},
+			{calculator.SourceBook, "book"},
+			{calculator.SourceSupplementary, "supplementary"},
+			{calculator.SourceDerived, "derived"},
 		},
 	}
 	parameterRoles = enumTable[calculator.ParameterRole]{
 		field: "parameter role",
 		entries: []enumEntry[calculator.ParameterRole]{
-			{"driver", calculator.RoleDriver},
-			{"derived", calculator.RoleDerived},
+			{calculator.RoleDriver, "driver"},
+			{calculator.RoleDerived, "derived"},
 		},
 	}
 	solveModes = enumTable[calculator.SolveMode]{
 		field: "solve mode",
 		entries: []enumEntry[calculator.SolveMode]{
-			{"span-and-area", calculator.SolveFromSpanAndArea},
-			{"span-and-aspect-ratio", calculator.SolveFromSpanAndAspectRatio},
-			{"area-and-aspect-ratio", calculator.SolveFromAreaAndAspectRatio},
-			{"span-and-root-chord", calculator.SolveFromSpanAndRootChord},
-			{"area-and-root-chord", calculator.SolveFromAreaAndRootChord},
-			{"aspect-ratio-and-root-chord", calculator.SolveFromAspectRatioAndRootChord},
+			{calculator.SolveFromSpanAndArea, "span-and-area"},
+			{calculator.SolveFromSpanAndAspectRatio, "span-and-aspect-ratio"},
+			{calculator.SolveFromAreaAndAspectRatio, "area-and-aspect-ratio"},
+			{calculator.SolveFromSpanAndRootChord, "span-and-root-chord"},
+			{calculator.SolveFromAreaAndRootChord, "area-and-root-chord"},
+			{calculator.SolveFromAspectRatioAndRootChord, "aspect-ratio-and-root-chord"},
 		},
 	}
 	journeys = enumTable[calculator.Journey]{
 		field: "journey",
 		entries: []enumEntry[calculator.Journey]{
-			{"span-first", calculator.JourneySpanFirst},
-			{"mass-and-performance-first", calculator.JourneyMassAndPerformanceFirst},
-			{"mass-and-size-first", calculator.JourneyMassAndSizeFirst},
-			{"existing-design", calculator.JourneyExistingDesign},
-			{"power-first", calculator.JourneyPowerFirst},
+			{calculator.JourneySpanFirst, "span-first"},
+			{calculator.JourneyMassAndPerformanceFirst, "mass-and-performance-first"},
+			{calculator.JourneyMassAndSizeFirst, "mass-and-size-first"},
+			{calculator.JourneyExistingDesign, "existing-design"},
+			{calculator.JourneyPowerFirst, "power-first"},
 		},
 	}
 	caseScopes = enumTable[calculator.CaseScopeKind]{
 		field: "case scope",
 		entries: []enumEntry[calculator.CaseScopeKind]{
-			{"all-required", calculator.CaseScopeAllRequired},
-			{"single", calculator.CaseScopeSingle},
+			{calculator.CaseScopeAllRequired, "all-required"},
+			{calculator.CaseScopeSingle, "single"},
 		},
 	}
 	dimensions = enumTable[calculator.Dimension]{
 		field: "dimension",
 		entries: []enumEntry[calculator.Dimension]{
-			{"ratio", calculator.Dimensionless},
-			{"mass", calculator.DimMass},
-			{"force", calculator.DimForce},
-			{"length", calculator.DimLength},
-			{"area", calculator.DimArea},
-			{"speed", calculator.DimSpeed},
-			{"density", calculator.DimDensity},
-			{"force-per-area", calculator.DimForcePerArea},
-			{"mass-per-area", calculator.DimMassPerArea},
-			{"angle", calculator.DimAngle},
-			{"power", calculator.DimPower},
-			{"energy", calculator.DimEnergy},
-			{"dynamic-viscosity", calculator.DimDynamicViscosity},
+			{calculator.Dimensionless, "ratio"},
+			{calculator.DimMass, "mass"},
+			{calculator.DimForce, "force"},
+			{calculator.DimLength, "length"},
+			{calculator.DimArea, "area"},
+			{calculator.DimSpeed, "speed"},
+			{calculator.DimDensity, "density"},
+			{calculator.DimForcePerArea, "force-per-area"},
+			{calculator.DimMassPerArea, "mass-per-area"},
+			{calculator.DimAngle, "angle"},
+			{calculator.DimPower, "power"},
+			{calculator.DimEnergy, "energy"},
+			{calculator.DimDynamicViscosity, "dynamic-viscosity"},
 		},
 	}
 )

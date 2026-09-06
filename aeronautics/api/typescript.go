@@ -2,7 +2,6 @@ package api
 
 import (
 	"reflect"
-	"sort"
 	"strings"
 )
 
@@ -135,15 +134,4 @@ func tsType(t reflect.Type) string {
 
 func quoteTS(s string) string {
 	return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(s) + `"`
-}
-
-// tsTypeNames lists the interfaces the generated module exports, for a test
-// that wants to check a specific one is present.
-func tsTypeNames() []string {
-	names := make([]string, 0, len(tsRoots))
-	for _, root := range tsRoots {
-		names = append(names, reflect.TypeOf(root).Name())
-	}
-	sort.Strings(names)
-	return names
 }

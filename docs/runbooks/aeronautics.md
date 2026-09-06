@@ -31,6 +31,32 @@ golangci-lint run
 `golangci-lint run` uses the module-local `.golangci.yml` because it is run from
 this directory; the config is a copy, not an inheritance of the root file.
 
+## Running it locally
+
+Two processes, neither of which touches the GCS:
+
+```sh
+# from aeronautics/
+go run ./cmd/aero serve            # /api/v1 on http://127.0.0.1:8081
+
+# from aeronautics/frontend/, in another shell
+pnpm dev                           # http://127.0.0.1:5173, proxying /api
+```
+
+`AERO_API` overrides the proxy target. A deployment needs the Go service as well
+as the built assets: a static host serves the page but does not execute the
+calculation core.
+
+The frontend's contract types are generated from the Go types. After changing
+anything in `api/`, regenerate them:
+
+```sh
+go run ./cmd/aero contract > frontend/src/api/contract.ts
+```
+
+`TestGeneratedTypeScriptMatchesTheCheckedInFile` fails if that is forgotten, so
+the check is part of `go test ./...` rather than a separate step.
+
 ## Frontend
 
 From `aeronautics/frontend/`:

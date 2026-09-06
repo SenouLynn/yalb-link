@@ -166,10 +166,10 @@ export interface Equation {
   id: string;
   revision: string;
   expression: string;
-  inputs: Port[];
-  output: Port;
-  assumptions: string[];
   source: Source;
+  output: Port;
+  inputs: Port[];
+  assumptions: string[];
 }
 
 export interface Port {
@@ -216,9 +216,9 @@ export interface BatchEvaluateResponse {
 }
 
 export interface ApplyRequest {
+  commands: Command[];
   request: Request;
   design: Design;
-  commands: Command[];
 }
 
 export interface ApplyResponse {
@@ -228,65 +228,65 @@ export interface ApplyResponse {
 }
 
 export interface PreviewRequest {
+  command: Command;
   request: Request;
   design: Design;
-  command: Command;
 }
 
 export interface PreviewResponse {
   command: string;
+  changes: Change[];
   before: Evaluation;
   after: Evaluation;
-  changes: Change[];
 }
 
 export interface Evaluation {
-  request: Request;
+  wing?: SolvedWing | null;
   snapshot: string;
   geometry: string;
   aggregate: string;
-  wing?: SolvedWing | null;
   checks: Check[];
-  areaLower: Bound;
-  areaUpper: Bound;
-  mass: MassRange;
   conflicts: Conflict[];
   patterns: string[];
   definitionIssues: Issue[];
   geometryIssues: Issue[];
   configurationIssues: Issue[];
+  request: Request;
+  areaLower: Bound;
+  areaUpper: Bound;
+  mass: MassRange;
   hasRequired: boolean;
 }
 
 export interface Design {
+  mass?: Quantity | null;
+  tail?: Tail | null;
   name: string;
   configuration: string;
   massBasis: string;
-  mass?: Quantity | null;
-  wing: Wing;
-  tail?: Tail | null;
   cases?: Case[];
   requirements?: Requirement[];
+  wing: Wing;
 }
 
 export interface Wing {
-  name: string;
-  shape: string;
   span?: Quantity | null;
   area?: Quantity | null;
   rootChord?: Quantity | null;
-  aspectRatio: number;
-  taperRatio: number;
   sweep?: Quantity | null;
   dihedral?: Quantity | null;
   twist?: Quantity | null;
   incidence?: Quantity | null;
   bodyWidth?: Quantity | null;
-  sweepReference: number;
-  areaBasis: string;
-  dihedralMode?: string;
   rootAirfoil?: Airfoil | null;
   tipAirfoil?: Airfoil | null;
+  name: string;
+  shape: string;
+  areaBasis: string;
+  dihedralMode?: string;
+  aspectRatio: number;
+  taperRatio: number;
+  sweepReference: number;
 }
 
 export interface Airfoil {
@@ -334,17 +334,23 @@ export interface CLmax {
 }
 
 export interface Requirement {
+  minimum?: Quantity | null;
+  maximum?: Quantity | null;
   name: string;
   subject: string;
   priority: string;
   basis: string;
   cases?: string[];
-  minimum?: Quantity | null;
-  maximum?: Quantity | null;
   margin: number;
 }
 
 export interface Command {
+  mass?: Quantity | null;
+  value?: Quantity | null;
+  requirement?: Requirement | null;
+  case?: Case | null;
+  clmax?: CLmax | null;
+  scope?: Scope | null;
   kind: string;
   basis?: string;
   key?: string;
@@ -353,12 +359,6 @@ export interface Command {
   name?: string;
   priority?: string;
   hold?: string;
-  mass?: Quantity | null;
-  value?: Quantity | null;
-  requirement?: Requirement | null;
-  case?: Case | null;
-  clmax?: CLmax | null;
-  scope?: Scope | null;
   ratio?: number;
 }
 
@@ -401,28 +401,28 @@ export interface Check {
   result: string;
   evidence?: string;
   detail?: string;
-  bound: Quantity;
   actual?: Quantity | null;
   trace?: Trace | null;
+  bound: Quantity;
   margin: number;
 }
 
 export interface Bound {
+  value?: Quantity | null;
   subject: string;
   direction: string;
   detail?: string;
   controlling?: string[];
   contributions?: Contribution[];
-  value?: Quantity | null;
   known: boolean;
   partial: boolean;
 }
 
 export interface Contribution {
-  source: string;
-  detail?: string;
   value?: Quantity | null;
   trace?: Trace | null;
+  source: string;
+  detail?: string;
   known: boolean;
 }
 

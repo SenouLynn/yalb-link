@@ -41,22 +41,33 @@ func Handler(service *api.Service) http.Handler {
 	mux.Handle("POST "+Prefix+"/evaluate-batch", evaluateBatch(service))
 	mux.Handle("POST "+Prefix+"/apply", apply(service))
 	mux.Handle("POST "+Prefix+"/preview", preview(service))
-	return withLimit(mux)
+	return route(mux)
 }
 
-// withLimit caps every request body before a handler reads it, and answers an
-// unrouted path with the boundary's own error shape rather than net/http's
-// plain-text default, so a client never has to parse two failure formats.
-func withLimit(next http.Handler) http.Handler {
+// methods are the methods the routes use. A miss is checked against them so a
+// wrong method can be answered as one rather than as a missing path.
+var methods = []string{http.MethodGet, http.MethodPost}
+
+// route caps every request body before a handler reads it and answers a miss in
+// the boundary's own error shape. net/http's built-in 404 and 405 are
+// plain text, and a client that has to parse two failure formats will
+// eventually parse one of them wrong.
+func route(mux *http.ServeMux) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.Body = http.MaxBytesReader(w, r.Body, MaxRequestBytes)
-		recorder := &statusRecorder{ResponseWriter: w}
-		next.ServeHTTP(recorder, r)
-		if recorder.wrote {
+		if _, pattern := mux.Handler(r); pattern != "" {
+			mux.ServeHTTP(w, r)
 			return
 		}
-		// ServeMux answered nothing of its own only when no route matched at
-		// all; its 404 and 405 both write, so this is the not-found case.
+		if allowed := allowedMethods(mux, r); len(allowed) > 0 {
+			w.Header().Set("Allow", strings.Join(allowed, ", "))
+			writeJSON(w, http.StatusMethodNotAllowed, errorBody{
+				Error: "method-not-allowed",
+				Message: r.Method + " is not served on " + r.URL.Path +
+					"; it accepts " + strings.Join(allowed, ", "),
+			})
+			return
+		}
 		writeFailure(w, &api.Failure{
 			Kind:    api.FailureNotFound,
 			Message: "no route serves " + r.Method + " " + r.URL.Path,
@@ -64,25 +75,18 @@ func withLimit(next http.Handler) http.Handler {
 	})
 }
 
-// statusRecorder notices whether a handler wrote anything, so the not-found
-// fallback does not overwrite a real response.
-type statusRecorder struct {
-	http.ResponseWriter
-	wrote bool
-}
-
-func (s *statusRecorder) WriteHeader(status int) {
-	s.wrote = true
-	s.ResponseWriter.WriteHeader(status)
-}
-
-func (s *statusRecorder) Write(b []byte) (int, error) {
-	s.wrote = true
-	n, err := s.ResponseWriter.Write(b)
-	if err != nil {
-		return n, err //nolint:wrapcheck // passthrough of the underlying writer's error
+// allowedMethods reports which methods the path would accept, by asking the mux
+// the same question once per supported method.
+func allowedMethods(mux *http.ServeMux, r *http.Request) []string {
+	var allowed []string
+	for _, method := range methods {
+		probe := r.Clone(r.Context())
+		probe.Method = method
+		if _, pattern := mux.Handler(probe); pattern != "" {
+			allowed = append(allowed, method)
+		}
 	}
-	return n, nil
+	return allowed
 }
 
 // errorBody is the failure shape every refused call returns, whatever went

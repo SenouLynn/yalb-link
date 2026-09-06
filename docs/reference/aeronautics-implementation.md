@@ -11,7 +11,7 @@ decisions. All thirteen tasks are authorized: the original eleven on
 | 02 — Lift | Complete | Units, registry, traces, typed issues and the lift inversions implemented; fixtures match to the quoted precision |
 | 03 — Geometry | Complete | Planform, MAC, dihedral planes, coordinates, parameters, Reynolds coverage and configuration contracts implemented; 69 tests pass, 185 including subtests; the book's worked example reproduces. A plane-blind limits check was found and fixed post-review, see below |
 | 04 — Workflows | Complete | Design definition, commands with undo/redo, requirement intersection, controlling cases, conflicts with offered alternatives, request identity and curated patterns implemented; 120 tests pass, 258 including subtests. The Matching process chapter was read and Task 04 claims no equation from it, see below |
-| 05 — HTTP | Pending | No API implemented |
+| 05 — HTTP | Complete | Transport-neutral `api` boundary, `httpapi` transport, discovery, evaluate/apply/preview, generated frontend contract types and a serving executable; 157 tests pass, 359 including subtests. The seams are checked from outside, see below |
 | 06 — Worksheet | Pending | Static shell only |
 | 07 — Visuals | Pending | No mass placement or sensitivity view |
 | 08 — Handling | Pending | Conventional minimum defined in task; no model implemented |
@@ -319,6 +319,98 @@ the missing tests rather than by accepting the gap:
   and checks the design is unchanged afterwards, which is the three-driver state
   the atomic swap exists to prevent.
 
+## Task 05 verification
+
+Run on 2026-09-05 from `aeronautics/`: `go build ./...`, `go vet ./...`,
+`go test -race -timeout=2m ./...` and `golangci-lint run` (0 issues) all pass,
+with no lint relaxation added. From `aeronautics/frontend/`: `pnpm typecheck`,
+`pnpm lint`, `pnpm test` and `pnpm build` all pass. The module now holds 157
+top-level tests, 359 counting subtests, across four packages: 122 in
+`calculator`, 16 in `api`, 14 in `httpapi` and 5 in `boundary`.
+
+The executable was started and exercised: `go run ./cmd/aero serve` answered
+`GET /api/v1/discovery` with the contract, the equations and their provenance,
+and answered `POST /api/v1/evaluate` for the Task 04 fixture with the solved
+parameter set and its per-parameter equation revisions.
+
+**The core gained two functions and no equations.** `calculator.Units` and
+`calculator.ParseUnit` exist so that a transport can list and resolve unit
+symbols without keeping a second copy of the conversion table, which is exactly
+how a mistyped factor gets into a system twice. The registry is unchanged, the
+core's import closure is unchanged, and no Task 05 code computes anything.
+
+**The seams are checked from outside, not asserted in prose.**
+
+- `TestApplicationBoundaryDoesNotDependOnHTTP` reads the actual import closures:
+  `yalb.aero/api` may not reach `net/http`, `net`, `os`, `database/sql` or
+  `httpapi`, and `yalb.aero/calculator` may not reach `api`, `httpapi`,
+  `encoding/json` or `context`. That is what makes "an MCP sidecar can reuse the
+  contract without loopback HTTP" a property rather than an intention.
+- `TestTransportDoesNotReimplementTheCore` parses `api` and `httpapi` with
+  go/ast and fails on any multiplication, division, subtraction or remainder.
+  Those four operators are how a unit conversion or a formula gets copied into a
+  transport, where it is then free to disagree with the core; string
+  concatenation and comparison stay allowed because that is what building a
+  message is made of. One real violation was found and removed: the TypeScript
+  generator was indexing with `len(tokens)-1`.
+- `TestCoreAndBoundaryAgreeOnTheSameCandidate` writes the fixture aircraft twice,
+  once as a wire design and once through direct Go calls, and compares the input
+  snapshots before comparing any number. Two definitions with the same
+  fingerprint are the same definition, so that is the check that the wire form
+  carried the aircraft across rather than something close to it.
+
+**Design decisions taken during implementation.**
+
+- *The service is stateless.* A request carries the whole design; history, undo
+  and the request stream stay with the client that owns them. Server-side
+  sessions would make two clients of one design fight over a single history and
+  put a second authoritative copy of the definition where the builder cannot see
+  it. Identity is therefore minted by the client and carried verbatim, and the
+  response returns the input snapshot the service computed so a stale answer is
+  detectable either way.
+- *Wire tokens are not display strings.* The enum tables in `api/enums.go` are
+  stable identifiers rather than the core's `String()` output, which is wording
+  meant for a person. Reusing those would make renaming a label a breaking API
+  change. `TestEveryCoreConstantHasAWireToken` walks each core enum and fails
+  when the table falls behind, so a new constant cannot reach the boundary
+  encoded as an empty string.
+- *Commands are a flat tagged union.* One strict decode pass can then reject an
+  unknown field, and `commandSpecs` names exactly which field does not belong to
+  which kind. A client that sends `hold` to a mass edit is told so rather than
+  having it dropped.
+- *A design that does not solve is a 200.* Refusing it would make an unfinished
+  worksheet unreadable. Only the *shape* of a request fails the call; the
+  physics comes back as the core's typed issues alongside whatever bounds could
+  still be established, which is why an area bound survives a wing that does not
+  solve.
+- *A negative span is not a bad request.* Lengths may be negative in general —
+  that is what makes anhedral and forward sweep expressible — so the boundary
+  passes it through and the core refuses it as an invalid driver.
+  `TestNegativeSpanIsADomainFailureNotARequestFailure` pins where that line sits.
+- *One failure shape everywhere.* `net/http`'s built-in 404 and 405 are plain
+  text, so the router answers both itself in the boundary's JSON error shape,
+  with an `Allow` header on a method mismatch. A client that has to parse two
+  failure formats will eventually parse one of them wrong.
+- *Limits live in `api`, not in the transport.* The case, requirement, command
+  and batch counts bind every adapter equally, and they are published in the
+  discovery document so a client can respect them instead of finding them by
+  being refused. Only the byte cap is HTTP's, because only HTTP has a body.
+- *The Go types are the contract authority.* `go run ./cmd/aero contract`
+  regenerates the frontend's types from them by reflection, and
+  `TestGeneratedTypeScriptMatchesTheCheckedInFile` fails on drift. The generated
+  file says in its own header that types are not validation.
+
+**Tests verified by mutation.** Sixteen deliberate breaks were introduced one at
+a time and the suite rerun for each. In `api`: dropping a requirement subject's
+token, rounding a value on the way out, ignoring an unknown command field,
+half-applying an apply call, dropping the request identity, ignoring the batch
+limit, ignoring cancellation, and reporting an unsupported input as an invalid
+one. In `httpapi`: ignoring unknown JSON fields, removing the body limit, mapping
+unsupported onto 400, falling back to net/http's plain-text errors, accepting
+trailing JSON after the body, dropping the identity header, turning a not-found
+equation into a success, and skipping the content-type check. Every one failed a
+test.
+
 ## Post-review corrections (2026-09-05)
 
 Findings from an adversarial review of the Task 01–03 commits, fixed in place.
@@ -396,7 +488,14 @@ with no lint relaxation added. The calculator package holds 69 top-level tests,
   is a closed-form bound, not an iteration, so there is no iterate that could be
   mislabelled converged and no residual or budget to report. A conflicting group
   is reported as known rather than minimal for the same reason.
-- A `Session` is single-goroutine. Concurrency belongs to whatever serves it.
+- A `Session` is single-goroutine. Concurrency belongs to whatever serves it;
+  the HTTP boundary avoids the question entirely by holding no session.
+- The API is the Task 04 workflow and nothing more. There is no persistence, no
+  authentication, no rate limiting and no CORS handling: the dev server proxies
+  same-origin, and a deployment that needs any of those adds them outside these
+  packages. Draft storage arrives with Task 06.
+- The generated TypeScript is types only. It disappears at run time and does not
+  validate an untrusted response; a client that parses one still has to check it.
 - Component placements, mass items and mission cases are not expressible in a
   `Design` yet; they arrive with Tasks 07 and 09. Draft versioning and load-time
   compatibility checks arrive with Task 06, so a draft is currently adopted as
