@@ -16,17 +16,58 @@ type listedPackage struct {
 	Standard   bool
 }
 
+// productionSeed is the stdlib the calculator core may reach. The allowlist is
+// the closure of these packages, because literal paths alone would reject the
+// Go toolchain's own implementation packages such as internal/cpu.
+//
+// Task 01 names six packages: math, fmt, errors, strconv, sort and testing.
+// Two of them are deliberately not seeded here:
+//
+//   - testing is a dependency of the tests, not of the core. This check reads
+//     the non-test closure, where testing has no business appearing. Seeding it
+//     expanded its closure into the production allowlist, which quietly admitted
+//     strings, bytes, io, reflect, context, sync/atomic, flag and filepath.
+//   - fmt reaches os, which the same task bans, so the core formats with strconv
+//     instead. Seeding a package whose closure is then rejected by the bans
+//     buys nothing and widens the allowlist by everything else fmt pulls in.
+//
+// Seeding four instead of six takes the allowlist from 71 packages to 38 and
+// leaves the core's actual closure a clean subset. Widening this list is a
+// decision to be made on purpose, which is the whole point of the check.
+var productionSeed = []string{"math", "errors", "strconv", "sort"}
+
 func TestCalculatorTransitiveImports(t *testing.T) {
-	// Expand the named stdlib allowlist to include its implementation dependencies
-	// for the active Go toolchain. Explicit I/O/clock bans take precedence.
+	// Expand the seed to include its implementation dependencies for the active
+	// Go toolchain. Explicit I/O/clock bans take precedence.
 	allowed := make(map[string]bool)
-	for _, pkg := range listPackages(t, "math", "fmt", "errors", "strconv", "sort", "testing") {
+	for _, pkg := range listPackages(t, productionSeed...) {
 		allowed[pkg.ImportPath] = true
 	}
 	for _, pkg := range listPackages(t, "yalb.aero/calculator") {
 		if reason := importIssue(pkg, allowed); reason != "" {
 			t.Errorf("core dependency %s: %s", pkg.ImportPath, reason)
 		}
+	}
+}
+
+// TestAllowlistDoesNotAdmitTestOnlyPackages pins the seed narrowing. These
+// packages are not banned outright — a sibling package outside the core may
+// legitimately use any of them — but none may enter the production core by
+// riding in on another package's closure. Re-seeding testing or fmt fails this.
+func TestAllowlistDoesNotAdmitTestOnlyPackages(t *testing.T) {
+	allowed := make(map[string]bool)
+	for _, pkg := range listPackages(t, productionSeed...) {
+		allowed[pkg.ImportPath] = true
+	}
+	for _, path := range []string{
+		"strings", "bytes", "io", "reflect", "context",
+		"sync", "sync/atomic", "flag", "path/filepath", "runtime/debug",
+	} {
+		t.Run(path, func(t *testing.T) {
+			if importIssue(listedPackage{ImportPath: path, Standard: true}, allowed) == "" {
+				t.Errorf("%s is admitted into the production core by closure expansion", path)
+			}
+		})
 	}
 }
 

@@ -135,7 +135,9 @@ type SpanwiseDimensions struct {
 type Wing struct {
 	// Traces record every relationship evaluated, in evaluation order.
 	Traces []Trace
-	// Planform is the solved plan form in the plane the drivers were given in.
+	// Planform is the solved plan form in the plane the drivers were given in,
+	// which Planform.Plane records. Projected and Panel below hold both planes
+	// explicitly; prefer them over this field when the plane matters.
 	Planform Planform
 	// Definition echoes the drivers and choices this wing was solved from.
 	Definition WingDefinition
@@ -187,6 +189,14 @@ func SolveWing(def WingDefinition) (Wing, error) {
 		return Wing{}, rs.issues
 	}
 	rs.traces = append(rs.traces, planform.Traces...)
+
+	// Record which plane the planform's own dimensions are in before anything
+	// reads them. Holding panel dimensions fixed under a nonzero dihedral means
+	// planform.Span is a construction length, not a plan-view span; at zero
+	// dihedral the planes coincide and the distinction cannot change a result.
+	if def.DihedralMode == DihedralHoldPanel && !def.Dihedral.IsZero() {
+		planform.Plane = OutlinePanelSurface
+	}
 
 	w := Wing{Definition: def, Planform: planform}
 	w.Projected, w.Panel = def.resolvePlanes(rs, planform)

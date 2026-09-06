@@ -47,6 +47,8 @@ type PlanformLimits struct {
 type LimitCheck struct {
 	// Name identifies the requirement.
 	Name string
+	// Detail explains an unknown status. It is empty for a met or unmet check.
+	Detail string
 	// Limit is the boundary that was requested.
 	Limit Quantity
 	// Actual is the solved value it was compared against.
@@ -58,25 +60,75 @@ type LimitCheck struct {
 // Check compares a solved planform against the supplied limits. Limits that
 // were not supplied produce no check; a limit whose value the planform does not
 // carry produces an unknown one.
+//
+// These limits are plan-view boundaries: a doorway constrains the span the wing
+// projects, not the length of the panel skin. A planform solved from panel-plane
+// drivers under a nonzero dihedral carries construction lengths, which are
+// larger by 1/cos(Gamma), so checking against them would report a wing as too
+// wide when it fits. That case returns unknown rather than a wrong answer, and
+// names Wing.CheckLimits, which has both planes and can answer it.
 func (l PlanformLimits) Check(p Planform) []LimitCheck {
-	checks := make([]LimitCheck, 0, 3)
-	add := func(name string, limit, actual Quantity, satisfied func() bool) {
-		if !limit.supplied() {
-			return
-		}
-		check := LimitCheck{Name: name, Limit: limit, Actual: actual}
+	if p.Plane == OutlinePanelSurface {
+		return l.checks(func(name string, limit Quantity) LimitCheck {
+			return LimitCheck{
+				Name:   name,
+				Limit:  limit,
+				Status: LimitUnknown,
+				Detail: "this planform holds panel-plane construction dimensions under a nonzero " +
+					"dihedral; a plan-view limit cannot be checked against them. Use " +
+					"Wing.CheckLimits, which reads the projected plane",
+			}
+		})
+	}
+	return l.against(p.Span, p.Area)
+}
+
+// CheckLimits compares the wing's plan-view dimensions against the supplied
+// limits, whichever plane its drivers were given in. This is the form to use
+// once a wing exists: Wing.Projected is the plane these limits are about.
+func (w Wing) CheckLimits(l PlanformLimits) []LimitCheck {
+	return l.against(w.Projected.Span, w.Projected.Area)
+}
+
+// against evaluates every supplied limit over one plane's span and area.
+func (l PlanformLimits) against(span, area Quantity) []LimitCheck {
+	satisfied := map[string]func() bool{
+		"maximum span": func() bool { return span.si <= l.MaximumSpan.si },
+		"minimum span": func() bool { return span.si >= l.MinimumSpan.si },
+		"maximum area": func() bool { return area.si <= l.MaximumArea.si },
+	}
+	actual := map[string]Quantity{"maximum span": span, "minimum span": span, "maximum area": area}
+	return l.checks(func(name string, limit Quantity) LimitCheck {
+		check := LimitCheck{Name: name, Limit: limit, Actual: actual[name]}
 		switch {
-		case !actual.supplied():
+		case !actual[name].supplied():
 			check.Status = LimitUnknown
-		case satisfied():
+			check.Detail = "the planform does not carry this value"
+		case satisfied[name]():
 			check.Status = LimitMet
 		default:
 			check.Status = LimitUnmet
 		}
-		checks = append(checks, check)
+		return check
+	})
+}
+
+// checks builds one entry per supplied limit, in a stable order, so that both
+// the plan-view path and the refusal path report the same set of requirements.
+func (l PlanformLimits) checks(build func(name string, limit Quantity) LimitCheck) []LimitCheck {
+	checks := make([]LimitCheck, 0, 3)
+	for _, requirement := range []struct {
+		name  string
+		limit Quantity
+	}{
+		{"maximum span", l.MaximumSpan},
+		{"minimum span", l.MinimumSpan},
+		{"maximum area", l.MaximumArea},
+	} {
+		if !requirement.limit.supplied() {
+			continue
+		}
+		checks = append(checks, build(requirement.name, requirement.limit))
 	}
-	add("maximum span", l.MaximumSpan, p.Span, func() bool { return p.Span.si <= l.MaximumSpan.si })
-	add("minimum span", l.MinimumSpan, p.Span, func() bool { return p.Span.si >= l.MinimumSpan.si })
-	add("maximum area", l.MaximumArea, p.Area, func() bool { return p.Area.si <= l.MaximumArea.si })
 	return checks
 }

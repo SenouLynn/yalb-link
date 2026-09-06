@@ -78,6 +78,9 @@ the geometry/control/power models used by each adapter.
 - Draft vs complete exports remain distinguishable. Adoption of imported results
   triggers the appropriate requirement checks and evidence invalidation.
 
-Structural load envelope, wing stiffness/bending, aeroelasticity and manufacturing
-detail remain additional engineering work unless separately implemented. Export
-must preserve these unknowns rather than imply whole-aircraft validation.
+Structural load envelope, aeroelasticity and manufacturing detail remain additional
+engineering work unless separately implemented. Wing stiffness and bending are now
+separately implemented, in [Task 13](13-spar-fit-and-stiffness.md), but only as spar
+fit and deflection: strength, buckling, joints and aeroelasticity stay unsupported
+there. Export a Task 13 result as stiffness, never as a structural rating, and
+preserve the remaining unknowns rather than imply whole-aircraft validation.

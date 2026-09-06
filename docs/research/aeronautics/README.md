@@ -1,8 +1,9 @@
 # Aeronautics calculator — task handoff
 
 Status: **implementation in progress in `aeronautics/`.** The user authorized
-all eleven tasks on 2026-09-05. Task descriptions are acceptance targets, not
-claims of completed capabilities. See the [implementation log](../../reference/aeronautics-implementation.md)
+the original eleven tasks on 2026-09-05; Tasks 12 and 13 were added afterwards
+and are listed in the task order below. Task descriptions are acceptance
+targets, not claims of completed capabilities. See the [implementation log](../../reference/aeronautics-implementation.md)
 for checked behavior, decisions and outstanding verification.
 
 ## Start here in a fresh session
@@ -133,6 +134,7 @@ software delivery order, with alternate user entry points into the same methods.
 | 08 | [Tail Sizing](https://computationaldesignlab.github.io/aircraft-design/tail_sizing.html), [Static Margin](https://computationaldesignlab.github.io/aircraft-design/long_stability/static_margin.html), [Trim Analysis](https://computationaldesignlab.github.io/aircraft-design/long_stability/trim.html), and their Weight and Balance prerequisites |
 | 09 | [Drag Polar](https://computationaldesignlab.github.io/aircraft-design/aerodynamics/drag_polar_induced_drag.html), [Engine and Propeller Selection](https://computationaldesignlab.github.io/aircraft-design/powerplant/engine_propeller.html), [Mission analysis](https://computationaldesignlab.github.io/aircraft-design/performance/mission_analysis.html), and Initial Weight Estimation/Weight and Balance |
 | 01, 05, 10, 11 | Package, expose and preserve these same methods and their provenance; these are application tasks, not additional aerodynamic models |
+| 12, 13 | **Outside the book.** It treats airfoil selection as context and has no section-generation method, and it has no structures chapter. Sections cite Abbott & von Doenhoff and the NACA reports; spanwise load and beam bending cite Schrenk and standard Euler–Bernoulli. Carbon material properties are always supplied evidence and have no source here |
 
 For each implemented method, record the chapter/section URL, access date and
 upstream revision if available, original notation/units, assumptions, applicability,
@@ -151,9 +153,11 @@ the book's own cited references when more detail is needed; supplementary source
 serve documented gaps and external-tool interfaces, not competing design recipes.
 
 The book's full contents do not automatically expand the first release. Record
-unimplemented takeoff/landing, fuselage, landing gear, structural/load-envelope,
-cost and other analyses as deferred. A supported subset must not imply completion
-of the whole book or whole-aircraft validation.
+unimplemented takeoff/landing, fuselage, landing gear, cost and other analyses as
+deferred. Structural coverage is split rather than wholly deferred: Task 13 implements
+spar fit and stiffness, while strength, buckling, joints, fatigue and aeroelasticity
+stay explicitly unsupported and stay named. A supported subset must not imply
+completion of the whole book or whole-aircraft validation.
 
 ## Rules every task must preserve
 
@@ -191,10 +195,16 @@ of the whole book or whole-aircraft validation.
 | [09 — Power and mission](09-power-and-mission.md) | Tested power-first UI, battery/motor feedback, energy budget | 02–06 |
 | [10 — MCP sidecar](10-mcp-sidecar.md) | Calculations and curated patterns available through MCP | 04; expose later models as they exist |
 | [11 — External handoff](11-external-handoff.md) | Reproducible export and analysis feedback | 04–06; relevant model tasks |
+| [12 — Airfoil sections](12-airfoil-sections.md) | NACA 4/5-digit generation, coordinate ingest, spanwise lofting | 03 |
+| [13 — Spar fit and stiffness](13-spar-fit-and-stiffness.md) | Carbon spar fit under taper/twist, bending and deflection | 03, 12 |
 
 Tasks 08 and 09 are independently schedulable. Task 10 is a nice-to-have and may
 move earlier if agent access becomes a driver. This table is a dependency map,
 not authorization to spawn parallel agents.
+
+Tasks 12 and 13 were added after the original eleven. They depend only on 03 and
+on each other, so they are schedulable independently of 04–11, but their worksheet
+surface arrives with Tasks 06 and 07 and their export surface with Task 11.
 
 The first useful sizing release ends at Task 06. Configuration choices already
 exist, but handling remains explicitly unknown until Task 08's supported assessment.

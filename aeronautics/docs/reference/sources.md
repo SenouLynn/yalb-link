@@ -146,13 +146,19 @@ it does not choose an area.
 | Plan-view versus panel-plane dimensions under uniform dihedral | **Implemented** (Task 03), with the held-fixed choice required from the builder |
 | Local Reynolds conditions at root, MAC and tip | **Implemented** (Task 03) |
 | Explicit configuration contracts for conventional, V-tail and flying-wing layouts | **Implemented as geometry only** (Task 03); no handling model for any of them |
-| Airfoil polar import, interpolation or extrapolation | Unsupported; only the section identity and its evidence are stored |
+| NACA 4/5-digit section generation and coordinate ingest | Deferred to Task 12; today only the section identity and its evidence are stored |
+| Spanwise section lofting under taper and twist | Deferred to Task 12; requires an explicitly stated twist axis |
+| Airfoil polar import, interpolation or extrapolation | Unsupported. Task 12 generates coordinates only: a generated section establishes geometry, never lift, drag, moment or a section clmax |
 | Wing fuel volume (Torenbeek) | Not implemented: an electric RC wing carries no fuel |
 | Kinked, cranked, elliptical or multi-panel planforms | Unsupported; reported as unsupported rather than solved approximately |
 | Matching process, supported requirement intersection | Deferred to Task 04 |
 | Weight/balance, conventional static margin and trim | Deferred to Tasks 07–08 |
 | Drag and electric propulsion/mission adaptations | Deferred to Task 09 |
-| Takeoff/landing, structures, loads, fuselage, landing gear and cost | Unsupported |
+| Carbon spar geometric fit under taper, twist and varying section | Deferred to Task 13 |
+| Spanwise load distribution, bending moment, flexural rigidity and deflection | Deferred to Task 13, against supplied material evidence |
+| Structural strength: allowable stress, margin of safety, failure, buckling, joints, bonds and fatigue | Unsupported. Task 13 reports stiffness and fit only, and refuses a strength result explicitly rather than omitting one |
+| Torsional stiffness, aeroelastic twist, divergence and flutter | Unsupported |
+| Takeoff/landing, fuselage, landing gear and cost | Unsupported |
 | V-tail/flying-wing aerodynamic handling, dynamic and closed-loop stability | Unsupported |
 
 No implemented method estimates a lift coefficient. `CLmax` is supplied by the
@@ -173,8 +179,8 @@ significant digits, not taken from the book: m=2 kg, rho=1.225 kg/m³, CLmax=1.2
 n=1, S=0.24 m². The CLmax is a fixture assumption and not a recommended default.
 Tolerances are stated in each quantity's SI unit plus a relative term, chosen
 from the precision the expected values are quoted to rather than from display
-rounding. No worked example from the book is reproduced yet, because no book
-method is implemented yet.
+rounding. Task 02 reproduces no worked example because no book method is
+implemented in that task; the book's example is reproduced by Task 03 above.
 
 For each method added later, record the chapter/section URL, access date and
 verified upstream revision when available, original notation and units,

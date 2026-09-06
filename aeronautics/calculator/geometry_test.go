@@ -1,6 +1,7 @@
 package calculator_test
 
 import (
+	"math"
 	"testing"
 
 	"yalb.aero/calculator"
@@ -411,3 +412,86 @@ func TestPlanformCarriesItsTraces(t *testing.T) {
 func errorFrom[T any](_ T, err error) error { return err }
 
 func containsText(s, sub string) bool { return contains(s, sub) }
+
+// A doorway constrains what the wing projects, not the length of its panel
+// skin. Under DihedralHoldPanel the solved planform carries construction
+// lengths, which exceed their plan-view projections by 1/cos(Gamma), so
+// checking a plan-view limit against them reports a wing as too wide when it
+// fits. The panel-plane planform must refuse the check, and the wing — which
+// holds both planes — must answer it from the projected one.
+func TestPlanViewLimitsAreNotCheckedAgainstPanelDimensions(t *testing.T) {
+	const dihedralDegrees = 20.0
+	panelSpan := 1.4
+	projected := panelSpan * math.Cos(dihedralDegrees*math.Pi/180) // 1.3156...
+
+	wing, err := calculator.SolveWing(calculator.WingDefinition{
+		Drivers: calculator.PlanformDrivers{
+			Shape:      calculator.ShapeRectangle,
+			Span:       mustQ(t, panelSpan, calculator.Meter),
+			RootChord:  mustQ(t, 0.2, calculator.Meter),
+			TaperRatio: 1,
+		},
+		Dihedral:       mustQ(t, dihedralDegrees, calculator.Degree),
+		DihedralMode:   calculator.DihedralHoldPanel,
+		Sweep:          mustQ(t, 0, calculator.Degree),
+		SweepReference: 0.25,
+		Twist:          mustQ(t, 0, calculator.Degree),
+		Incidence:      mustQ(t, 0, calculator.Degree),
+		AreaBasis:      calculator.AreaBasisReferenceTrapezoid,
+	})
+	if err != nil {
+		t.Fatalf("solving a wing with dihedral: %v", err)
+	}
+
+	if got := inUnit(t, wing.Projected.Span, calculator.Meter); !(tol{abs: 1e-12}).ok(got, projected) {
+		t.Fatalf("projected span %v, want %v", got, projected)
+	}
+	if wing.Planform.Plane != calculator.OutlinePanelSurface {
+		t.Fatalf("a planform solved from panel drivers under dihedral is a panel-plane form, got %v",
+			wing.Planform.Plane)
+	}
+
+	// The wing fits a 1.35 m doorway: it projects 1.3156 m. Its panel span does not.
+	limits := calculator.PlanformLimits{MaximumSpan: mustQ(t, 1.35, calculator.Meter)}
+
+	checks := wing.CheckLimits(limits)
+	if len(checks) != 1 || checks[0].Status != calculator.LimitMet {
+		t.Errorf("a wing projecting %.4f m meets a 1.35 m limit, got %+v", projected, checks)
+	}
+
+	// The bare planform must not answer from its construction lengths.
+	refused := limits.Check(wing.Planform)
+	if len(refused) != 1 || refused[0].Status != calculator.LimitUnknown {
+		t.Fatalf("a panel-plane planform cannot answer a plan-view limit, got %+v", refused)
+	}
+	if !containsText(refused[0].Detail, "Wing.CheckLimits") {
+		t.Errorf("the refusal must name what can answer it, got %q", refused[0].Detail)
+	}
+
+	// At zero dihedral the planes coincide, so the distinction is not demanded.
+	flat, err := calculator.SolveWing(calculator.WingDefinition{
+		Drivers: calculator.PlanformDrivers{
+			Shape:      calculator.ShapeRectangle,
+			Span:       mustQ(t, panelSpan, calculator.Meter),
+			RootChord:  mustQ(t, 0.2, calculator.Meter),
+			TaperRatio: 1,
+		},
+		Dihedral:       mustQ(t, 0, calculator.Degree),
+		DihedralMode:   calculator.DihedralHoldPanel,
+		Sweep:          mustQ(t, 0, calculator.Degree),
+		SweepReference: 0.25,
+		Twist:          mustQ(t, 0, calculator.Degree),
+		Incidence:      mustQ(t, 0, calculator.Degree),
+		AreaBasis:      calculator.AreaBasisReferenceTrapezoid,
+	})
+	if err != nil {
+		t.Fatalf("solving a flat wing: %v", err)
+	}
+	if flat.Planform.Plane != calculator.OutlinePlanView {
+		t.Errorf("at zero dihedral the planes coincide, got %v", flat.Planform.Plane)
+	}
+	if checks := limits.Check(flat.Planform); len(checks) != 1 ||
+		checks[0].Status != calculator.LimitUnmet {
+		t.Errorf("a flat 1.4 m span against a 1.35 m limit is unmet, got %+v", checks)
+	}
+}

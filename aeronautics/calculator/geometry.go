@@ -98,7 +98,9 @@ var solveModeForDrivers = map[int]SolveMode{
 // The zero value of each field means "not supplied". A supplied zero is a
 // different answer and is rejected as invalid rather than treated as absent.
 type PlanformDrivers struct {
-	// Span is the projected, tip-to-tip span b of the reference planform.
+	// Span is the tip-to-tip span b, in the plane named by the wing's
+	// DihedralMode. Solved on its own, with no dihedral in scope, it is a
+	// plan-view dimension.
 	Span Quantity
 	// Area is the reference area S, the trapezoid carried through the centerline.
 	Area Quantity
@@ -115,15 +117,20 @@ type PlanformDrivers struct {
 	Shape PlanformShape
 }
 
-// Planform is a solved plan-view geometry. Every value is a plan-view
-// projection of the reference trapezoid; panel construction lengths come from
-// the wing, which is where dihedral lives.
+// Planform is a solved plan form, expressed in the plane its drivers were
+// given in. That plane is recorded in Plane rather than assumed: SolvePlanform
+// alone has no dihedral, so its result is a plan view, but SolveWing under
+// DihedralHoldPanel solves from panel-plane drivers, and those dimensions are
+// larger than their plan-view projections by 1/cos(Gamma).
+//
+// Anything that must be a plan-view quantity — a reference area an aerodynamic
+// model uses, a span a doorway constrains — reads Wing.Projected, not this.
 type Planform struct {
 	// Traces record every relationship evaluated, in evaluation order.
 	Traces []Trace
-	// Span is the projected tip-to-tip span.
+	// Span is the tip-to-tip span in Plane.
 	Span Quantity
-	// Area is the reference area, including the part inside any body.
+	// Area is the reference area in Plane, including the part inside any body.
 	Area Quantity
 	// RootChord is the centerline chord of the reference trapezoid.
 	RootChord Quantity
@@ -143,6 +150,10 @@ type Planform struct {
 	Shape PlanformShape
 	// Mode names the driver pair this planform was solved from.
 	Mode SolveMode
+	// Plane records which plane Span and Area are expressed in. It is
+	// OutlinePlanView unless a wing solve held panel dimensions fixed under a
+	// nonzero dihedral, where the two planes genuinely differ.
+	Plane OutlinePlane
 }
 
 // resultSet accumulates the traces and issues of a multi-equation solve, so a
@@ -195,6 +206,9 @@ func SolvePlanform(d PlanformDrivers) (Planform, error) {
 		Span:       span,
 		Area:       area,
 		TaperRatio: taper,
+		// A planform on its own has no dihedral, so it is a plan view. A wing
+		// solve restamps this when it holds panel dimensions fixed instead.
+		Plane: OutlinePlanView,
 	}
 	p.completeFrom(d, rs, taper)
 	if len(rs.issues) > 0 {

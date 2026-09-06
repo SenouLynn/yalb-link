@@ -2,13 +2,14 @@
 
 Updated 2026-09-05. This is the review record for implementation in `aeronautics/`.
 The task plan defines acceptance targets; this file records actual checks and
-decisions. All eleven tasks are authorized. OpenVSP is the selected NASA tool.
+decisions. All thirteen tasks are authorized: the original eleven on
+2026-09-05, with 12 and 13 added afterwards. OpenVSP is the selected NASA tool.
 
 | Task | State | Evidence / remaining work |
 |---|---|---|
 | 01 — Boundaries | Complete | Module checks and frontend checks run and pass; runbook recorded. One acceptance check is not satisfiable, see "GCS gates" below |
 | 02 — Lift | Complete | Units, registry, traces, typed issues and the lift inversions implemented; fixtures match to the quoted precision |
-| 03 — Geometry | Complete | Planform, MAC, dihedral planes, coordinates, parameters, Reynolds coverage and configuration contracts implemented; 68 tests pass, 184 including subtests; the book's worked example reproduces |
+| 03 — Geometry | Complete | Planform, MAC, dihedral planes, coordinates, parameters, Reynolds coverage and configuration contracts implemented; 69 tests pass, 185 including subtests; the book's worked example reproduces. A plane-blind limits check was found and fixed post-review, see below |
 | 04 — Workflows | Pending | No workflow engine implemented |
 | 05 — HTTP | Pending | No API implemented |
 | 06 — Worksheet | Pending | Static shell only |
@@ -17,6 +18,8 @@ decisions. All eleven tasks are authorized. OpenVSP is the selected NASA tool.
 | 09 — Power | Pending | No electric/mission model implemented |
 | 10 — MCP | Pending | No sidecar implemented |
 | 11 — Handoff | Pending | OpenVSP selected; target application/version checks remain |
+| 12 — Airfoil sections | Pending | Task defined; no section generation, coordinate ingest or lofting implemented |
+| 13 — Spar fit and stiffness | Pending | Task defined; no material, spar, load or deflection model implemented |
 
 ## Task 01 verification
 
@@ -45,14 +48,27 @@ three consecutive runs. Both failures are in `internal/**`, which this work does
 not touch. `make build` passes. The gates were already red; the calculator does
 not change them either way.
 
-**Boundary-test weakness.** The import allowlist expands six named stdlib
-packages to their toolchain implementation dependencies. Because `testing` is one
-of them, its closure quietly admits pure packages such as `strings` into
-production code. Nothing in the core relies on that: `Issues.Error` joins its
-parts by hand instead of calling `strings.Join`, and the core's actual closure is
-`math`, `sort`, `strconv`, `errors` plus the module. Tightening the allowlist so
-test-only packages cannot widen the production surface is worth doing before the
-core grows.
+**Boundary-test weakness — found, measured and closed.** The import allowlist
+expanded six named stdlib packages to their toolchain implementation
+dependencies. Because `testing` and `fmt` were among them, their closures
+admitted 71 packages in total, including `strings`, `bytes`, `io`, `reflect`,
+`context`, `sync/atomic`, `flag` and `path/filepath`, into what the production
+core was permitted to import. The explicit `net`/`os`/`database/sql`/`time` bans
+still held, so no hard guarantee was ever broken, but anything else could have
+entered the core silently.
+
+The seed is now the four packages the core may actually reach — `math`,
+`errors`, `strconv`, `sort` — which narrows the allowlist from 71 packages to
+38 and leaves the core's real closure a clean subset. `testing` is a dependency
+of the tests, not of the non-test closure this check reads; `fmt` reaches `os`,
+which the same task bans, which is why the core formats with `strconv`.
+`TestAllowlistDoesNotAdmitTestOnlyPackages` pins the narrowing and was verified
+by mutation: re-seeding `testing` fails it on `strings`, `bytes`, `io`,
+`reflect`, `context`, `sync` and `sync/atomic`.
+
+This mattered ahead of Task 04 specifically: request identity and ordering are
+exactly where `sync/atomic` and `context` get reached for, and admitting them
+is now a decision rather than an accident.
 
 ## Task 02 verification
 
@@ -195,6 +211,46 @@ MAC and tip rather than the MAC alone — is recorded as this project's adaptati
   `EvaluationOrder` fails on a cycle or a dangling edge, and the cycle detection
   is checked against a hand-built cyclic set rather than assumed.
 
+## Post-review corrections (2026-09-05)
+
+Findings from an adversarial review of the Task 01–03 commits, fixed in place.
+All fixture values in this record were independently recomputed at 45
+significant digits during that review and match.
+
+**Plan-view limits were checked against panel dimensions.** `PlanformLimits`
+documents `MaximumSpan` as a projected span — a doorway or a contest rule — and
+`Check` compared it against `Planform.Span`. But a `Planform` is solved in the
+plane its drivers were given in, and under `DihedralHoldPanel` those are
+panel-plane construction lengths, larger than their projections by
+`1/cos(Gamma)`. A wing with 20 degrees of dihedral and a 1.4 m panel span
+projects 1.3156 m and fits a 1.35 m doorway; the check reported it unmet.
+Reachable through the public API as `limits.Check(wing.Planform)`, and the one
+existing limits test never used dihedral.
+
+`Planform` now records its own plane in a `Plane` field, reusing the existing
+`OutlinePlane` type rather than adding a second plane vocabulary. `SolveWing`
+stamps `OutlinePanelSurface` only when panel dimensions are held under a nonzero
+dihedral — at zero dihedral the planes coincide, following the precedent already
+set in `resolvePlanes`. `Check` returns `unknown` with a `Detail` naming
+`Wing.CheckLimits` rather than answering from the wrong plane, and
+`Wing.CheckLimits` evaluates against `Wing.Projected`.
+`TestPlanViewLimitsAreNotCheckedAgainstPanelDimensions` covers both, and was
+verified by mutation in both directions: inverting the stamp and pointing
+`CheckLimits` at the driver plane each fail it, the latter reproducing the
+original wrong answer.
+
+**Three doc comments disagreed about what a `Planform` is** — `geometry.go` said
+every value was a plan-view projection, `wing.go` said the plane the drivers
+were given in, and `PlanformDrivers.Span` said projected while
+`WingDefinition.Drivers` said mode-dependent. They now agree, and the `Plane`
+field makes the answer checkable rather than a matter of which comment is read.
+
+Gates after these changes, from `aeronautics/`: `go build ./...`, `go vet ./...`,
+`go test -race -timeout=2m ./...` and `golangci-lint run` (0 issues) all pass,
+with no lint relaxation added. The calculator package holds 69 top-level tests,
+185 counting subtests. The core's import closure is unchanged: the module plus
+`math`, `sort`, `strconv` and `errors`. No frontend file was touched.
+
 ## Decisions and verification
 
 - **Project boundary:** `aeronautics/`, module `yalb.aero`, Go 1.25.0, independent
@@ -233,6 +289,13 @@ MAC and tip rather than the MAC alone — is recorded as this project's adaptati
   value is recoverable, but no equation claims it.
 - Airfoils are an identity and its evidence. No polar is imported, interpolated
   or extrapolated, and no section property is derived from a designation.
+  Task 12 adds section *coordinates* — generated NACA shapes and ingested
+  tables — which remains geometry: it will still derive no lift, drag or
+  section clmax from a designation.
+- No structural model exists. Nothing reports whether a spar fits, how stiff a
+  wing is, or what load it carries. Task 13 adds fit and stiffness only, and
+  strength, buckling, joints, fatigue and aeroelasticity stay unsupported there.
+  A mass ceiling remains aerodynamic and is not a structural rating.
 - Locating the MAC is not a balance result. The datum and the MAC leading-edge
   station are what a centre-of-gravity position would be measured against; no
   mass, balance or static-margin model exists.
