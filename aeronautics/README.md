@@ -2,10 +2,11 @@
 
 Independent fixed-wing RC aircraft calculator project. The current implementation
 is a transport-free Go library covering units, the initial lift calculations,
-wing geometry and a sizing workflow engine; a JSON HTTP boundary over it; an
-executable that serves that boundary; and a static Vite/React page that compiles
-against the generated contract types but does not yet display any calculation.
-No handling prediction, power model or external-tool adapter is implemented.
+wing geometry, mass properties and a sizing workflow engine; a JSON HTTP
+boundary over it; an executable that serves that boundary; and a Vite/React
+worksheet that drives the running service, draws the dimensioned views, places
+component masses and plots one-driver sensitivity sweeps. No handling
+prediction, power model or external-tool adapter is implemented.
 
 ## What the library does
 
@@ -127,6 +128,47 @@ The constraint set is stall-only. This is not the book's takeoff, climb and
 cruise matching plot, and nothing here presents it as one; later constraints
 enter through the same case engine as their models arrive.
 
+## Mass properties and sensitivity
+
+- **A balance, not a guess.** `Design.MassProperties` totals the listed component
+  masses and divides their moment sum by it, on all three axes, from the book's
+  Center of gravity relation. A component with no mass, or with any coordinate
+  unstated, contributes nothing: it is never read as weightless and never placed
+  at the origin, and the result says which one is incomplete. Zero is spelled
+  out, exactly as the wing angles are.
+- **Two mass modes, kept apart.** `MassMode` selects whether the all-up mass is
+  the entered figure or the component total. Adopting the components never
+  overwrites the entered one, and an incomplete inventory establishes no all-up
+  mass, so every result resting on it waits rather than being computed against a
+  partial aircraft.
+- **Moving is not resizing.** `PlaceComponent` carries a position and nothing
+  else, so it changes the balance and leaves the total, the wing loading and the
+  stall speed alone. `SetComponent` carries the item, so changing its mass moves
+  all of them.
+- **Mechanical only.** The centre of gravity is not an aerodynamic centre, a
+  neutral point or a centre of pressure. `StationFractionOfMAC` expresses a
+  station as a chord fraction as a geometric reference; it is not a static
+  margin, and no handling conclusion follows from any of it.
+- **One driver at a time.** `Design.PlanSweep` validates a sensitivity request
+  and reports what it holds fixed; `SweepPlan.Run` evaluates between 2 and 65
+  candidates, each an ordinary design produced by the ordinary driver edit, so a
+  plotted sample *is* the candidate. A derived value cannot be swept: moving it
+  would mean a promotion, which releases another driver and is the builder's
+  decision. Samples the model cannot evaluate are gaps, and `Status` never
+  collapses into `Feasibility`.
+- **A plot carries its driver mode.** The answer states the solve mode and what
+  stayed fixed, and where the plotted output does not move it names the derived
+  parameters that did — at a fixed area a longer span leaves the stall speed
+  alone and changes the aspect ratio and every chord. This is a documented
+  one-driver subset, not the book's wing-loading/power-loading trade study, which
+  needs the propulsion models Task 09 brings.
+- **Dimensions and formulas.** `Wing.Views` returns dimensioned plan, front and
+  side views with the sketch origin, axes, centerline and construction geometry,
+  and every dimension carries the parameter key it measures and that parameter's
+  value. `Wing.Explain` returns the relationship, revision, substituted values
+  and dependencies behind any parameter. Projected and panel dimensions are
+  distinguished; a projected outline is not a cutting template.
+
 ## The HTTP boundary
 
 `yalb.aero/api` is the application boundary: the wire contract and the
@@ -164,7 +206,13 @@ knows about neither.
 
 Routes live under `/api/v1`: `GET discovery`, `GET equations`,
 `GET equations/{id}`, `GET patterns`, `GET units`, and `POST evaluate`,
-`evaluate-batch`, `apply` and `preview`.
+`evaluate-batch`, `apply`, `preview` and `sweep`.
+
+A sweep answer carries the input snapshot and a fingerprint of the settings it
+answers, because a curve belongs to a question: a different range or a different
+plotted output is a different one, and an answer to either is not an answer to
+the other. Sampling is evaluated one candidate at a time and stops when the
+caller goes away.
 
 Run it with `go run ./cmd/aero serve` (default `127.0.0.1:8081`); `pnpm dev` in
 `frontend/` proxies `/api` to it. A deployment needs this process as well as the

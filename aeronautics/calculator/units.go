@@ -49,6 +49,10 @@ const (
 	DimEnergy
 	// DimDynamicViscosity is stored in pascal seconds.
 	DimDynamicViscosity
+	// DimMassMoment is stored in kilogram metres. It is the product of a mass
+	// and a distance from a datum, which is what a centre-of-gravity sum is
+	// formed of; it is not a torque, and nothing here treats it as one.
+	DimMassMoment
 )
 
 var dimensionSymbols = [...]string{
@@ -66,6 +70,7 @@ var dimensionSymbols = [...]string{
 	DimEnergy:       "J",
 
 	DimDynamicViscosity: "Pa*s",
+	DimMassMoment:       "kg*m",
 }
 
 // String returns the dimension's SI symbol.
@@ -165,6 +170,11 @@ const (
 	// MicropascalSecond is 1e-6 Pa*s, the magnitude air viscosity is usually
 	// tabulated in.
 	MicropascalSecond
+	// KilogramMeter is the SI unit of a mass moment about a datum.
+	KilogramMeter
+	// GramMillimeter is 1e-6 kg*m, the magnitude a small RC component's moment
+	// falls in when its mass is quoted in grams and its arm in millimetres.
+	GramMillimeter
 )
 
 // unitDef carries a unit's symbol, dimension, and the exact factor that
@@ -225,6 +235,9 @@ var unitTable = [...]unitDef{
 
 	PascalSecond:      {symbol: "Pa*s", dim: DimDynamicViscosity, factor: 1},
 	MicropascalSecond: {symbol: "uPa*s", dim: DimDynamicViscosity, factor: 1e-6},
+
+	KilogramMeter:  {symbol: "kg*m", dim: DimMassMoment, factor: 1},
+	GramMillimeter: {symbol: "g*mm", dim: DimMassMoment, factor: 1e-3 * 1e-3},
 }
 
 // dimensionSIUnits names the unit each dimension is stored in. It is the
@@ -243,6 +256,7 @@ var dimensionSIUnits = [...]Unit{
 	DimPower:            Watt,
 	DimEnergy:           Joule,
 	DimDynamicViscosity: PascalSecond,
+	DimMassMoment:       KilogramMeter,
 }
 
 // ErrUnknownUnit reports a Unit outside the supported table, including the zero

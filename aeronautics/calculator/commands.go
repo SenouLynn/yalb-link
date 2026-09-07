@@ -588,3 +588,180 @@ func (c SetConfiguration) apply(d Design) (Design, error) {
 	out.Tail = c.Tail
 	return out, nil
 }
+
+// SetMassMode selects whether the all-up mass is the entered figure or the
+// component total. It is an explicit edit because the two are different claims:
+// a target mass a builder holds, and the sum of an inventory that is only as
+// complete as the components in it.
+type SetMassMode struct {
+	// Mode is the new mass mode.
+	Mode MassMode
+}
+
+// Label names the edit.
+func (c SetMassMode) Label() string { return "take the all-up mass from the " + c.Mode.String() }
+
+func (c SetMassMode) apply(d Design) (Design, error) {
+	if c.Mode == MassModeUnknown {
+		return Design{}, commandIssue("mass_mode", IssueMissing,
+			"choose where the all-up mass comes from: the entered figure or the component total")
+	}
+	out := d.clone()
+	out.MassMode = c.Mode
+	return out, nil
+}
+
+// SetComponent adds a mass item or replaces the one with the same name. It
+// carries the whole item, so changing a component's mass and changing where it
+// sits are the same kind of edit and produce the same kind of revision.
+//
+// Adding or resizing a mass is not the same act as moving one, and the
+// difference matters physically: moving a fixed component changes the balance
+// and leaves the all-up mass, the wing loading and the stall speed alone, while
+// resizing it changes all of them. Both are recorded, and neither is inferred
+// from the other.
+type SetComponent struct {
+	// Item is the component to record.
+	Item MassItem
+}
+
+// Label names the edit.
+func (c SetComponent) Label() string { return "set component " + c.Item.Name }
+
+func (c SetComponent) apply(d Design) (Design, error) {
+	if c.Item.Name == "" {
+		return Design{}, commandIssue("component", IssueMissing,
+			"name the component so its mass and position can be reported against it")
+	}
+	if c.Item.Role == ComponentRoleUnknown {
+		return Design{}, commandIssue("component."+c.Item.Name, IssueMissing,
+			"say what the component is; a role groups and labels it and implies no value")
+	}
+	if c.Item.Mass.supplied() && c.Item.Mass.dim != DimMass {
+		return Design{}, commandIssue("component."+c.Item.Name, IssueInvalid,
+			"expected a mass but received "+c.Item.Mass.dim.String())
+	}
+	if err := checkPosition("component."+c.Item.Name, c.Item.Position); err != nil {
+		return Design{}, err
+	}
+	out := d.clone()
+	for n := range out.Components {
+		if out.Components[n].Name == c.Item.Name {
+			out.Components[n] = c.Item
+			return out, nil
+		}
+	}
+	out.Components = append(out.Components, c.Item)
+	return out, nil
+}
+
+// PlaceComponent moves a component that already exists, without touching its
+// mass or its basis. It is the edit a completed drag commits: one placement,
+// one revision, undone in one step.
+type PlaceComponent struct {
+	// Name identifies the component.
+	Name string
+	// Position is where it now sits, in DatumAircraft. Every coordinate must be
+	// stated, with zero spelled out, because an unstated y is a missing field
+	// rather than a claim that the component is on the centerline.
+	Position Point
+}
+
+// Label names the edit.
+func (c PlaceComponent) Label() string { return "place component " + c.Name }
+
+func (c PlaceComponent) apply(d Design) (Design, error) {
+	field := "component." + c.Name
+	if err := checkPosition(field, c.Position); err != nil {
+		return Design{}, err
+	}
+	for _, axis := range []struct {
+		name  string
+		value Quantity
+	}{{"x", c.Position.X}, {"y", c.Position.Y}, {"z", c.Position.Z}} {
+		if !axis.value.supplied() {
+			return Design{}, commandIssue(field, IssueMissing,
+				"state the "+axis.name+" coordinate, using 0 where the component sits on the datum; "+
+					"a placement with a coordinate missing is not a placement")
+		}
+	}
+	out := d.clone()
+	for n := range out.Components {
+		if out.Components[n].Name == c.Name {
+			out.Components[n].Position = c.Position
+			return out, nil
+		}
+	}
+	return Design{}, commandIssue("component", IssueMissing,
+		"the design lists no component named "+c.Name+"; it lists "+joinNames(d.componentNames()))
+}
+
+// RemoveComponent drops the named mass item.
+type RemoveComponent struct {
+	// Name identifies the component.
+	Name string
+}
+
+// Label names the edit.
+func (c RemoveComponent) Label() string { return "remove component " + c.Name }
+
+func (c RemoveComponent) apply(d Design) (Design, error) {
+	out := d.clone()
+	for n := range out.Components {
+		if out.Components[n].Name != c.Name {
+			continue
+		}
+		out.Components = append(out.Components[:n], out.Components[n+1:]...)
+		return out, nil
+	}
+	return Design{}, commandIssue("component", IssueMissing,
+		"the design lists no component named "+c.Name+"; it lists "+joinNames(d.componentNames()))
+}
+
+// checkPosition rejects a coordinate of the wrong dimension. A coordinate that
+// is simply absent is accepted here: a component may be listed before it has
+// been placed, and the mass properties report it as unplaced rather than
+// assuming an origin for it.
+func checkPosition(field string, p Point) error {
+	for _, axis := range []struct {
+		name  string
+		value Quantity
+	}{{"x", p.X}, {"y", p.Y}, {"z", p.Z}} {
+		if axis.value.supplied() && axis.value.dim != DimLength {
+			return commandIssue(field, IssueInvalid,
+				"the "+axis.name+" coordinate is a length, but a "+axis.value.dim.String()+
+					" value was supplied")
+		}
+	}
+	return nil
+}
+
+// SetBodyWidth records the plan-view width of the body the wing passes through,
+// measured at the wing. It is optional: without it no exposed area is reported,
+// which is a different answer from an exposed area equal to the reference one.
+//
+// The zero Quantity withdraws it, which takes the exposed-area result back
+// rather than setting the body width to nothing.
+type SetBodyWidth struct {
+	// Value is the body width, or the zero Quantity to withdraw it.
+	Value Quantity
+}
+
+// Label names the edit.
+func (c SetBodyWidth) Label() string { return "set the body width to " + c.Value.String() }
+
+func (c SetBodyWidth) apply(d Design) (Design, error) {
+	if c.Value.supplied() {
+		if c.Value.dim != DimLength {
+			return Design{}, commandIssue(portBodyWidth.Name, IssueInvalid,
+				"expected a length but received "+c.Value.dim.String())
+		}
+		if c.Value.si <= 0 {
+			return Design{}, commandIssue(portBodyWidth.Name, IssueInvalid,
+				"a body width must be greater than zero; withdraw it to report no exposed area")
+		}
+	}
+	out := d.clone()
+	out.Wing.BodyWidth = c.Value
+	return out, nil
+}

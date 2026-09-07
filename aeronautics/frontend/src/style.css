@@ -115,3 +115,74 @@ thead th { color: var(--muted); font-weight: 600; }
 .drafts li { padding: 0.15rem 0; }
 code { font-family: ui-monospace, monospace; font-size: 0.85em; }
 p { line-height: 1.5; }
+
+/* The explanatory views: drawings, placement and sensitivity.
+
+   Every state a reader needs is written out beside the thing it describes.
+   Line weight, dash pattern and marker shape carry the distinctions on the
+   drawings, so nothing here depends on telling two colours apart. */
+
+.explanations { display: grid; gap: 0.6rem; padding: 0 0.6rem 0.6rem; }
+.views { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: flex-start; }
+.view { margin: 0; }
+.view figcaption { font-size: 0.85rem; color: var(--muted); margin-bottom: 0.2rem; }
+.view-axes { font-variant-numeric: tabular-nums; }
+.view-canvas { width: min(22rem, 100%); height: auto; background: var(--panel); border: 1px solid var(--line); }
+
+.curve polyline { stroke: #e6e9ed; stroke-width: 1.4; }
+.curve-centerline polyline { stroke: var(--muted); stroke-dasharray: 6 3 1 3; stroke-width: 1; }
+.curve-axis polyline { stroke: var(--muted); stroke-dasharray: 2 3; stroke-width: 1; }
+.curve-construction polyline { stroke: var(--muted); stroke-dasharray: 4 3; stroke-width: 1; }
+.curve-reference polyline { stroke: #a7d1f5; stroke-width: 2; }
+
+.dimension { cursor: pointer; }
+.dimension line { stroke: var(--muted); stroke-width: 1; }
+.dimension circle { fill: var(--muted); }
+.dimension text { fill: var(--muted); font-size: 9px; }
+.dimension.plane-panel-surface line { stroke-dasharray: 3 2; }
+.dimension.selected line { stroke: #f5d7a7; stroke-width: 2.5; }
+.dimension.selected circle { fill: #f5d7a7; }
+.dimension.selected text { fill: #f5d7a7; font-weight: 700; }
+.dimension:focus { outline: 2px solid #a7d1f5; }
+
+.explanation { border: 1px solid var(--line); padding: 0.5rem 0.6rem; margin-top: 0.5rem; }
+.explanation h4 { margin: 0 0 0.3rem; font-size: 0.95rem; }
+.explanation .expression { font-size: 0.95rem; }
+.explanation .revision { color: var(--muted); font-size: 0.85rem; }
+.substitutions { max-width: 26rem; }
+.depends { font-size: 0.85rem; }
+.copy-area { width: 100%; font-family: ui-monospace, monospace; font-size: 0.8rem; background: var(--panel); color: inherit; border: 1px solid var(--line); }
+.parameters tr.selected th, .parameters tr.selected td { background: var(--raised); }
+.selection-mark.selected { border-color: #f5d7a7; }
+
+.component-marker { fill: #e6e9ed; font-size: 14px; cursor: grab; }
+.component-marker.dragging { fill: #f5d7a7; cursor: grabbing; }
+.component-marker:focus { outline: 2px solid #a7d1f5; }
+.cg-marker circle { fill: none; stroke: #f5d7a7; stroke-width: 1.6; }
+.cg-marker line { stroke: #f5d7a7; stroke-width: 1.6; }
+.reference-marker circle { fill: none; stroke: #a7d1f5; stroke-width: 1.4; stroke-dasharray: 2 2; }
+.placement-canvas { touch-action: none; }
+.drag-readout { border: 1px solid #f5d7a7; padding: 0.5rem 0.6rem; margin-top: 0.5rem; }
+.balance, .references, .before-after { display: grid; grid-template-columns: minmax(10rem, 16rem) minmax(0, 1fr); gap: 0.2rem 0.6rem; font-size: 0.88rem; }
+.balance dt, .references dt, .before-after dt { color: var(--muted); }
+.balance dd, .references dd, .before-after dd { margin: 0; }
+
+.sweep-controls { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; margin-bottom: 0.5rem; }
+.sweep-controls input { width: 6rem; font: inherit; color: inherit; background: var(--raised); border: 1px solid var(--line); padding: 0.2rem 0.35rem; }
+.sweep-controls .field-label { margin: 0; }
+.sweep-plot { width: min(28rem, 100%); height: auto; background: var(--panel); border: 1px solid var(--line); }
+.sweep-curve { stroke: #e6e9ed; stroke-width: 1.6; }
+.sweep-sample { fill: #e6e9ed; font-size: 11px; cursor: pointer; }
+.sweep-sample.selected { fill: #f5d7a7; font-size: 15px; }
+.sweep-bound line { stroke: #a7d1f5; stroke-width: 1.2; stroke-dasharray: 5 3; }
+.sweep-bound text { fill: #a7d1f5; font-size: 9px; }
+.sweep-current line { stroke: #f5d7a7; stroke-width: 1; stroke-dasharray: 2 2; }
+.sweep-current text { fill: #f5d7a7; font-size: 9px; }
+.sweep-detail, .legend { font-size: 0.85rem; color: var(--muted); line-height: 1.5; }
+.sweep-table tr.selected th, .sweep-table tr.selected td { background: var(--raised); }
+.sweep-table tbody:focus { outline: 2px solid #a7d1f5; }
+
+@media (max-width: 60rem) {
+  .views { flex-direction: column; }
+  .view-canvas, .sweep-plot { width: 100%; }
+}

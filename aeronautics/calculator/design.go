@@ -95,10 +95,9 @@ type DesignCase struct {
 // driver roles and evaluation identity stay consistent; nothing mutates a
 // Design in place.
 //
-// Not yet present, and deliberately so: component placements and mass items
-// (Tasks 07 and 09), power and mission cases (Task 09), and any handling
-// requirement (Task 08). Only the implemented lift and geometry constraints are
-// expressible here.
+// Not yet present, and deliberately so: power and mission cases (Task 09), and
+// any handling requirement (Task 08). Only the implemented lift, geometry and
+// mass-properties constraints are expressible here.
 type Design struct {
 	// Name identifies the candidate.
 	Name string
@@ -109,14 +108,22 @@ type Design struct {
 	Cases []DesignCase
 	// Requirements are the bounds it is judged against.
 	Requirements []Requirement
+	// Components are the placed masses the design is built from. They are
+	// balanced whatever the mass mode; whether they also set the all-up mass is
+	// what MassMode selects.
+	Components []MassItem
 	// Wing is the wing definition, whose Drivers hold the active solve mode.
 	Wing WingDefinition
 	// Tail is the tail description the configuration calls for.
 	Tail TailGeometry
-	// Mass is the all-up mass.
+	// Mass is the entered all-up mass. It is what the design is judged at in
+	// MassModeEntered and is left alone, not overwritten, in MassModeComponents.
 	Mass Quantity
 	// Configuration names the layout.
 	Configuration Configuration
+	// MassMode selects whether the all-up mass is the entered one or the
+	// component total.
+	MassMode MassMode
 }
 
 // clone returns a deep copy. The slices are the only shared state a Design
@@ -129,6 +136,7 @@ func (d Design) clone() Design {
 	for n := range d.Requirements {
 		c.Requirements[n] = d.Requirements[n].clone()
 	}
+	c.Components = append([]MassItem(nil), d.Components...)
 	return c
 }
 

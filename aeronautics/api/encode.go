@@ -76,6 +76,7 @@ func encodeDesign(d calculator.Design) Design {
 		Name:          d.Name,
 		Configuration: configurations.format(d.Configuration),
 		MassBasis:     d.MassBasis,
+		MassMode:      massModes.format(d.MassMode),
 		Mass:          encodeQuantity(d.Mass),
 		Wing:          encodeWing(d.Wing),
 	}
@@ -87,6 +88,9 @@ func encodeDesign(d calculator.Design) Design {
 	}
 	for n := range d.Requirements {
 		out.Requirements = append(out.Requirements, encodeRequirement(d.Requirements[n]))
+	}
+	for n := range d.Components {
+		out.Components = append(out.Components, encodeComponent(d.Components[n]))
 	}
 	return out
 }
@@ -156,6 +160,76 @@ func encodeSurface(s calculator.TailSurface) *Surface {
 	}
 }
 
+// encodePosition renders a component's position. An absent coordinate stays
+// absent: it means the component has not been placed on that axis, which is a
+// different answer from a coordinate of zero.
+func encodePosition(p calculator.Point) Position {
+	return Position{X: encodeQuantity(p.X), Y: encodeQuantity(p.Y), Z: encodeQuantity(p.Z)}
+}
+
+// requirePoint renders a point every coordinate of which is present, such as a
+// vertex of a drawn curve.
+func requirePoint(p calculator.Point) Point {
+	return Point{X: requireQuantity(p.X), Y: requireQuantity(p.Y), Z: requireQuantity(p.Z)}
+}
+
+func encodeComponent(item calculator.MassItem) Component {
+	return Component{
+		Name:     item.Name,
+		Role:     componentRoles.format(item.Role),
+		Basis:    item.Basis,
+		Mass:     encodeQuantity(item.Mass),
+		Position: encodePosition(item.Position),
+	}
+}
+
+func encodeMassProperties(mp calculator.MassProperties) MassProperties {
+	out := MassProperties{
+		Datum:         mp.Datum,
+		Status:        resultStatuses.format(mp.Status),
+		Detail:        mp.Detail,
+		Complete:      mp.Complete,
+		Total:         encodeQuantity(mp.Total),
+		Contributions: []MassContribution{},
+	}
+	if mp.Status == calculator.ResultComputed {
+		cg := requirePoint(mp.CG)
+		out.CG = &cg
+	}
+	for n := range mp.Contributions {
+		c := &mp.Contributions[n]
+		contribution := MassContribution{
+			Name:     c.Name,
+			Role:     componentRoles.format(c.Role),
+			Detail:   c.Detail,
+			Known:    c.Known,
+			Mass:     encodeQuantity(c.Mass),
+			Position: encodePosition(c.Position),
+			Moments:  []Quantity{},
+		}
+		for _, moment := range c.Moments {
+			contribution.Moments = append(contribution.Moments, requireQuantity(moment))
+		}
+		out.Contributions = append(out.Contributions, contribution)
+	}
+	return out
+}
+
+func encodeLoads(loads []calculator.CaseLoad) []CaseLoad {
+	out := make([]CaseLoad, 0, len(loads))
+	for n := range loads {
+		load := &loads[n]
+		out = append(out, CaseLoad{
+			Case:         load.Case,
+			Priority:     priorities.format(load.Priority),
+			Status:       resultStatuses.format(load.Status),
+			Detail:       load.Detail,
+			RequiredLift: encodeQuantity(load.RequiredLift),
+		})
+	}
+	return out
+}
+
 func encodeCase(c calculator.DesignCase) Case {
 	return Case{
 		Name:           c.Case.Name,
@@ -200,6 +274,8 @@ func encodeEvaluation(e calculator.Evaluation, request Request) Evaluation {
 		AreaLower:           encodeBound(e.AreaLower),
 		AreaUpper:           encodeBound(e.AreaUpper),
 		Mass:                encodeMassRange(e.Mass),
+		MassProperties:      encodeMassProperties(e.MassProperties),
+		Loads:               encodeLoads(e.Loads),
 		Conflicts:           encodeConflicts(e.Conflicts),
 		Patterns:            patternIDsFor(e.Design),
 		DefinitionIssues:    encodeIssues(e.DefinitionIssues),
@@ -223,10 +299,12 @@ func patternIDsFor(d calculator.Design) []string {
 
 func encodeSolvedWing(d calculator.Design, w calculator.Wing) *SolvedWing {
 	out := &SolvedWing{
-		Datum:      calculator.DatumWingRoot,
-		Drivers:    []string{},
-		Parameters: []Parameter{},
-		Outline:    []Point{},
+		Datum:        calculator.DatumWingRoot,
+		Drivers:      []string{},
+		Parameters:   []Parameter{},
+		Outline:      []Point{},
+		Views:        encodeViews(w),
+		Explanations: encodeExplanations(w),
 	}
 	if mode, err := d.SolveMode(); err == nil {
 		out.SolveMode = solveModes.format(mode)
@@ -255,6 +333,135 @@ func encodeSolvedWing(d calculator.Design, w calculator.Wing) *SolvedWing {
 		}
 	}
 	return out
+}
+
+// encodeViews renders the dimensioned plan, front and side views. Every
+// dimension keeps the parameter key it measures, which is what lets a worksheet
+// map a click on a drawing onto a field and back again.
+func encodeViews(w calculator.Wing) []SketchView {
+	views := w.Views()
+	out := make([]SketchView, 0, len(views))
+	for n := range views {
+		view := &views[n]
+		encoded := SketchView{
+			View:       viewKinds.format(view.View),
+			Datum:      view.Datum,
+			Across:     view.Across,
+			Up:         view.Up,
+			Curves:     []SketchCurve{},
+			Dimensions: []SketchDimension{},
+		}
+		for c := range view.Curves {
+			curve := &view.Curves[c]
+			points := make([]Point, 0, len(curve.Points))
+			for _, p := range curve.Points {
+				points = append(points, requirePoint(p))
+			}
+			encoded.Curves = append(encoded.Curves, SketchCurve{
+				Label:    curve.Label,
+				Role:     sketchRoles.format(curve.Role),
+				Points:   points,
+				Mirrored: curve.Mirrored,
+				Closed:   curve.Closed,
+			})
+		}
+		for d := range view.Dimensions {
+			dimension := &view.Dimensions[d]
+			encoded.Dimensions = append(encoded.Dimensions, SketchDimension{
+				Key:    string(dimension.Key),
+				Label:  dimension.Label,
+				Detail: dimension.Detail,
+				Kind:   dimensionKinds.format(dimension.Kind),
+				Plane:  outlinePlanes.format(dimension.Plane),
+				From:   requirePoint(dimension.From),
+				To:     requirePoint(dimension.To),
+				Value:  requireQuantity(dimension.Value),
+			})
+		}
+		out = append(out, encoded)
+	}
+	return out
+}
+
+func encodeExplanations(w calculator.Wing) []Explanation {
+	explanations := w.Explanations()
+	out := make([]Explanation, 0, len(explanations))
+	for n := range explanations {
+		e := &explanations[n]
+		out = append(out, Explanation{
+			Key:           string(e.Key),
+			Role:          parameterRoles.format(e.Role),
+			EquationID:    e.EquationID,
+			Revision:      e.Revision,
+			Expression:    e.Expression,
+			Detail:        e.Detail,
+			Substitutions: encodeSubstitutions(e.Substitutions),
+			DependsOn:     encodeKeys(e.DependsOn),
+			Value:         requireQuantity(e.Value),
+		})
+	}
+	return out
+}
+
+func encodeSubstitutions(subs []calculator.Substitution) []Substitution {
+	out := make([]Substitution, 0, len(subs))
+	for _, s := range subs {
+		out = append(out, Substitution{Name: s.Name, Value: requireQuantity(s.Value)})
+	}
+	return out
+}
+
+// encodeSweep renders one sensitivity sweep.
+func encodeSweep(result calculator.SweepResult, request Request) SweepResponse {
+	out := SweepResponse{
+		Request:             request,
+		Settings:            encodeSweepSettings(result.Settings),
+		SettingsFingerprint: result.SettingsFingerprint,
+		Snapshot:            result.Snapshot,
+		SolveMode:           solveModes.format(result.Mode),
+		Detail:              result.Detail,
+		HeldFixed:           encodeKeys(result.HeldFixed),
+		AlsoChanged:         encodeKeys(result.AlsoChanged),
+		Bounds:              []SweepBound{},
+		Samples:             make([]SweepSample, 0, len(result.Samples)),
+		Current:             encodeSweepSample(result.Current),
+		Invariant:           result.Invariant,
+	}
+	for n := range result.Bounds {
+		b := &result.Bounds[n]
+		out.Bounds = append(out.Bounds, SweepBound{
+			Name:      b.Name,
+			Direction: directions.format(b.Direction),
+			Priority:  priorities.format(b.Priority),
+			Value:     requireQuantity(b.Value),
+		})
+	}
+	for n := range result.Samples {
+		out.Samples = append(out.Samples, encodeSweepSample(result.Samples[n]))
+	}
+	return out
+}
+
+func encodeSweepSettings(s calculator.SweepSettings) SweepSettings {
+	return SweepSettings{
+		Driver:  string(s.Driver),
+		Output:  SweepOutput{Subject: subjects.format(s.Output.Subject), Case: s.Output.Case},
+		From:    requireQuantity(s.From),
+		To:      requireQuantity(s.To),
+		Samples: s.Samples,
+	}
+}
+
+func encodeSweepSample(sample calculator.SweepSample) SweepSample {
+	return SweepSample{
+		Driver:      requireQuantity(sample.Driver),
+		Value:       encodeQuantity(sample.Value),
+		Status:      resultStatuses.format(sample.Status),
+		Feasibility: limitStatuses.format(sample.Feasibility),
+		Detail:      sample.Detail,
+		Trace:       encodeTrace(sample.Trace),
+		HasRequired: sample.HasRequired,
+	}
 }
 
 func encodeKeys(keys []calculator.ParameterKey) []string {

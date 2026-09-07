@@ -1,6 +1,6 @@
 # Aeronautics implementation record
 
-Updated 2026-09-05. This is the review record for implementation in `aeronautics/`.
+Updated 2026-09-07. This is the review record for implementation in `aeronautics/`.
 The task plan defines acceptance targets; this file records actual checks and
 decisions. All thirteen tasks are authorized: the original eleven on
 2026-09-05, with 12 and 13 added afterwards. OpenVSP is the selected NASA tool.
@@ -12,8 +12,8 @@ decisions. All thirteen tasks are authorized: the original eleven on
 | 03 — Geometry | Complete | Planform, MAC, dihedral planes, coordinates, parameters, Reynolds coverage and configuration contracts implemented; 69 tests pass, 185 including subtests; the book's worked example reproduces. A plane-blind limits check was found and fixed post-review, see below |
 | 04 — Workflows | Complete | Design definition, commands with undo/redo, requirement intersection, controlling cases, conflicts with offered alternatives, request identity and curated patterns implemented; 120 tests pass, 258 including subtests. The Matching process chapter was read and Task 04 claims no equation from it, see below |
 | 05 — HTTP | Complete | Transport-neutral `api` boundary, `httpapi` transport, discovery, evaluate/apply/preview, generated frontend contract types and a serving executable; 157 tests pass, 359 including subtests. The seams are checked from outside, see below |
-| 06 — Worksheet | Pending | Static shell only |
-| 07 — Visuals | Pending | No mass placement or sensitivity view |
+| 06 — Worksheet | Complete | Span-first and both weight-first journeys drive the running Go service; versioned drafts save and reopen; 166 Go tests and 61 frontend tests pass. The status row was left stale when the work landed and is corrected here |
+| 07 — Visuals | Complete | Mass properties, a one-driver sensitivity sweep, dimensioned views and the formula behind each dimension implemented in Go and surfaced in the worksheet; 237 Go tests pass, 466 including subtests, and 101 frontend tests. The Center of gravity chapter was read and its worked example reproduces; the Trade study chapter was read and Task 07 claims no equation from it, see below |
 | 08 — Handling | Pending | Conventional minimum defined in task; no model implemented |
 | 09 — Power | Pending | No electric/mission model implemented |
 | 10 — MCP | Pending | No sidecar implemented |
@@ -540,6 +540,193 @@ because none exists yet. The sections a builder can see are the wing sizing,
 requirements and cases of Tasks 02–04: choosing a conventional tail, a V-tail or
 a flying wing works and none of them reports a handling result, which is the
 honest state rather than a gap in the page.
+
+## Task 07 verification
+
+Run on 2026-09-07 from `aeronautics/`: `go build ./...`, `go vet ./...`,
+`go test -race -timeout=3m ./...` and `golangci-lint run` (0 issues) all pass,
+with no lint relaxation added. From `aeronautics/frontend/`: `pnpm typecheck`,
+`pnpm lint`, `pnpm test` and `pnpm build` all pass. The Go module holds 237
+top-level tests, 466 counting subtests: 181 in `calculator`, 32 in `api`, 19 in
+`httpapi` and 5 in `boundary`. The frontend holds 103 tests across eleven files,
+of which 42 are new: 6 dimension-and-formula, 7 placement, 8 sensitivity,
+5 request-ordering, 10 sweep-state and 6 reducer tests.
+
+**Two chapters were read, and they produced opposite answers.** The
+[Center of gravity chapter](https://computationaldesignlab.github.io/aircraft-design/weight_and_balance/cg.html)
+contains the relation implemented from it, so the mass family is the second set
+in this package to carry `SourceBook`; its worked example — eight components,
+3114 lb, 44214.7 lb·ft, displayed as `x = 14.2 ft` and 8% MAC — reproduces in SI
+and in its own units, and is recorded at 50 significant digits in
+`calculator/testdata/cg-book-example.md`. The chapter writes the sum over
+component *weights*; this package holds masses, and one uniform standard gravity
+cancels between numerator and denominator, which is the single adaptation and is
+recorded on the equation itself.
+
+The [Aspect ratio trade study](https://computationaldesignlab.github.io/aircraft-design/trade_study/ar_study.html)
+does not. It contours MTOW against wing loading and *power* loading over an 80×80
+grid per aspect ratio, against takeoff, landing, climb-gradient, cruise-speed and
+fuel-volume constraints. Every one of those needs a propulsion model, a drag
+polar and a weight-estimation method this package does not have. Task 07
+therefore implements no equation from it, and the one-driver sweep is documented
+as a subset rather than presented as that plot. `TestBookProvenanceIsLimitedToCheckedChapterMethods`
+now holds a chapter URL per equation, so an attribution cannot drift sideways
+onto a chapter that does not contain the method either.
+
+**A balance is only as complete as its inventory, and says so.** A component
+with no mass, or with any coordinate of its position unstated, contributes
+nothing: it is never read as weightless and never placed at the origin. The
+result carries `Complete: false` and names which component is missing what, and
+in the component mass mode an incomplete inventory establishes no all-up mass at
+all, so every sizing result that rests on the mass waits for it rather than
+being computed against a partial aircraft. Zero is spelled out exactly as the
+wing angles are — a component on the centerline has `y = 0`, and an unstated `y`
+is a missing field rather than a claim.
+
+**Moving a mass and resizing one are different edits because they are different
+physics.** `PlaceComponent` carries a whole position and nothing else, so a
+completed drag changes the balance and leaves the all-up mass, the wing loading
+and Task 02's stall speed exactly where they were. `SetComponent` carries the
+item, so changing its mass moves all of them. The worksheet sends the first when
+a component is already placed and the second while it is still being filled in,
+which is what lets a builder type one coordinate at a time without the core
+accepting a position with a field missing.
+
+**The mass modes are kept apart.** An entered all-up mass is a figure a builder
+holds; a component total is only as good as the inventory behind it. `MassMode`
+selects which the design is judged at, the entered figure is never overwritten
+by adopting the components, and switching back restores it. Components are
+balanced in either mode, so a builder can see where the masses sit before
+adopting their total.
+
+**Four references are named apart, and three of them are unknown.** The
+mechanical centre of gravity is implemented. The quarter-MAC marker is drawn and
+labelled as a geometric reference on the reference planform; the panel says in
+words that it is not a wing aerodynamic centre, not an aircraft neutral point,
+not a centre of pressure and not a "centre of lift". Static margin and trim are
+named as unknown until Task 08. The lumped required lift crosses the boundary as
+a magnitude per case with no line of action, because the Task 02 model solves
+none; `TestTheLumpedCaseLoadIsAMagnitudeOnly` checks that its equation still
+states the lumped assumption.
+
+**A plot without its driver mode is ambiguous, so the mode travels with it.**
+Every sweep answer carries the solve mode, what was held fixed, and — when the
+plotted output does not move — which derived parameters did. That is what
+answers the acceptance check that a span sweep at a fixed area leaves the target
+stall speed constant: the answer says so and then names the aspect ratio and the
+chords as what changed, rather than leaving "the span does nothing" on the page.
+
+**A sweep is a question, so an answer is matched against the question.** Three
+things must agree before a curve is shown: the outstanding sweep identity, the
+input snapshot, and the settings. The identity clause is Task 04's history rule
+applied to sweeps — every design change retires it, undo and redo included — so
+an obsolete answer stays obsolete even when the history walks back to the exact
+design it was computed from. The settings clause is the sweep's own: a different
+range or a different plotted output is a different question, and the worksheet
+says so rather than relabelling an old curve. `Session.AcceptSweep` holds all
+three in the core, and the reducer holds them again in the browser.
+
+**Gaps are gaps.** A candidate the model cannot evaluate carries no value, no
+line is drawn through it, and the table says why. A candidate that computes and
+violates a requirement is a point outside the feasible region, which is a
+different answer and is reported as one: `Status` and `Feasibility` never
+collapse into each other.
+
+**Sampling costs bounded work.** Between 2 and 65 candidates per request, each
+one an ordinary design produced by the ordinary driver edit and evaluated
+through the ordinary workflow, so a plotted sample *is* the candidate rather
+than an approximation of it — `TestEveryPlottedSampleMatchesADirectEvaluation`
+and its boundary twin check that against direct evaluation. The samples run
+sequentially: each is a handful of algebraic steps, the count is bounded, and a
+deterministic order is part of the answer rather than an implementation detail.
+`RunUntil` takes a stop predicate rather than a context, because the core
+reaches neither a context nor a clock, and the HTTP boundary passes its own
+cancellation check in so a caller that goes away stops the remaining samples.
+
+**A dimension and a field are one thing seen twice.** Every dimension the
+service emits carries the core's own parameter key and that parameter's value,
+so selecting a dimension selects the field and selecting a field highlights the
+dimension, with no shared code between the two components and no second copy of
+a value. `TestEveryDimensionNamesAParameterTheWingReports` holds it in the core
+and `TestEveryDimensionNamesAParameterInTheSameResponse` at the boundary. A
+driver swap moves the roles and the formulas without moving the keys, and the
+drawing follows because it never held a copy.
+
+**Explanations are the core's, not the browser's.** Each parameter's
+relationship, revision, substituted values and dependencies come from the
+service; the trace is matched to the parameter by equation *and* result value,
+and where no trace matches exactly the explanation says the substitutions were
+not recorded rather than showing another evaluation's. The copyable parameter
+table is written with `String(value)`, the shortest text that reads back as the
+same float64, so copying loses nothing that the rounded display costs.
+
+**Projected and panel dimensions are told apart in words as well as in line
+style.** The front view dimensions both half spans, marks which plane each is
+in, and the accessible name says "panel as built" or "plan-view projection".
+Nothing on any drawing can only be read by seeing a colour: each outcome has a
+shape and is written out beside it, the plot's accessible name carries the axes
+and what was held fixed, and the sample table is a complete alternative to the
+plot.
+
+**Three defects were found and fixed while finishing the task.**
+
+- *A preview took an identity without moving the reducer's counter.* The hook
+  mints request identities from its own counter and the reducer keeps a matching
+  one, and the pairing is what makes the two agree. Adding the drag preview
+  broke it: `previewCommand` minted an identity and dispatched nothing, so from
+  the first drag onwards every apply and every evaluation answered an identity
+  the reducer had never issued and was discarded. The worksheet showed
+  "Calculating…" forever. `preview-started` exists for no reason except to move
+  the counter, `sweep-started` now moves it too, and
+  `TestEveryRequestKindKeepsTheCountersInStep` fails if a fourth kind is added
+  without one.
+- *A delayed preview could describe a position the builder had left.* The first
+  implementation matched preview answers by a sequence number and gated on one
+  request in flight, which meant a fast pointer left the readout showing an
+  older position's numbers under newer coordinates. An answer is now applied
+  only when the marker is still exactly where it was when the question was
+  asked, and the newest position waits its turn behind the outstanding request.
+- *A sweep could be revived by an undo.* The first `AcceptSweep` matched on the
+  input snapshot and the settings alone, on the reasoning that the same inputs
+  give the same curve. That contradicts the task's acceptance check, which
+  requires an obsolete response to stay obsolete even when the design returns to
+  a previously visited revision. The identity clause was added and the core test
+  inverted; the reducer already behaved correctly, which is why the browser test
+  passed while the core one asserted the opposite.
+
+**Selecting a candidate and adopting one are different acts.** Choosing a
+sample on the plot describes it and changes nothing; "use this as the aspect
+ratio" is the ordinary driver edit, going through the same command, the same
+history and the same identity check as a typed one, and undoing in one step. The
+two coordinated placement views share a single pixels-per-metre scale, because a
+plan and a side view of one aircraft drawn at different scales are two drawings
+of two aircraft. And no band is shaded anywhere: an assumed lift coefficient is
+an assumption whose consequences the samples show, and shading it would present
+it as a statistical interval it is not.
+
+**Two additions the task did not name but the checks needed.** `DimMassMoment`
+with `kg*m` and `g*mm`, because a moment sum is what a centre of gravity is
+formed of and a trace that could not carry one would be a total with no
+inspectable inputs. And a body-width field in the wing panel, which the contract
+and the geometry model already supported but nothing surfaced: it is what makes
+the exposed area reportable, draws the body sides on the plan view, and gives
+the sweep a range that straddles a genuine model limit rather than a contrived
+one.
+
+**What Task 07 does not establish.** No aerodynamic reference location, no
+static margin, no trim, no control authority and no handling result: the panel
+names each as unknown rather than omitting it. The sweep plots one driver
+against one implemented output; wing-loading and power-loading plots wait for
+Task 09's models, and no assumption range is drawn as a confidence interval
+anywhere. The parameter table is labelled a generic geometry handoff, because
+Task 11 owns the verified Fusion expressions, units and sketch workflow. The
+component model carries mass and position only — no electrical budget, no
+volume, no attachment — and Task 09 extends this same model rather than starting
+a second one. A found-but-unfixed observation: because the service answers in SI,
+an angle field shows radians once the design has been through the boundary once,
+so a builder entering degrees must choose the unit; that is Task 06's field
+behaviour, it is visible rather than silent, and changing it was left out of
+this task's scope.
 
 ## Post-review corrections (2026-09-05)
 

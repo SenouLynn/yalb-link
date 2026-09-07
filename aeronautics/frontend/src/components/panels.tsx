@@ -104,10 +104,35 @@ const SIZE_FIELDS = [
   { key: DRIVER_KEYS.rootChord, id: 'root-chord', label: 'Root chord', dimension: 'length' },
 ] as const
 
+/**
+ * SelectionMark is the other half of the dimension-to-field link. A dimension
+ * on a drawing and the field that drives it are one thing seen twice, so the
+ * field says when it is the selected one and can select itself.
+ *
+ * The selection lives in the worksheet state rather than in either component,
+ * which is what lets the drawing and the worksheet sit in different columns and
+ * still agree.
+ */
+function SelectionMark(props: { api: WorksheetApi; parameterKey: string }): ReactNode {
+  const { api, parameterKey } = props
+  const selected = api.selection === parameterKey
+  return (
+    <button
+      type="button"
+      className={`inline selection-mark${selected ? ' selected' : ''}`}
+      aria-pressed={selected}
+      aria-label={`Show the drawing and formula for ${parameterKey}`}
+      onClick={() => { api.select(selected ? null : parameterKey) }}
+    >
+      {selected ? 'On the drawing ▸' : 'On the drawing'}
+    </button>
+  )
+}
+
 const PLANFORM_DRIVERS = 2
 
 export function WingPanel(props: { api: WorksheetApi }): ReactNode {
-  const { api } = props
+  const { api, api: { design } } = props
   const evaluation = api.worksheet.current?.evaluation ?? null
   const solved = evaluation?.wing ?? null
   // Which values are inputs is read from the design rather than from the last
@@ -150,9 +175,12 @@ export function WingPanel(props: { api: WorksheetApi }): ReactNode {
             issue={issueFor(api, field.key) ?? issueFor(api, field.id)}
             {...(isDriver ? {} : hintProp(derivedHint(api, field.key)))}
             actions={
-              isDriver || editable ? undefined : (
-                <UseAsInput api={api} promote={field.key} value={value} unit={field.dimension} />
-              )
+              <>
+                <SelectionMark api={api} parameterKey={field.key} />
+                {!isDriver && !editable && (
+                  <UseAsInput api={api} promote={field.key} value={value} unit={field.dimension} />
+                )}
+              </>
             }
             onCommit={(target) => {
               // An empty field withdraws the value rather than meaning zero,
@@ -173,6 +201,25 @@ export function WingPanel(props: { api: WorksheetApi }): ReactNode {
           />
         )
       })}
+      <QuantityField
+        id="body-width"
+        label="Body width at the wing"
+        dimension="length"
+        value={design.wing.bodyWidth ?? null}
+        role="driver"
+        api={api}
+        issue={issueFor(api, 'body_width')}
+        hint="Optional. With it the exposed area outside the body is reported, and the body sides are drawn on the plan view; without it neither is claimed."
+        onCommit={(target) => {
+          void api.run(
+            [{
+              kind: 'set-body-width',
+              value: target === null ? null : { value: target.value, unit: target.unit },
+            }],
+            ['body-width'],
+          )
+        }}
+      />
       <ShapeControls api={api} />
       <AngleControls api={api} />
     </Section>
@@ -245,6 +292,11 @@ function UseAsInput(props: {
           key={release}
           type="button"
           className="inline"
+          // The bare key is what a builder is choosing between, but it is not a
+          // name on its own: the parameter table names the same keys, and a
+          // button called only "wing.area.reference" does not say what pressing
+          // it would do.
+          aria-label={`Give up ${release}`}
           onClick={() => {
             setAsking(false)
             const value = props.value

@@ -67,16 +67,25 @@ async function press(user: UserEvent, name: string | RegExp): Promise<void> {
   await settled()
 }
 
+/**
+ * results scopes a query to the results panel. The same parameter keys appear
+ * in the dimension views' own table, so a query that did not say which table it
+ * meant would match both and stop meaning anything.
+ */
+function results(): HTMLElement {
+  return screen.getByRole('complementary', { name: /Results and requirements/ })
+}
+
 /** checkRow returns the requirement row for a named requirement. */
 function checkRow(name: string): HTMLElement {
-  const row = screen.getByRole('rowheader', { name: new RegExp(name) }).closest('tr')
+  const row = within(results()).getByRole('rowheader', { name: new RegExp(name) }).closest('tr')
   if (row === null) throw new Error(`no requirement row for ${name}`)
   return row
 }
 
 /** parameterValue reads a solved parameter out of the geometry table. */
 function parameterValue(key: string): string {
-  const row = screen.getByRole('rowheader', { name: key }).closest('tr')
+  const row = within(results()).getByRole('rowheader', { name: key }).closest('tr')
   if (row === null) throw new Error(`no parameter row for ${key}`)
   const cells = within(row).getAllByRole('cell')
   return cells[0]?.textContent ?? ''
@@ -310,7 +319,7 @@ describe('editing', () => {
     // The swap is deliberate: with two inputs held, the worksheet asks which
     // one is given up rather than choosing.
     expect(screen.getByText('Give up:')).toBeInTheDocument()
-    await press(user, 'wing.aspect_ratio.planform')
+    await press(user, 'Give up wing.aspect_ratio.planform')
 
     expect(screen.getByLabelText('Wing area')).not.toHaveAttribute('readonly')
     expect(screen.getByLabelText('Aspect ratio')).toHaveAttribute('readonly')

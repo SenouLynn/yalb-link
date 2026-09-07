@@ -166,17 +166,43 @@ type Requirement struct {
 	Margin float64 `json:"margin"`
 }
 
+// Position is a component's centre of mass in the design's datum. Each
+// coordinate is optional on the wire and absent means "not stated": a component
+// may be listed before it has been placed, and an unstated y is a missing field
+// rather than a claim that the component sits on the centerline.
+type Position struct {
+	X *Quantity `json:"x,omitempty"`
+	Y *Quantity `json:"y,omitempty"`
+	Z *Quantity `json:"z,omitempty"`
+}
+
+// Component is one mass and where it sits. It carries no physics: a role groups
+// and labels the item and implies no mass, no power draw and no attachment.
+type Component struct {
+	Mass     *Quantity `json:"mass,omitempty"`
+	Position Position  `json:"position"`
+	Name     string    `json:"name"`
+	// Role is "airframe", "battery", "motor", "avionics", "payload" or "other".
+	Role string `json:"role"`
+	// Basis states where the mass came from.
+	Basis string `json:"basis"`
+}
+
 // Design is the authoritative parametric definition on the wire. It is the
 // whole request state: the service holds none of it between calls.
 type Design struct {
-	Mass          *Quantity     `json:"mass,omitempty"`
-	Tail          *Tail         `json:"tail,omitempty"`
-	Name          string        `json:"name"`
-	Configuration string        `json:"configuration"`
-	MassBasis     string        `json:"massBasis"`
-	Cases         []Case        `json:"cases,omitempty"`
-	Requirements  []Requirement `json:"requirements,omitempty"`
-	Wing          Wing          `json:"wing"`
+	Mass          *Quantity `json:"mass,omitempty"`
+	Tail          *Tail     `json:"tail,omitempty"`
+	Name          string    `json:"name"`
+	Configuration string    `json:"configuration"`
+	MassBasis     string    `json:"massBasis"`
+	// MassMode is "entered" or "components": whether the all-up mass is the
+	// entered figure or the sum of the component inventory.
+	MassMode     string        `json:"massMode,omitempty"`
+	Components   []Component   `json:"components,omitempty"`
+	Cases        []Case        `json:"cases,omitempty"`
+	Requirements []Requirement `json:"requirements,omitempty"`
+	Wing         Wing          `json:"wing"`
 }
 
 // Scope names the cases an action covers. It is required rather than defaulted:
@@ -204,6 +230,8 @@ type Command struct {
 	Scope       *Scope       `json:"scope,omitempty"`
 	Angles      *Angles      `json:"angles,omitempty"`
 	Tail        *Tail        `json:"tail,omitempty"`
+	Component   *Component   `json:"component,omitempty"`
+	Position    *Position    `json:"position,omitempty"`
 
 	// Kind selects the edit.
 	Kind string `json:"kind"`
@@ -219,6 +247,8 @@ type Command struct {
 	Shape string `json:"shape,omitempty"`
 	// Configuration is the airframe layout, for the configuration edit.
 	Configuration string `json:"configuration,omitempty"`
+	// Mode is the mass mode, for the mass-mode edit.
+	Mode string `json:"mode,omitempty"`
 
 	// Ratio is the taper ratio, for the shape and taper-ratio edits.
 	Ratio float64 `json:"ratio,omitempty"`
@@ -288,6 +318,126 @@ type SolvedWing struct {
 	Parameters []Parameter `json:"parameters"`
 	// Outline is the right panel's plan-view corners.
 	Outline []Point `json:"outline"`
+	// Views are the dimensioned plan, front and side views. Every dimension
+	// names the parameter it measures, which is what lets a worksheet map a
+	// click on a drawing onto a field and back.
+	Views []SketchView `json:"views"`
+	// Explanations are the relationship behind each parameter: the expression,
+	// the revision and the values actually substituted.
+	Explanations []Explanation `json:"explanations"`
+}
+
+// SketchCurve is one drawn line in a view.
+type SketchCurve struct {
+	Label string `json:"label"`
+	// Role is "outline", "centerline", "axis", "construction" or "reference".
+	Role   string  `json:"role"`
+	Points []Point `json:"points"`
+	// Mirrored reports that the left panel is this curve's mirror in y. It is
+	// stated rather than drawn twice, so a consumer cannot mistake the mirror
+	// for a second, independently solved panel.
+	Mirrored bool `json:"mirrored"`
+	// Closed reports that the last point joins the first.
+	Closed bool `json:"closed"`
+}
+
+// SketchDimension is one dimension on a view, tied to the parameter it measures.
+type SketchDimension struct {
+	// Key names the parameter this dimension measures, using the core's own
+	// stable key. Selecting the dimension selects that field, and selecting the
+	// field highlights this dimension.
+	Key    string `json:"key"`
+	Label  string `json:"label"`
+	Detail string `json:"detail"`
+	// Kind is "linear" or "angular".
+	Kind string `json:"kind"`
+	// Plane is "plan-view" or "panel-surface": whether the dimension is a
+	// projection or a dimension of the panel as built.
+	Plane string   `json:"plane"`
+	From  Point    `json:"from"`
+	To    Point    `json:"to"`
+	Value Quantity `json:"value"`
+}
+
+// SketchView is one orthographic view: what to draw and what to dimension.
+type SketchView struct {
+	// View is "plan-view", "front-view" or "side-view".
+	View string `json:"view"`
+	// Datum names the coordinate convention every point here uses.
+	Datum string `json:"datum"`
+	// Across and Up name the datum axes that run left to right and up the page.
+	Across     string            `json:"across"`
+	Up         string            `json:"up"`
+	Curves     []SketchCurve     `json:"curves"`
+	Dimensions []SketchDimension `json:"dimensions"`
+}
+
+// Explanation is why one parameter holds the value it does.
+type Explanation struct {
+	Key string `json:"key"`
+	// Role is "driver" or "derived".
+	Role       string `json:"role"`
+	EquationID string `json:"equationId,omitempty"`
+	Revision   string `json:"revision,omitempty"`
+	// Expression is the symbolic relationship, for example c_root = 2S/(b(1+lambda)).
+	Expression string `json:"expression,omitempty"`
+	Detail     string `json:"detail"`
+	// Substitutions are the values actually used, in the order the equation
+	// consumed them. It is empty for a driver: nothing was substituted.
+	Substitutions []Substitution `json:"substitutions"`
+	DependsOn     []string       `json:"dependsOn"`
+	Value         Quantity       `json:"value"`
+}
+
+// CaseLoad is the lift one flight case demands of the whole aircraft.
+//
+// It is a magnitude and nothing else. The lumped model puts the entire load on
+// the wing and solves no line of action, no spanwise distribution and no tail
+// balancing load, so nothing here says where that force acts.
+type CaseLoad struct {
+	RequiredLift *Quantity `json:"requiredLift,omitempty"`
+	Case         string    `json:"case"`
+	// Priority is "required" or "preferred".
+	Priority string `json:"priority"`
+	// Status is "computed", "missing", "invalid" or "stale".
+	Status string `json:"status"`
+	Detail string `json:"detail,omitempty"`
+}
+
+// MassContribution is one component's contribution to the balance.
+type MassContribution struct {
+	Mass     *Quantity `json:"mass,omitempty"`
+	Position Position  `json:"position"`
+	Name     string    `json:"name"`
+	Role     string    `json:"role"`
+	Detail   string    `json:"detail,omitempty"`
+	// Moments are the mass moments about the datum on x, y and z, in that order.
+	Moments []Quantity `json:"moments"`
+	// Known reports whether the component contributed. A component with no mass
+	// or no complete position contributes nothing and is never placed at the
+	// origin.
+	Known bool `json:"known"`
+}
+
+// MassProperties is the mechanical balance of the listed components.
+//
+// It is mechanical only. The centre of gravity is not an aerodynamic centre, a
+// neutral point or a centre of pressure, and no trim, static-margin or handling
+// conclusion follows from it.
+type MassProperties struct {
+	Total *Quantity `json:"total,omitempty"`
+	CG    *Point    `json:"cg,omitempty"`
+	// Datum names the coordinate convention the centre of gravity and every
+	// position use.
+	Datum string `json:"datum"`
+	// Status is "computed", "missing", "invalid" or "stale".
+	Status string `json:"status"`
+	// Detail explains an incomplete or unavailable result.
+	Detail        string             `json:"detail,omitempty"`
+	Contributions []MassContribution `json:"contributions"`
+	// Complete reports that every listed component contributed. A false value
+	// with a computed status means the result describes a subset of the design.
+	Complete bool `json:"complete"`
 }
 
 // Check is one requirement bound's outcome.
@@ -401,8 +551,14 @@ type Evaluation struct {
 	Request             Request    `json:"request"`
 	AreaLower           Bound      `json:"areaLower"`
 	AreaUpper           Bound      `json:"areaUpper"`
-	Mass                MassRange  `json:"mass"`
-	HasRequired         bool       `json:"hasRequired"`
+	// MassProperties is the mechanical balance of the listed components. It is
+	// reported in either mass mode.
+	MassProperties MassProperties `json:"massProperties"`
+	// Loads are the lumped lift each case demands: a magnitude with no line of
+	// action, from the Task 02 model.
+	Loads       []CaseLoad `json:"loads"`
+	Mass        MassRange  `json:"mass"`
+	HasRequired bool       `json:"hasRequired"`
 }
 
 // Port names one input or output of an equation and fixes its dimension.
@@ -498,6 +654,10 @@ type Limits struct {
 	MaxRequirements int `json:"maxRequirements"`
 	MaxCommands     int `json:"maxCommands"`
 	MaxBatch        int `json:"maxBatch"`
+	MaxComponents   int `json:"maxComponents"`
+	// MaxSweepSamples is the largest sensitivity sweep the core evaluates in one
+	// request. A sweep evaluates the whole design once per sample.
+	MaxSweepSamples int `json:"maxSweepSamples"`
 	MaxRequestBytes int `json:"maxRequestBytes"`
 }
 
@@ -549,4 +709,96 @@ type PreviewResponse struct {
 	Changes []Change   `json:"changes"`
 	Before  Evaluation `json:"before"`
 	After   Evaluation `json:"after"`
+}
+
+// SweepOutput names the quantity a sweep plots. It reuses the requirement
+// subjects rather than inventing a second vocabulary of plottable values: a
+// curve is only worth drawing next to the bounds it is judged against.
+type SweepOutput struct {
+	// Subject names the plotted quantity, using the requirement-subject tokens.
+	Subject string `json:"subject"`
+	// Case names the flight case, for a per-case subject only.
+	Case string `json:"case,omitempty"`
+}
+
+// SweepSettings is one sensitivity request: which driver moves, between which
+// values, at how many samples, and what is read off each candidate.
+type SweepSettings struct {
+	// Driver names the value to move, using the core's own parameter keys. It
+	// must be one the design currently holds: a derived value cannot move
+	// without a promotion the builder makes explicitly.
+	Driver string      `json:"driver"`
+	Output SweepOutput `json:"output"`
+	From   Quantity    `json:"from"`
+	To     Quantity    `json:"to"`
+	// Samples is how many candidates to evaluate, endpoints included.
+	Samples int `json:"samples"`
+}
+
+// SweepSample is one evaluated candidate. Status and Feasibility are separate
+// answers: a candidate whose output could not be computed is a gap in the
+// curve, and one that computed and violates a requirement is a point outside
+// the feasible region.
+type SweepSample struct {
+	Value *Quantity `json:"value,omitempty"`
+	Trace *Trace    `json:"trace,omitempty"`
+	// Status is "computed", "missing", "invalid" or "stale".
+	Status string `json:"status"`
+	// Feasibility is "met", "unmet" or "unknown".
+	Feasibility string   `json:"feasibility"`
+	Detail      string   `json:"detail,omitempty"`
+	Driver      Quantity `json:"driver"`
+	// HasRequired reports whether any required check existed. When it is false,
+	// Feasibility makes no claim.
+	HasRequired bool `json:"hasRequired"`
+}
+
+// SweepBound is a requirement boundary drawn across the plotted output.
+type SweepBound struct {
+	Name      string   `json:"name"`
+	Direction string   `json:"direction"`
+	Priority  string   `json:"priority"`
+	Value     Quantity `json:"value"`
+}
+
+// SweepRequest asks for one sensitivity sweep of one design.
+type SweepRequest struct {
+	Request  Request       `json:"request"`
+	Settings SweepSettings `json:"settings"`
+	Design   Design        `json:"design"`
+}
+
+// SweepResponse is one complete sweep, tied to the request identity, the input
+// snapshot and the settings it answers.
+//
+// It commits nothing. Sampling a range asks about candidates the design does
+// not hold, and selecting one of them is a separate, explicit edit.
+type SweepResponse struct {
+	// SettingsFingerprint is the canonical form of Settings, so a client can
+	// match an answer against the question without comparing fields.
+	SettingsFingerprint string `json:"settingsFingerprint"`
+	// Snapshot is the fingerprint of the design the sweep was computed from.
+	Snapshot string `json:"snapshot"`
+	// SolveMode names the driver pair the planform solves from. A plot without
+	// it is ambiguous: at fixed span a higher aspect ratio is a smaller area,
+	// and at fixed area it is a longer span.
+	SolveMode string `json:"solveMode"`
+	// Detail states what moved and what stayed fixed, in words.
+	Detail string `json:"detail"`
+	// HeldFixed names the parameters that did not move.
+	HeldFixed []string `json:"heldFixed"`
+	// AlsoChanged names the derived parameters whose values differ across the
+	// range. It is what answers "this driver has no effect" when the plotted
+	// output happens not to move.
+	AlsoChanged []string      `json:"alsoChanged"`
+	Bounds      []SweepBound  `json:"bounds"`
+	Samples     []SweepSample `json:"samples"`
+	Request     Request       `json:"request"`
+	Settings    SweepSettings `json:"settings"`
+	// Current is the design's own candidate, evaluated at the driver value it
+	// actually holds. It is the marker on the curve and is not one of Samples.
+	Current SweepSample `json:"current"`
+	// Invariant reports that every computed sample produced the same output. It
+	// is a fact about this output at this solve mode, not about the driver.
+	Invariant bool `json:"invariant"`
 }

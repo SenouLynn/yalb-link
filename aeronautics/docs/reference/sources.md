@@ -106,6 +106,72 @@ A stall-only subset is therefore **not** the chapter's matching plot, and nothin
 in this package presents it as one. `TestBookProvenanceIsLimitedToCheckedChapterMethods`
 still holds the same seven geometry equations and no others.
 
+## What the Center of gravity chapter actually contains
+
+The [Center of gravity chapter](https://computationaldesignlab.github.io/aircraft-design/weight_and_balance/cg.html),
+under Weight and Balance, was read on 2026-09-06 for Task 07. Unlike the Lift
+and Matching process chapters, it **does** contain the relation implemented from
+it, so the Task 07 mass family is the second set in this package to carry
+`SourceBook`:
+
+- `x_CG = sum(x_CG_k W_k) / sum(W_k)`, a weighted mean over component **weights**;
+- the statement that "a similar equation can be used for y and z axis", with only
+  the `x` axis demonstrated;
+- a worked example: eight components totalling 3114 lb and 44214.7 lb·ft about a
+  nose datum at `x = 3.4 ft`, giving `x = 14.2 ft`, which against a MAC of 4.3 ft
+  with its leading edge at 13.85 ft is displayed as 8% MAC.
+
+**Adaptation.** This package holds masses rather than weights. Under one uniform
+standard gravity the `g` cancels between the numerator and the denominator, so
+`sum(m_k x_k)/sum(m_k)` gives the same station; that is the only adaptation, and
+it is recorded on the equation's own `Source.Adaptation` as well as here. All
+three axes are evaluated with the relation the chapter sanctions for them. The
+chapter's datum is the aircraft nose; this package measures from the reference
+planform's root leading edge, which is the datum its wing geometry already uses,
+so a centre of gravity can be compared with the mean aerodynamic chord without a
+transform nothing here implements.
+
+The worked example is reproduced in
+[calculator/testdata/cg-book-example.md](../../calculator/testdata/cg-book-example.md)
+and checked in SI and in the chapter's own units. Its component masses are a
+manned twin's and none of them is a default here.
+
+`mass.station-fraction-of-mac` is recorded as **derived**, not book: the chapter
+states no chord-fraction relation, and `TestMACFractionIsDerivedRatherThanBookSourced`
+holds that. Expressing a station as a fraction of the MAC is a geometric
+reference and is not a static margin.
+
+## What the Trade study chapter actually contains
+
+The [Aspect ratio study](https://computationaldesignlab.github.io/aircraft-design/trade_study/ar_study.html),
+under Trade study, was read on 2026-09-06 before Task 07 was implemented. As
+with the Matching process chapter, the reading limited what the implementation
+may claim:
+
+- It evaluates **five discrete aspect ratios** (7 to 11) and, for each, an 80×80
+  grid over wing loading `W/S` from 30 to 60 lb/ft² and power loading `W/P` from
+  6 to 12 lb/hp.
+- Each grid is contoured with MTOW isolines and the takeoff, landing, climb-
+  gradient, cruise-speed and fuel-volume constraint boundaries, and the feasible
+  region is shaded.
+- It selects `A = 9` as the aspect ratio giving the lowest MTOW, at 6258 lb with
+  `W/S = 45.3 lb/ft²` and `W/P = 8.7 lb/hp`.
+
+**Consequence for attribution.** Task 07 implements no equation from this chapter
+and adds none to the registry from it. Its axes are power loading for a piston
+engine, its constraints need a propulsion model, a drag polar and a weight-
+estimation method that do not exist here, and its MTOW isolines need the fuel-
+fraction mission analysis this project has explicitly deferred. A one-driver
+sweep over an implemented output is **not** this chapter's trade study, and
+nothing in the worksheet presents it as one.
+
+What the chapter does contribute is methodology, recorded as such: a design
+parameter is moved across a bounded range, every candidate is evaluated by the
+same method, the constraints are drawn against the result rather than applied
+silently, and the builder chooses. Task 07's sweep follows exactly that, over
+the outputs the implemented models actually produce. The wing-loading and
+power-loading plots wait for Task 09.
+
 ## Implemented methods
 
 All are in `yalb.aero/calculator`, each with an equation ID, revision, expression,
@@ -146,6 +212,11 @@ declared input/output ports, source record and assumptions. SI is internal.
 | `geometry.panel-span` | `b_panel = b_projected / cos(Gamma)` | derived |
 | `geometry.panel-area` | `S_panel = S_projected / cos(Gamma)` | derived |
 | `aero.reynolds` | `Re = rho V c / mu` | supplementary |
+| `mass.total` | `m = sum(m_i)` | book |
+| `mass.component-moment` | `M_i = m_i r_i` | book |
+| `mass.moment-sum` | `M = sum(M_i)` | book |
+| `mass.center-of-gravity` | `r_cg = sum(m_i r_i) / sum(m_i)` | book |
+| `mass.station-fraction-of-mac` | `fraction = (x − x_le_mac) / MAC` | derived |
 
 The geometry entries marked derived are algebraic consequences of the chapter's
 own relations — rearrangements for a different driver pair, linear interpolation
@@ -194,7 +265,13 @@ it does not choose an area.
 | Discovery and evaluation over HTTP, with the source records preserved | **Implemented** (Task 05). An application task: it adds no equation and no solver decision, and `TestTransportDoesNotReimplementTheCore` fails on any arithmetic in the boundary packages |
 | Takeoff, landing, OEI climb-gradient and cruise-speed constraints | Unsupported. Each needs a propulsion model, a drag polar and empirical constants this package does not have; they enter through the same case engine when Task 09 supplies them |
 | Numerical solvers, convergence budgets and discrete component search | Unsupported. Task 04 treats feedback loops as explicit builder revisions; no iterate is produced, so none can be mislabelled converged |
-| Weight/balance, conventional static margin and trim | Deferred to Tasks 07–08 |
+| Component mass properties: total mass and mechanical centre of gravity on all three axes | **Implemented** (Task 07), against the chapter's own worked example. Missing mass or position makes the assessment incomplete rather than assuming an origin |
+| Station as a fraction of the mean aerodynamic chord | **Implemented** (Task 07) as a geometric reference only. It is not a static margin and no handling conclusion follows from it |
+| One-driver sensitivity sweep over an implemented output, with requirement boundaries and feasible/unknown regions | **Implemented** (Task 07) as a documented subset. The book's trade study and its matching plot need Task 09's power models and are not claimed |
+| Dimensioned plan, front and side views with construction geometry, and the relationship behind each dimension | **Implemented** (Task 07). Fusion-ready expressions and units are Task 11's; until then the parameter table is a generic geometry handoff |
+| Wing aerodynamic centre, aircraft neutral point, centre of pressure, static margin and trim | Unsupported. Task 07 draws none of them and names each as unknown; Task 08 owns the conventional minimum |
+| Line of action, spanwise pressure distribution and separately solved wing and tail loads | Unsupported. Task 07 reports the lumped required lift as a magnitude only |
+| Conventional static margin and trim | Deferred to Task 08 |
 | Drag and electric propulsion/mission adaptations | Deferred to Task 09 |
 | Carbon spar geometric fit under taper, twist and varying section | Deferred to Task 13 |
 | Spanwise load distribution, bending moment, flexural rigidity and deflection | Deferred to Task 13, against supplied material evidence |
@@ -215,6 +292,17 @@ plus the independent Reynolds fixture `Re = 205376.1037219179613278194` at
 `rho = 1.225 kg/m³`, `V = 15 m/s`, `c = 0.2 m`, `mu = 1.7894e-5 Pa·s`. The
 example's values were computed independently at 45 significant digits and are
 never taken from the chapter's rounded display.
+
+Task 07's Center of gravity fixture is the chapter's own worked example,
+recorded in full precision in
+[calculator/testdata/cg-book-example.md](../../calculator/testdata/cg-book-example.md)
+and checked both in SI and against the `14.2 ft` the chapter displays. Its
+placement fixtures are independent of the book and of this package: 1.5 kg of
+airframe at `x = 0.4 m` with a 0.5 kg battery at `x = 0.2 m` totals 2 kg and
+balances at `x = 0.35 m`; moving the battery to `x = 0.6 m` gives `x = 0.45 m`
+with the loading unchanged; growing it to 1 kg gives 2.5 kg at `x = 0.48 m` and a
+stall speed higher by `sqrt(2.5/2)`, which is Task 02's model responding to a
+mass change rather than a new one.
 
 Task 02's numerical fixtures are synthetic and independently calculated at 40
 significant digits, not taken from the book: m=2 kg, rho=1.225 kg/m³, CLmax=1.2,

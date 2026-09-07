@@ -44,6 +44,12 @@ var evaluatedEquations = []string{
 	calculator.EqPanelArea,
 	calculator.EqSemiSpan,
 	calculator.EqReynolds,
+
+	calculator.EqTotalMass,
+	calculator.EqComponentMoment,
+	calculator.EqMomentSum,
+	calculator.EqCenterOfGravity,
+	calculator.EqStationFractionOfMAC,
 }
 
 func TestRegistryDefinesEveryEvaluatedEquation(t *testing.T) {
@@ -226,23 +232,34 @@ func TestEquationIDsAreSorted(t *testing.T) {
 }
 
 // Only the methods from a chapter that was actually read may claim the book as
-// their source. The Lift chapter was checked on the recorded access date and
-// contains no stall-speed equation and no inversion of the lift identity, so the
-// Task 02 family cites the standard identity and its own derivations. The Wing
-// Planform Sizing chapter was checked on the same date and does contain the
-// planform relations below, so those carry SourceBook. Adding a method to this
-// list is a deliberate act: provenance cannot drift upward by accident.
-var bookSourcedEquations = map[string]bool{
-	calculator.EqAspectRatio:           true,
-	calculator.EqSpanFromAreaAndAspect: true,
-	calculator.EqRootChord:             true,
-	calculator.EqTipChord:              true,
-	calculator.EqMeanAerodynamicChord:  true,
-	calculator.EqMACStation:            true,
-	calculator.EqSweepTransform:        true,
+// their source, and each may cite only the chapter it came from. The Lift
+// chapter was checked on the recorded access date and contains no stall-speed
+// equation and no inversion of the lift identity, so the Task 02 family cites
+// the standard identity and its own derivations. The Wing Planform Sizing
+// chapter was checked on the same date and does contain the planform relations
+// below. The Center of gravity chapter was checked for Task 07 and contains the
+// weighted-mean relation, written over component weights rather than masses.
+// Adding a method to this map is a deliberate act: provenance cannot drift
+// upward, and it cannot drift sideways onto a chapter that does not hold it.
+var bookSourcedEquations = map[string]string{
+	calculator.EqAspectRatio:           wingLayoutURL,
+	calculator.EqSpanFromAreaAndAspect: wingLayoutURL,
+	calculator.EqRootChord:             wingLayoutURL,
+	calculator.EqTipChord:              wingLayoutURL,
+	calculator.EqMeanAerodynamicChord:  wingLayoutURL,
+	calculator.EqMACStation:            wingLayoutURL,
+	calculator.EqSweepTransform:        wingLayoutURL,
+
+	calculator.EqTotalMass:       centerOfGravityURL,
+	calculator.EqComponentMoment: centerOfGravityURL,
+	calculator.EqMomentSum:       centerOfGravityURL,
+	calculator.EqCenterOfGravity: centerOfGravityURL,
 }
 
-const wingLayoutURL = "https://computationaldesignlab.github.io/aircraft-design/wing_layout.html"
+const (
+	wingLayoutURL      = "https://computationaldesignlab.github.io/aircraft-design/wing_layout.html"
+	centerOfGravityURL = "https://computationaldesignlab.github.io/aircraft-design/weight_and_balance/cg.html"
+)
 
 func TestBookProvenanceIsLimitedToCheckedChapterMethods(t *testing.T) {
 	for _, id := range calculator.EquationIDs() {
@@ -250,16 +267,33 @@ func TestBookProvenanceIsLimitedToCheckedChapterMethods(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Lookup(%q): %v", id, err)
 		}
+		chapter, listed := bookSourcedEquations[id]
 		claimsBook := eq.Source.Kind == calculator.SourceBook
 		switch {
-		case claimsBook && !bookSourcedEquations[id]:
+		case claimsBook && !listed:
 			t.Errorf("equation %q claims book provenance but is not one of the checked "+
-				"chapter's methods", id)
-		case !claimsBook && bookSourcedEquations[id]:
+				"chapters' methods", id)
+		case !claimsBook && listed:
 			t.Errorf("equation %q is a checked chapter method but no longer claims it", id)
-		case claimsBook && eq.Source.URL != wingLayoutURL:
-			t.Errorf("equation %q claims the book but cites %q", id, eq.Source.URL)
+		case claimsBook && eq.Source.URL != chapter:
+			t.Errorf("equation %q claims the book but cites %q rather than %q",
+				id, eq.Source.URL, chapter)
 		}
+	}
+}
+
+// The Task 07 mass family carries the CG chapter's relation and its own
+// derivation, and nothing else. Expressing a station as a fraction of the mean
+// aerodynamic chord is a rearrangement this project made for the worksheet, not
+// a method the chapter states, so it must stay derived.
+func TestMACFractionIsDerivedRatherThanBookSourced(t *testing.T) {
+	eq, err := calculator.Lookup(calculator.EqStationFractionOfMAC)
+	if err != nil {
+		t.Fatalf("Lookup: %v", err)
+	}
+	if eq.Source.Kind != calculator.SourceDerived {
+		t.Errorf("source kind = %v, want derived; the chapter states no chord-fraction relation",
+			eq.Source.Kind)
 	}
 }
 

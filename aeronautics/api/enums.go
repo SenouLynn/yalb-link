@@ -210,6 +210,56 @@ var (
 			{calculator.JourneyPowerFirst, "power-first"},
 		},
 	}
+	componentRoles = enumTable[calculator.ComponentRole]{
+		field: "component role",
+		entries: []enumEntry[calculator.ComponentRole]{
+			{calculator.ComponentAirframe, "airframe"},
+			{calculator.ComponentBattery, "battery"},
+			{calculator.ComponentMotor, "motor"},
+			{calculator.ComponentAvionics, "avionics"},
+			{calculator.ComponentPayload, "payload"},
+			{calculator.ComponentOther, "other"},
+		},
+	}
+	massModes = enumTable[calculator.MassMode]{
+		field: "mass mode",
+		entries: []enumEntry[calculator.MassMode]{
+			{calculator.MassModeEntered, "entered"},
+			{calculator.MassModeComponents, "components"},
+		},
+	}
+	viewKinds = enumTable[calculator.ViewKind]{
+		field: "view",
+		entries: []enumEntry[calculator.ViewKind]{
+			{calculator.ViewPlan, "plan-view"},
+			{calculator.ViewFront, "front-view"},
+			{calculator.ViewSide, "side-view"},
+		},
+	}
+	sketchRoles = enumTable[calculator.SketchRole]{
+		field: "sketch role",
+		entries: []enumEntry[calculator.SketchRole]{
+			{calculator.SketchOutline, "outline"},
+			{calculator.SketchCenterline, "centerline"},
+			{calculator.SketchAxis, "axis"},
+			{calculator.SketchConstruction, "construction"},
+			{calculator.SketchReference, "reference"},
+		},
+	}
+	dimensionKinds = enumTable[calculator.DimensionKind]{
+		field: "dimension kind",
+		entries: []enumEntry[calculator.DimensionKind]{
+			{calculator.DimensionLinear, "linear"},
+			{calculator.DimensionAngular, "angular"},
+		},
+	}
+	outlinePlanes = enumTable[calculator.OutlinePlane]{
+		field: "outline plane",
+		entries: []enumEntry[calculator.OutlinePlane]{
+			{calculator.OutlinePlanView, "plan-view"},
+			{calculator.OutlinePanelSurface, "panel-surface"},
+		},
+	}
 	caseScopes = enumTable[calculator.CaseScopeKind]{
 		field: "case scope",
 		entries: []enumEntry[calculator.CaseScopeKind]{
@@ -233,6 +283,7 @@ var (
 			{calculator.DimPower, "power"},
 			{calculator.DimEnergy, "energy"},
 			{calculator.DimDynamicViscosity, "dynamic-viscosity"},
+			{calculator.DimMassMoment, "mass-moment"},
 		},
 	}
 )
@@ -247,6 +298,38 @@ var driverKeys = []calculator.ParameterKey{
 	calculator.ParamAreaPanel,
 	calculator.ParamAspectRatio,
 	calculator.ParamChordRoot,
+}
+
+// sweepDriverKeys are the parameter keys a sweep may move. They are the size
+// drivers plus the entered all-up mass, which is a value the builder enters and
+// a sweep can move even though it is not a wing parameter.
+var sweepDriverKeys = append([]calculator.ParameterKey{calculator.ParamAllUpMass}, driverKeys...)
+
+// parseSweepDriverKey resolves a swept driver key token. Whether the design
+// actually holds that driver is the core's answer, not this one: refusing it
+// here would duplicate the rule and could disagree with it.
+func parseSweepDriverKey(field, token string) (calculator.ParameterKey, *Issue) {
+	if token == "" {
+		return "", &Issue{Field: field, Kind: "missing", Detail: "name the driver to sweep"}
+	}
+	for _, key := range sweepDriverKeys {
+		if string(key) == token {
+			return key, nil
+		}
+	}
+	return "", &Issue{
+		Field:  field,
+		Kind:   "invalid",
+		Detail: token + " cannot be swept; the contract accepts " + joinTokens(sweepDriverKeyTokens()),
+	}
+}
+
+func sweepDriverKeyTokens() []string {
+	tokens := make([]string, 0, len(sweepDriverKeys))
+	for _, key := range sweepDriverKeys {
+		tokens = append(tokens, string(key))
+	}
+	return tokens
 }
 
 // parseDriverKey resolves a driver key token.
@@ -293,6 +376,13 @@ func Vocabularies() []Vocabulary {
 		{Name: "journey", Tokens: journeys.tokens()},
 		{Name: "caseScope", Tokens: caseScopes.tokens()},
 		{Name: "dimension", Tokens: dimensions.tokens()},
+		{Name: "componentRole", Tokens: componentRoles.tokens()},
+		{Name: "massMode", Tokens: massModes.tokens()},
+		{Name: "viewKind", Tokens: viewKinds.tokens()},
+		{Name: "sketchRole", Tokens: sketchRoles.tokens()},
+		{Name: "dimensionKind", Tokens: dimensionKinds.tokens()},
+		{Name: "outlinePlane", Tokens: outlinePlanes.tokens()},
+		{Name: "sweepDriverKey", Tokens: sweepDriverKeyTokens()},
 		{Name: "commandKind", Tokens: commandKinds()},
 		{Name: "driverKey", Tokens: driverKeyTokens()},
 	}

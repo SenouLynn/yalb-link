@@ -19,16 +19,20 @@ for checked behavior, decisions and outstanding verification.
 
 Suggested continuation prompt:
 
-> Read docs/research/aeronautics/README.md and implement Task 07 only, including
+> Read docs/research/aeronautics/README.md and implement Task 08 only, including
 > its checks. Keep the calculator independent of the existing GCS frontend and
 > services. Do not start another task automatically.
 
-Tasks 01 to 06 are complete; the [implementation log](../../reference/aeronautics-implementation.md)
+Tasks 01 to 07 are complete; the [implementation log](../../reference/aeronautics-implementation.md)
 records what each one actually checks and where it stops. Task 06 finished the
 first useful sizing release: the worksheet drives the span-first and both
 weight-first journeys against the running Go service, and versioned drafts save
-and reopen. Tasks 07, 08 and 09 are all schedulable now; Task 07 adds
-the explanatory visuals the brief calls for and is the natural next one.
+and reopen. Task 07 added the explanatory visuals: dimensioned views whose every
+dimension names the parameter that drives it, a shared mass-properties model with
+visual placement, and a one-driver sensitivity sweep. Tasks 08 and 09 are both
+schedulable now; Task 08 is the natural next one, because Task 07 has left every
+aerodynamic reference location and every handling question explicitly unknown and
+Task 08 is what may answer them.
 
 ## User intent and settled direction
 
@@ -65,8 +69,10 @@ the explanatory visuals the brief calls for and is the natural next one.
   reasonably tested. Define and test workflow behavior before implementing UI.
 - Provide a visual mass-placement worksheet: move battery, motor, avionics and
   payload on aircraft views and see CG, aerodynamic reference markers and supported
-  lift/trim effects update alongside loading and stall results. Task 07 establishes
-  the view; Tasks 08 and 09 connect handling and component/power models.
+  lift/trim effects update alongside loading and stall results. Task 07 established
+  the view and the mechanical CG; Tasks 08 and 09 connect handling and
+  component/power models. The aerodynamic reference markers other than the
+  geometric quarter-MAC stay unknown until Task 08.
 - **Sketch-ready geometry:** values must be usable in Fusion 360 sketches. Show
   named dimensions, datums, construction lines and the formulas linking them;
   connect each worksheet field to its visual dimension and CAD parameter. Task 03
@@ -213,12 +219,15 @@ Tasks 12 and 13 were added after the original eleven. They depend only on 03 and
 on each other, so they are schedulable independently of 04–11, but their worksheet
 surface arrives with Tasks 06 and 07 and their export surface with Task 11.
 
-The first useful sizing release ends at Task 06 and has been delivered.
-Configuration choices already exist, but handling remains explicitly unknown
-until Task 08's supported assessment.
-V-tail/flying-wing handling remains unknown until its extension is validated.
-Task 07 adds the requested explanatory visuals. A complete power-first workflow
-arrives in Task 09.
+The first useful sizing release ends at Task 06 and has been delivered, and
+Task 07's explanatory visuals have been delivered on top of it: dimension and
+formula views, visual mass placement with a mechanical centre of gravity, and a
+one-driver sensitivity sweep over the implemented outputs. Configuration choices
+already exist, but handling remains explicitly unknown until Task 08's supported
+assessment, and Task 07 names every aerodynamic reference location it does not
+have rather than drawing one. V-tail/flying-wing handling remains unknown until
+its extension is validated. A complete power-first workflow arrives in Task 09,
+and the book's wing-loading/power-loading trade study waits for the same models.
 
 ## Open decisions, resolved when they become relevant
 

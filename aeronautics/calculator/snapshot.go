@@ -58,11 +58,31 @@ func (d Design) Snapshot() string {
 	c.code("configuration", int(d.Configuration))
 	c.qty("mass", d.Mass)
 	c.text("mass_basis", d.MassBasis)
+	c.code("mass_mode", int(d.MassMode))
+	d.canonicalizeComponents(c)
 	d.Wing.canonicalize(c)
 	d.Tail.canonicalize(c)
 	d.canonicalizeCases(c)
 	d.canonicalizeRequirements(c)
 	return c.out
+}
+
+// canonicalizeComponents writes the components in name order, so that adding a
+// component and then reordering the slice cannot change the fingerprint.
+func (d Design) canonicalizeComponents(c *canonical) {
+	items := append([]MassItem(nil), d.Components...)
+	sort.Slice(items, func(i, j int) bool { return items[i].Name < items[j].Name })
+	c.code("components", len(items))
+	for _, item := range items {
+		prefix := "component[" + item.Name + "]"
+		c.text(prefix+".name", item.Name)
+		c.code(prefix+".role", int(item.Role))
+		c.qty(prefix+".mass", item.Mass)
+		c.text(prefix+".basis", item.Basis)
+		c.qty(prefix+".x", item.Position.X)
+		c.qty(prefix+".y", item.Position.Y)
+		c.qty(prefix+".z", item.Position.Z)
+	}
 }
 
 func (def WingDefinition) canonicalize(c *canonical) {

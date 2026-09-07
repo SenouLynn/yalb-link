@@ -27,21 +27,34 @@ export type CoefficientScope =
   "airfoil-section";
 
 export type CommandKind =
+  "place-component" |
   "promote-driver" |
   "remove-case" |
+  "remove-component" |
   "remove-requirement" |
+  "set-body-width" |
   "set-case" |
   "set-case-clmax" |
   "set-case-priority" |
+  "set-component" |
   "set-configuration" |
   "set-driver" |
   "set-mass" |
+  "set-mass-mode" |
   "set-planform-shape" |
   "set-requirement" |
   "set-requirement-priority" |
   "set-taper-ratio" |
   "set-wing-angles" |
   "size-at-stall-limit";
+
+export type ComponentRole =
+  "airframe" |
+  "battery" |
+  "motor" |
+  "avionics" |
+  "payload" |
+  "other";
 
 export type Configuration =
   "conventional-tail" |
@@ -65,7 +78,12 @@ export type Dimension =
   "angle" |
   "power" |
   "energy" |
-  "dynamic-viscosity";
+  "dynamic-viscosity" |
+  "mass-moment";
+
+export type DimensionKind =
+  "linear" |
+  "angular";
 
 export type DriverKey =
   "wing.span.projected" |
@@ -91,6 +109,14 @@ export type Journey =
   "mass-and-size-first" |
   "existing-design" |
   "power-first";
+
+export type MassMode =
+  "entered" |
+  "components";
+
+export type OutlinePlane =
+  "plan-view" |
+  "panel-surface";
 
 export type ParameterRole =
   "driver" |
@@ -123,6 +149,13 @@ export type ResultStatus =
   "invalid" |
   "stale";
 
+export type SketchRole =
+  "outline" |
+  "centerline" |
+  "axis" |
+  "construction" |
+  "reference";
+
 export type SolveMode =
   "span-and-area" |
   "span-and-aspect-ratio" |
@@ -135,6 +168,20 @@ export type SourceKind =
   "book" |
   "supplementary" |
   "derived";
+
+export type SweepDriverKey =
+  "design.mass" |
+  "wing.span.projected" |
+  "wing.span.panel" |
+  "wing.area.reference" |
+  "wing.area.panel" |
+  "wing.aspect_ratio.planform" |
+  "wing.chord.root";
+
+export type ViewKind =
+  "plan-view" |
+  "front-view" |
+  "side-view";
 
 export interface Discovery {
   contractVersion: string;
@@ -151,6 +198,8 @@ export interface Limits {
   maxRequirements: number;
   maxCommands: number;
   maxBatch: number;
+  maxComponents: number;
+  maxSweepSamples: number;
   maxRequestBytes: number;
 }
 
@@ -244,6 +293,57 @@ export interface PreviewResponse {
   after: Evaluation;
 }
 
+export interface SweepRequest {
+  request: Request;
+  settings: SweepSettings;
+  design: Design;
+}
+
+export interface SweepResponse {
+  settingsFingerprint: string;
+  snapshot: string;
+  solveMode: string;
+  detail: string;
+  heldFixed: string[];
+  alsoChanged: string[];
+  bounds: SweepBound[];
+  samples: SweepSample[];
+  request: Request;
+  settings: SweepSettings;
+  current: SweepSample;
+  invariant: boolean;
+}
+
+export interface SweepSettings {
+  driver: string;
+  output: SweepOutput;
+  from: Quantity;
+  to: Quantity;
+  samples: number;
+}
+
+export interface SweepOutput {
+  subject: string;
+  case?: string;
+}
+
+export interface SweepSample {
+  value?: Quantity | null;
+  trace?: Trace | null;
+  status: string;
+  feasibility: string;
+  detail?: string;
+  driver: Quantity;
+  hasRequired: boolean;
+}
+
+export interface SweepBound {
+  name: string;
+  direction: string;
+  priority: string;
+  value: Quantity;
+}
+
 export interface Evaluation {
   wing?: SolvedWing | null;
   snapshot: string;
@@ -258,6 +358,8 @@ export interface Evaluation {
   request: Request;
   areaLower: Bound;
   areaUpper: Bound;
+  massProperties: MassProperties;
+  loads: CaseLoad[];
   mass: MassRange;
   hasRequired: boolean;
 }
@@ -268,6 +370,8 @@ export interface Design {
   name: string;
   configuration: string;
   massBasis: string;
+  massMode?: string;
+  components?: Component[];
   cases?: Case[];
   requirements?: Requirement[];
   wing: Wing;
@@ -357,6 +461,8 @@ export interface Command {
   scope?: Scope | null;
   angles?: Angles | null;
   tail?: Tail | null;
+  component?: Component | null;
+  position?: Position | null;
   kind: string;
   basis?: string;
   key?: string;
@@ -367,6 +473,7 @@ export interface Command {
   hold?: string;
   shape?: string;
   configuration?: string;
+  mode?: string;
   ratio?: number;
 }
 
@@ -384,12 +491,56 @@ export interface Angles {
   sweepReference: number;
 }
 
+export interface Component {
+  mass?: Quantity | null;
+  position: Position;
+  name: string;
+  role: string;
+  basis: string;
+}
+
+export interface Position {
+  x?: Quantity | null;
+  y?: Quantity | null;
+  z?: Quantity | null;
+}
+
+export interface MassProperties {
+  total?: Quantity | null;
+  cg?: Point | null;
+  datum: string;
+  status: string;
+  detail?: string;
+  contributions: MassContribution[];
+  complete: boolean;
+}
+
+export interface MassContribution {
+  mass?: Quantity | null;
+  position: Position;
+  name: string;
+  role: string;
+  detail?: string;
+  moments: Quantity[];
+  known: boolean;
+}
+
+export interface CaseLoad {
+  requiredLift?: Quantity | null;
+  case: string;
+  priority: string;
+  status: string;
+  detail?: string;
+}
+
 export interface SolvedWing {
   datum: string;
   solveMode: string;
   drivers: string[];
   parameters: Parameter[];
   outline: Point[];
+  views: SketchView[];
+  explanations: Explanation[];
 }
 
 export interface Parameter {
@@ -406,6 +557,46 @@ export interface Point {
   x: Quantity;
   y: Quantity;
   z: Quantity;
+}
+
+export interface SketchView {
+  view: string;
+  datum: string;
+  across: string;
+  up: string;
+  curves: SketchCurve[];
+  dimensions: SketchDimension[];
+}
+
+export interface SketchCurve {
+  label: string;
+  role: string;
+  points: Point[];
+  mirrored: boolean;
+  closed: boolean;
+}
+
+export interface SketchDimension {
+  key: string;
+  label: string;
+  detail: string;
+  kind: string;
+  plane: string;
+  from: Point;
+  to: Point;
+  value: Quantity;
+}
+
+export interface Explanation {
+  key: string;
+  role: string;
+  equationId?: string;
+  revision?: string;
+  expression?: string;
+  detail: string;
+  substitutions: Substitution[];
+  dependsOn: string[];
+  value: Quantity;
 }
 
 export interface Check {

@@ -22,6 +22,8 @@ const (
 	MaxCommands = 32
 	// MaxBatch is the number of designs one batch evaluation may carry.
 	MaxBatch = 16
+	// MaxComponents is the number of mass items one design may carry.
+	MaxComponents = 64
 )
 
 // FailureKind classifies why a call did not produce a result. It is a
@@ -142,6 +144,8 @@ func (s *Service) Discover() Discovery {
 			MaxRequirements: MaxRequirements,
 			MaxCommands:     MaxCommands,
 			MaxBatch:        MaxBatch,
+			MaxComponents:   MaxComponents,
+			MaxSweepSamples: calculator.MaxSweepSamples,
 		},
 	}
 }
@@ -317,6 +321,41 @@ func (s *Service) Preview(ctx context.Context, req PreviewRequest) (PreviewRespo
 		After:   encodeEvaluation(preview.After, identity),
 		Changes: encodeChanges(preview.Changes),
 	}, nil
+}
+
+// Sweep evaluates one sensitivity sweep: one driver moved across a bounded
+// range, with every candidate assessed through the same workflow an ordinary
+// evaluation uses.
+//
+// Nothing is committed. The response describes candidates the client's design
+// does not hold, and it carries the input snapshot and the settings fingerprint
+// so a client can tell whether the answer still belongs to the question it is
+// asking. Selecting a sampled candidate is a separate, explicit edit.
+func (s *Service) Sweep(ctx context.Context, req SweepRequest) (SweepResponse, error) {
+	if err := checkContext(ctx); err != nil {
+		return SweepResponse{}, err
+	}
+	d := &decoder{}
+	identity := d.request(req.Request)
+	design := d.design(req.Design)
+	settings := d.sweepSettings("settings", req.Settings)
+	if len(d.issues) > 0 {
+		return SweepResponse{}, fail(worstKind(d.issues), "the request could not be read", d.issues...)
+	}
+	plan, err := design.PlanSweep(settings)
+	if err != nil {
+		return SweepResponse{}, fail(coreFailureKind(err),
+			"the sweep was refused, so nothing was sampled", encodeIssues(err)...)
+	}
+	// The samples are evaluated one at a time so a caller that goes away part-way
+	// through stops the remaining work rather than paying for a whole answer
+	// nobody is waiting for.
+	result, finished := plan.RunUntil(func() bool { return ctx.Err() != nil })
+	if !finished {
+		return SweepResponse{}, fail(FailureCancelled,
+			"the caller went away before the sweep finished: "+ctx.Err().Error())
+	}
+	return encodeSweep(result, identity), nil
 }
 
 // coreFailureKind maps the core's own typed issues onto a boundary failure

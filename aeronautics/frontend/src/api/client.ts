@@ -14,6 +14,8 @@ import type {
   Issue,
   PreviewRequest,
   Request as RequestIdentity,
+  SweepRequest,
+  SweepResponse,
 } from './contract.ts'
 import { CONTRACT_VERSION } from './contract.ts'
 import * as validate from './validate.ts'
@@ -56,6 +58,7 @@ export interface Transport {
   evaluate(request: EvaluateRequest, signal?: AbortSignal): Promise<Evaluation>
   apply(request: ApplyRequest, signal?: AbortSignal): Promise<ApplyResult>
   preview(request: PreviewRequest, signal?: AbortSignal): Promise<Evaluation>
+  sweep(request: SweepRequest, signal?: AbortSignal): Promise<SweepResponse>
 }
 
 /** The versioned path prefix the Go service serves, matching its own. */
@@ -116,6 +119,9 @@ export function httpTransport(base = ''): Transport {
         throw new TransportError('the preview response is not an object')
       }
       return validate.evaluation((raw as Record<string, unknown>)['after'], 'preview.after')
+    },
+    async sweep(request, signal) {
+      return validate.sweep(await call(base, '/sweep', request, signal))
     },
   }
 }

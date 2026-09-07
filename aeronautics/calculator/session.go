@@ -54,6 +54,14 @@ type Evaluation struct {
 	AreaUpper SizingBound
 	// Mass is the feasible all-up mass interval over the required cases.
 	Mass MassInterval
+	// Loads are the lumped lift each case demands: a magnitude with no line of
+	// action, from Task 02's model.
+	Loads []CaseLoad
+	// MassProperties is the mechanical balance of the listed components. It is
+	// reported in either mass mode: a builder who entered an all-up mass may
+	// still place components and read where their combined centre of gravity
+	// sits, and the two answers stay separately labelled.
+	MassProperties MassProperties
 	// Design is the definition evaluated.
 	Design Design
 	// Wing is the solved geometry. It is the zero Wing when Geometry is not
@@ -84,6 +92,14 @@ func (e Evaluation) Stale() Evaluation {
 		out.Checks[n].Detail = "computed from an earlier revision of the design and not recomputed"
 	}
 	out.Geometry = ResultStale
+	out.Loads = make([]CaseLoad, len(e.Loads))
+	copy(out.Loads, e.Loads)
+	for n := range out.Loads {
+		out.Loads[n].Status = ResultStale
+		out.Loads[n].Detail = "computed from an earlier revision of the design and not recomputed"
+	}
+	out.MassProperties.Status = ResultStale
+	out.MassProperties.Detail = "computed from an earlier revision of the design and not recomputed"
 	out.Aggregate, out.HasRequired = out.Checks.Aggregate()
 	return out
 }
@@ -111,6 +127,8 @@ func (d Design) Evaluate() Evaluation {
 	e.AreaLower, _ = d.AreaLowerBound(AllRequiredCases())
 	e.AreaUpper = d.AreaUpperBound()
 	e.Mass, _ = d.MassInterval(AllRequiredCases())
+	e.MassProperties = d.MassProperties()
+	e.Loads = d.CaseLoads()
 	e.Conflicts = d.Conflicts()
 	return e
 }
@@ -123,11 +141,16 @@ func (d Design) Evaluate() Evaluation {
 // does not import sync/atomic or context; a transport that serves several
 // callers owns its own serialization and lives outside this package.
 type Session struct {
-	name    string
-	history []Design
-	current RequestID
-	cursor  int
-	next    uint64
+	name string
+	// current is the outstanding evaluation identity, and currentSweep the
+	// outstanding sweep identity. They are separate streams of acceptance over
+	// one stream of identities: an answer to one is never an answer to the
+	// other, and a design change retires both.
+	current      RequestID
+	currentSweep RequestID
+	history      []Design
+	cursor       int
+	next         uint64
 }
 
 // NewSession starts a session over an initial design. The design is copied, so
@@ -211,7 +234,10 @@ func (s *Session) Load(loaded Design) {
 // invalidateRequest drops the current request identity. Every design change,
 // including one that restores an earlier revision, makes any outstanding result
 // unacceptable until a new evaluation is requested.
-func (s *Session) invalidateRequest() { s.current = RequestID{} }
+func (s *Session) invalidateRequest() {
+	s.current = RequestID{}
+	s.currentSweep = RequestID{}
+}
 
 // Evaluate mints a fresh request identity and evaluates the current design.
 // Calling it twice without an edit produces two distinct identities, and only

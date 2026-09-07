@@ -36,6 +36,10 @@ const (
 	ParamTipRise              ParameterKey = "wing.tip.rise"
 	ParamStationMACLeading    ParameterKey = "wing.station.mac_leading_edge"
 	ParamBodyWidth            ParameterKey = "body.width_at_wing"
+	// ParamAllUpMass names the entered all-up mass. It is not a wing parameter
+	// and never appears in a solved wing's parameter set; it is named here
+	// because it is a value the builder enters and a sensitivity sweep can move.
+	ParamAllUpMass ParameterKey = "design.mass"
 )
 
 // ParameterRole separates what the builder chose from what follows from that

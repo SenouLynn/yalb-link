@@ -75,7 +75,7 @@ const (
 // per-subject sets. A duplicate ID between sets would shadow one definition
 // silently; TestRegistryDefinesEveryEvaluatedEquation compares the registry
 // count against the evaluator list, which is what catches that.
-var registry = mergeEquations(liftEquations, geometryEquations)
+var registry = mergeEquations(liftEquations, geometryEquations, massEquations)
 
 func mergeEquations(sets ...map[string]Equation) map[string]Equation {
 	merged := make(map[string]Equation)

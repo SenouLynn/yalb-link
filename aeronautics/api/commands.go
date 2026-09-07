@@ -24,6 +24,11 @@ const (
 	CmdSetPlanformShape       = "set-planform-shape"
 	CmdSetWingAngles          = "set-wing-angles"
 	CmdSetConfiguration       = "set-configuration"
+	CmdSetMassMode            = "set-mass-mode"
+	CmdSetComponent           = "set-component"
+	CmdPlaceComponent         = "place-component"
+	CmdRemoveComponent        = "remove-component"
+	CmdSetBodyWidth           = "set-body-width"
 )
 
 // commandField names one field of the flat Command union. The names are the
@@ -50,6 +55,9 @@ const (
 	fieldTail        commandField = "tail"
 	fieldShape       commandField = "shape"
 	fieldConfig      commandField = "configuration"
+	fieldComponent   commandField = "component"
+	fieldPosition    commandField = "position"
+	fieldMode        commandField = "mode"
 )
 
 // commandSpec lists the fields one kind uses. A field outside the list is
@@ -88,6 +96,17 @@ var commandSpecs = map[string]commandSpec{
 	CmdSetWingAngles:    {Fields: []commandField{fieldAngles}},
 	// A flying wing carries no tail, so the description may be absent.
 	CmdSetConfiguration: {Fields: []commandField{fieldConfig, fieldTail}, Optional: []commandField{fieldTail}},
+	CmdSetMassMode:      {Fields: []commandField{fieldMode}},
+	// A component may be listed before it has a mass or a position: the balance
+	// reports it as incomplete rather than assuming either.
+	CmdSetComponent: {Fields: []commandField{fieldComponent}},
+	// A placement carries the whole position. Moving a component is a different
+	// act from resizing it, so it never carries a mass.
+	CmdPlaceComponent:  {Fields: []commandField{fieldName, fieldPosition}},
+	CmdRemoveComponent: {Fields: []commandField{fieldName}},
+	// An absent value withdraws the body width, which takes the exposed-area
+	// result back rather than setting the width to nothing.
+	CmdSetBodyWidth: {Fields: []commandField{fieldValue}, Optional: []commandField{fieldValue}},
 }
 
 // commandKinds lists the accepted kinds in sorted order.
@@ -121,6 +140,9 @@ func (c Command) present() map[commandField]bool {
 		fieldTail:        c.Tail != nil,
 		fieldShape:       c.Shape != "",
 		fieldConfig:      c.Configuration != "",
+		fieldComponent:   c.Component != nil,
+		fieldPosition:    c.Position != nil,
+		fieldMode:        c.Mode != "",
 	}
 	return carried
 }
@@ -239,6 +261,30 @@ func (d *decoder) buildCaseCommand(field string, c Command) calculator.Command {
 			cmd.Tail = d.tail(*c.Tail)
 		}
 		return cmd
+	default:
+		return d.buildMassCommand(field, c)
+	}
+}
+
+// buildMassCommand maps the edits that place and weigh a component.
+func (d *decoder) buildMassCommand(field string, c Command) calculator.Command {
+	switch c.Kind {
+	case CmdSetMassMode:
+		return calculator.SetMassMode{Mode: enumOrEmpty(d, massModes, field+".mode", c.Mode)}
+	case CmdSetComponent:
+		if c.Component == nil {
+			return nil
+		}
+		return calculator.SetComponent{Item: d.component(field+".component", *c.Component)}
+	case CmdPlaceComponent:
+		return calculator.PlaceComponent{
+			Name:     c.Name,
+			Position: d.position(field+".position", c.Position),
+		}
+	case CmdRemoveComponent:
+		return calculator.RemoveComponent{Name: c.Name}
+	case CmdSetBodyWidth:
+		return calculator.SetBodyWidth{Value: d.quantity(field+".value", c.Value)}
 	default:
 		return nil
 	}

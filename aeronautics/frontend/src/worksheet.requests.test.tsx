@@ -75,6 +75,7 @@ function deferredTransport(): { transport: Transport; queue: Deferred[] } {
       return await promise
     },
     preview: () => Promise.reject(new TransportError('previews are not used here')),
+    sweep: () => Promise.reject(new TransportError('sweeps are not used here')),
   }
   return { transport, queue }
 }
@@ -96,6 +97,15 @@ function answerFor(identity: RequestIdentity): Evaluation {
       complete: false,
       empty: false,
     },
+    massProperties: {
+      datum: 'wing root',
+      status: 'missing',
+      contributions: [],
+      total: null,
+      cg: null,
+      complete: false,
+    },
+    loads: [],
     conflicts: [],
     patterns: [],
     definitionIssues: [],

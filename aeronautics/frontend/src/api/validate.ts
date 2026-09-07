@@ -12,13 +12,24 @@
 
 import type {
   Bound,
+  CaseLoad,
   Check,
+  SketchCurve,
+  SketchDimension,
   Discovery,
   Evaluation,
+  Explanation,
   Issue,
+  MassContribution,
+  MassProperties,
+  Point,
+  Position,
   Quantity,
   SolvedWing,
+  SweepResponse,
+  SweepSample,
   UnitInfo,
+  SketchView,
 } from './contract.ts'
 
 export class ResponseShapeError extends Error {
@@ -123,6 +134,146 @@ function bound(value: unknown, path: string): Bound {
   }
 }
 
+function loads(value: unknown, path: string): CaseLoad[] {
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      case: str(raw['case'], `${at}.case`),
+      priority: str(raw['priority'], `${at}.priority`),
+      status: str(raw['status'], `${at}.status`),
+      detail: raw['detail'] === undefined ? '' : str(raw['detail'], `${at}.detail`),
+      requiredLift: optional(raw['requiredLift'], `${at}.requiredLift`, quantity),
+    }
+  })
+}
+
+function point(value: unknown, path: string): Point {
+  const raw = record(value, path)
+  return {
+    x: quantity(raw['x'], `${path}.x`),
+    y: quantity(raw['y'], `${path}.y`),
+    z: quantity(raw['z'], `${path}.z`),
+  }
+}
+
+function position(value: unknown, path: string): Position {
+  const raw = record(value, path)
+  return {
+    x: optional(raw['x'], `${path}.x`, quantity),
+    y: optional(raw['y'], `${path}.y`, quantity),
+    z: optional(raw['z'], `${path}.z`, quantity),
+  }
+}
+
+function curves(value: unknown, path: string): SketchCurve[] {
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      label: str(raw['label'], `${at}.label`),
+      role: str(raw['role'], `${at}.role`),
+      points: array(raw['points'], `${at}.points`)
+        .map((p, m) => point(p, `${at}.points[${String(m)}]`)),
+      mirrored: bool(raw['mirrored'], `${at}.mirrored`),
+      closed: bool(raw['closed'], `${at}.closed`),
+    }
+  })
+}
+
+function dimensions(value: unknown, path: string): SketchDimension[] {
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      key: str(raw['key'], `${at}.key`),
+      label: str(raw['label'], `${at}.label`),
+      detail: str(raw['detail'], `${at}.detail`),
+      kind: str(raw['kind'], `${at}.kind`),
+      plane: str(raw['plane'], `${at}.plane`),
+      from: point(raw['from'], `${at}.from`),
+      to: point(raw['to'], `${at}.to`),
+      value: quantity(raw['value'], `${at}.value`),
+    }
+  })
+}
+
+function views(value: unknown, path: string): SketchView[] {
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      view: str(raw['view'], `${at}.view`),
+      datum: str(raw['datum'], `${at}.datum`),
+      across: str(raw['across'], `${at}.across`),
+      up: str(raw['up'], `${at}.up`),
+      curves: curves(raw['curves'], `${at}.curves`),
+      dimensions: dimensions(raw['dimensions'], `${at}.dimensions`),
+    }
+  })
+}
+
+function substitutions(value: unknown, path: string): { name: string; value: Quantity }[] {
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return { name: str(raw['name'], `${at}.name`), value: quantity(raw['value'], `${at}.value`) }
+  })
+}
+
+function explanations(value: unknown, path: string): Explanation[] {
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      key: str(raw['key'], `${at}.key`),
+      role: str(raw['role'], `${at}.role`),
+      equationId: raw['equationId'] === undefined ? '' : str(raw['equationId'], `${at}.equationId`),
+      revision: raw['revision'] === undefined ? '' : str(raw['revision'], `${at}.revision`),
+      expression: raw['expression'] === undefined ? '' : str(raw['expression'], `${at}.expression`),
+      detail: str(raw['detail'], `${at}.detail`),
+      substitutions: substitutions(raw['substitutions'], `${at}.substitutions`),
+      dependsOn: strings(raw['dependsOn'], `${at}.dependsOn`),
+      value: quantity(raw['value'], `${at}.value`),
+    }
+  })
+}
+
+function contributions(value: unknown, path: string): MassContribution[] {
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      name: str(raw['name'], `${at}.name`),
+      role: str(raw['role'], `${at}.role`),
+      detail: raw['detail'] === undefined ? '' : str(raw['detail'], `${at}.detail`),
+      moments: array(raw['moments'], `${at}.moments`)
+        .map((m, i) => quantity(m, `${at}.moments[${String(i)}]`)),
+      mass: optional(raw['mass'], `${at}.mass`, quantity),
+      position: position(raw['position'], `${at}.position`),
+      known: bool(raw['known'], `${at}.known`),
+    }
+  })
+}
+
+/**
+ * massProperties validates the balance. The centre of gravity is only read when
+ * the service sends one: a station that arrived without a computed status would
+ * otherwise be shown as a result.
+ */
+export function massProperties(value: unknown, path: string): MassProperties {
+  const raw = record(value, path)
+  return {
+    datum: str(raw['datum'], `${path}.datum`),
+    status: str(raw['status'], `${path}.status`),
+    detail: raw['detail'] === undefined ? '' : str(raw['detail'], `${path}.detail`),
+    contributions: contributions(raw['contributions'], `${path}.contributions`),
+    total: optional(raw['total'], `${path}.total`, quantity),
+    cg: optional(raw['cg'], `${path}.cg`, point),
+    complete: bool(raw['complete'], `${path}.complete`),
+  }
+}
+
 function solvedWing(value: unknown, path: string): SolvedWing {
   const raw = record(value, path)
   const parameters = array(raw['parameters'], `${path}.parameters`).map((entry, n) => {
@@ -144,6 +295,70 @@ function solvedWing(value: unknown, path: string): SolvedWing {
     drivers: strings(raw['drivers'], `${path}.drivers`),
     parameters,
     outline: [],
+    views: views(raw['views'], `${path}.views`),
+    explanations: explanations(raw['explanations'], `${path}.explanations`),
+  }
+}
+
+function sweepSample(value: unknown, path: string): SweepSample {
+  const raw = record(value, path)
+  return {
+    driver: quantity(raw['driver'], `${path}.driver`),
+    value: optional(raw['value'], `${path}.value`, quantity),
+    status: str(raw['status'], `${path}.status`),
+    feasibility: str(raw['feasibility'], `${path}.feasibility`),
+    detail: raw['detail'] === undefined ? '' : str(raw['detail'], `${path}.detail`),
+    trace: null,
+    hasRequired: bool(raw['hasRequired'], `${path}.hasRequired`),
+  }
+}
+
+/**
+ * sweep validates a sensitivity answer. The snapshot and the settings
+ * fingerprint are checked like any other field, because they are what decides
+ * whether the answer still belongs to the question being asked; a missing one
+ * would silently make every answer look current.
+ */
+export function sweep(value: unknown, path = 'sweep'): SweepResponse {
+  const raw = record(value, path)
+  const request = record(raw['request'], `${path}.request`)
+  const settings = record(raw['settings'], `${path}.settings`)
+  const output = record(settings['output'], `${path}.settings.output`)
+  return {
+    request: {
+      session: str(request['session'], `${path}.request.session`),
+      sequence: num(request['sequence'], `${path}.request.sequence`),
+    },
+    settings: {
+      driver: str(settings['driver'], `${path}.settings.driver`),
+      output: {
+        subject: str(output['subject'], `${path}.settings.output.subject`),
+        case: output['case'] === undefined ? '' : str(output['case'], `${path}.settings.output.case`),
+      },
+      from: quantity(settings['from'], `${path}.settings.from`),
+      to: quantity(settings['to'], `${path}.settings.to`),
+      samples: num(settings['samples'], `${path}.settings.samples`),
+    },
+    settingsFingerprint: str(raw['settingsFingerprint'], `${path}.settingsFingerprint`),
+    snapshot: str(raw['snapshot'], `${path}.snapshot`),
+    solveMode: str(raw['solveMode'], `${path}.solveMode`),
+    detail: str(raw['detail'], `${path}.detail`),
+    heldFixed: strings(raw['heldFixed'], `${path}.heldFixed`),
+    alsoChanged: strings(raw['alsoChanged'], `${path}.alsoChanged`),
+    bounds: array(raw['bounds'], `${path}.bounds`).map((entry, n) => {
+      const at = `${path}.bounds[${String(n)}]`
+      const b = record(entry, at)
+      return {
+        name: str(b['name'], `${at}.name`),
+        direction: str(b['direction'], `${at}.direction`),
+        priority: str(b['priority'], `${at}.priority`),
+        value: quantity(b['value'], `${at}.value`),
+      }
+    }),
+    samples: array(raw['samples'], `${path}.samples`)
+      .map((entry, n) => sweepSample(entry, `${path}.samples[${String(n)}]`)),
+    current: sweepSample(raw['current'], `${path}.current`),
+    invariant: bool(raw['invariant'], `${path}.invariant`),
   }
 }
 
@@ -175,6 +390,8 @@ export function evaluation(value: unknown, path = 'evaluation'): Evaluation {
       complete: bool(record(raw['mass'], `${path}.mass`)['complete'], `${path}.mass.complete`),
       empty: bool(record(raw['mass'], `${path}.mass`)['empty'], `${path}.mass.empty`),
     },
+    massProperties: massProperties(raw['massProperties'], `${path}.massProperties`),
+    loads: loads(raw['loads'], `${path}.loads`),
     conflicts: array(raw['conflicts'], `${path}.conflicts`).map((entry, n) => {
       const at = `${path}.conflicts[${String(n)}]`
       const c = record(entry, at)

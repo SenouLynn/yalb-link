@@ -13,7 +13,15 @@
 // slow answer cannot land on a branch the builder has already left — including
 // after an undo back to the exact design the answer was computed from.
 
-import type { Design, Evaluation, Issue, Request as RequestIdentity } from '../api/contract.ts'
+import type {
+  Design,
+  Evaluation,
+  Issue,
+  Request as RequestIdentity,
+  SweepSettings,
+} from '../api/contract.ts'
+import type { Sweeping, Swept } from './sweep.ts'
+import { answers } from './sweep.ts'
 import type { JourneyId } from './design.ts'
 import { startingDesign } from './design.ts'
 
@@ -54,6 +62,16 @@ export interface Worksheet {
   readonly previous: Accepted | null
   readonly journey: JourneyId | null
   readonly failure: Failure | null
+  /**
+   * selection is the parameter a builder has selected, by the core's own key.
+   * It is what makes a dimension on a drawing and a field in the worksheet one
+   * thing: both read this, so selecting either highlights the other.
+   */
+  readonly selection: string | null
+  /** sweeping is the outstanding sensitivity request, if there is one. */
+  readonly sweeping: Sweeping | null
+  /** swept is the sensitivity answer currently being shown. */
+  readonly swept: Swept | null
 }
 
 export function initialWorksheet(session: string, design = startingDesign()): Worksheet {
@@ -69,6 +87,9 @@ export function initialWorksheet(session: string, design = startingDesign()): Wo
     previous: null,
     journey: null,
     failure: null,
+    selection: null,
+    sweeping: null,
+    swept: null,
   }
 }
 
@@ -91,6 +112,15 @@ export function staleResult(worksheet: Worksheet): boolean {
   return worksheet.current !== null && worksheet.current.revision !== worksheet.revision
 }
 
+/**
+ * staleSweep reports whether the plotted curve describes an earlier revision.
+ * It is a separate question from staleResult: an edit retires both, but
+ * changing the range or the plotted output retires only the sweep.
+ */
+export function staleSweep(worksheet: Worksheet): boolean {
+  return worksheet.swept !== null && worksheet.swept.revision !== worksheet.revision
+}
+
 export type Action =
   | { readonly type: 'journey-selected'; readonly journey: JourneyId }
   | { readonly type: 'draft-changed'; readonly field: string; readonly text: string }
@@ -102,6 +132,11 @@ export type Action =
   | { readonly type: 'undo' }
   | { readonly type: 'redo' }
   | { readonly type: 'draft-loaded'; readonly design: Design; readonly drafts: Record<string, string>; readonly journey: JourneyId | null }
+  | { readonly type: 'parameter-selected'; readonly key: string | null }
+  | { readonly type: 'sweep-started'; readonly settings: SweepSettings; readonly sequence: number }
+  | { readonly type: 'preview-started'; readonly sequence: number }
+  | { readonly type: 'swept'; readonly response: import('../api/contract.ts').SweepResponse; readonly snapshot: string }
+  | { readonly type: 'sweep-discarded' }
 
 /**
  * nextIdentity mints the identity the next request will carry. The sequence
@@ -133,6 +168,11 @@ function commitDesign(worksheet: Worksheet, next: Design): Worksheet {
     revision: worksheet.revision + 1,
     pending: null,
     failure: null,
+    // A design change retires an outstanding sweep for the same reason it
+    // retires an outstanding evaluation: the answer on its way describes a
+    // branch the builder has left. The plotted curve stays on screen, marked as
+    // describing an earlier revision, rather than vanishing mid-read.
+    sweeping: null,
   }
 }
 
@@ -204,6 +244,7 @@ export function reduce(worksheet: Worksheet, action: Action): Worksheet {
         revision: worksheet.revision + 1,
         pending: null,
         failure: null,
+        sweeping: null,
       }
 
     case 'redo':
@@ -214,7 +255,56 @@ export function reduce(worksheet: Worksheet, action: Action): Worksheet {
         revision: worksheet.revision + 1,
         pending: null,
         failure: null,
+        sweeping: null,
       }
+
+    case 'parameter-selected':
+      return { ...worksheet, selection: action.key }
+
+    // Every request that leaves the worksheet takes an identity out of the same
+    // stream, so every one of them has to move the counter — including the two
+    // that record nothing else. A request whose identity was minted outside the
+    // counter would put the two out of step, and a pending identity that never
+    // matches an answer discards every response after it.
+    case 'sweep-started':
+      return {
+        ...worksheet,
+        nextSequence: action.sequence,
+        sweeping: {
+          settings: action.settings,
+          sequence: action.sequence,
+          revision: worksheet.revision,
+        },
+        failure: null,
+      }
+
+    case 'preview-started':
+      // A preview describes a design the worksheet does not hold, so nothing
+      // but the counter changes: there is no pending state to record and no
+      // result to accept.
+      return { ...worksheet, nextSequence: action.sequence }
+
+    case 'swept': {
+      // A sweep answer is accepted only when it answers the outstanding
+      // request, over the inputs the design still holds, for the settings still
+      // selected. An answer that fails any of the three is somebody else's.
+      const asked = worksheet.sweeping
+      if (asked === null || !answers(action.response, asked, action.snapshot, asked.settings)) {
+        return worksheet
+      }
+      return {
+        ...worksheet,
+        sweeping: null,
+        swept: {
+          response: action.response,
+          settings: asked.settings,
+          revision: asked.revision,
+        },
+      }
+    }
+
+    case 'sweep-discarded':
+      return { ...worksheet, sweeping: null, swept: null }
 
     case 'draft-loaded': {
       const committed = commitDesign(worksheet, action.design)
@@ -228,6 +318,10 @@ export function reduce(worksheet: Worksheet, action: Action): Worksheet {
         // current one.
         previous: null,
         current: null,
+        // A loaded draft is a different design, so a curve plotted for the
+        // previous one is not an earlier revision of this one; it is an answer
+        // about something else and is dropped rather than shown as stale.
+        swept: null,
       }
     }
 

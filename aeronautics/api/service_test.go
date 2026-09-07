@@ -149,6 +149,12 @@ func TestEveryCoreConstantHasAWireToken(t *testing.T) {
 		{func(n int) string { return calculator.LimitStatus(n).String() }, "requirementStatus", "unknown", 0},
 		{func(n int) string { return calculator.ResultStatus(n).String() }, "resultStatus", "missing", 0},
 		{func(n int) string { return calculator.Dimension(n).String() }, "dimension", "unknown-dimension", 0},
+		{func(n int) string { return calculator.ComponentRole(n).String() }, "componentRole", "unknown", 1},
+		{func(n int) string { return calculator.MassMode(n).String() }, "massMode", "unknown", 1},
+		{func(n int) string { return calculator.ViewKind(n).String() }, "viewKind", "unknown", 1},
+		{func(n int) string { return calculator.SketchRole(n).String() }, "sketchRole", "unknown", 1},
+		{func(n int) string { return calculator.DimensionKind(n).String() }, "dimensionKind", "unknown", 1},
+		{func(n int) string { return calculator.OutlinePlane(n).String() }, "outlinePlane", "unknown", 1},
 	} {
 		t.Run(tc.vocabulary, func(t *testing.T) {
 			want := countNamed(tc.name, tc.first, tc.past)

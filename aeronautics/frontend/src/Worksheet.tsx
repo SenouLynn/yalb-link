@@ -11,6 +11,9 @@ import {
   RequirementsPanel,
   WingPanel,
 } from './components/panels.tsx'
+import { ComponentsPanel, PlacementPanel } from './components/placement.tsx'
+import { SensitivityPanel } from './components/sensitivity.tsx'
+import { SketchPanel } from './components/sketch.tsx'
 
 /**
  * Worksheet is the whole page: entry choices and inputs on the left, the
@@ -52,12 +55,26 @@ export function Worksheet(props: { transport: Transport; session: string; storag
           <JourneyPanel api={api} />
           <ConfigurationPanel api={api} />
           <MassPanel api={api} />
+          <ComponentsPanel api={api} />
           <WingPanel api={api} />
           <CasesPanel api={api} />
           <RequirementsPanel api={api} />
           <DraftsPanel api={api} />
         </div>
         <ResultsPanel api={api} />
+      </div>
+
+      {/*
+        The explanatory views run the full width beneath the worksheet. They are
+        views of the same definition, not a second place to hold one: a
+        dimension and a field carry the same parameter key, a dragged component
+        commits the same command a typed coordinate does, and a sampled
+        candidate is never applied by looking at it.
+      */}
+      <div className="explanations">
+        <SketchPanel api={api} />
+        <PlacementPanel api={api} />
+        <SensitivityPanel api={api} />
       </div>
     </div>
   )

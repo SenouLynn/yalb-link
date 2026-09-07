@@ -375,11 +375,9 @@ type subjectReading struct {
 // solved. A geometry failure blocks every dependent subject rather than
 // producing an approximate number: mass, which no geometry feeds, still reads.
 func (d Design) read(subject RequirementSubject, dc DesignCase, solved solvedWing) subjectReading {
+	mass := d.massReading()
 	if subject == SubjectMass {
-		if !d.Mass.supplied() {
-			return subjectReading{Status: ResultMissing, Detail: "no all-up mass is supplied"}
-		}
-		return subjectReading{Status: ResultComputed, Value: d.Mass}
+		return mass
 	}
 	if solved.err != nil {
 		return subjectReading{Status: solved.status, Detail: "the wing geometry did not solve: " + solved.err.Error()}
@@ -393,9 +391,15 @@ func (d Design) read(subject RequirementSubject, dc DesignCase, solved solvedWin
 	case SubjectAspectRatio:
 		return subjectReading{Status: ResultComputed, Value: ratio(w.ProjectedAspectRatio)}
 	case SubjectWingLoadingMass:
-		return reading(WingLoadingMass(d.Mass, w.Projected.Area))
+		if mass.Status != ResultComputed {
+			return mass
+		}
+		return reading(WingLoadingMass(mass.Value, w.Projected.Area))
 	case SubjectStallSpeed:
-		return reading(StallSpeed(dc.Case, d.Mass, w.Projected.Area))
+		if mass.Status != ResultComputed {
+			return mass
+		}
+		return reading(StallSpeed(dc.Case, mass.Value, w.Projected.Area))
 	case SubjectMass, SubjectUnknown:
 		return subjectReading{Status: ResultMissing, Detail: "no value is defined for " + subject.String()}
 	default:
@@ -552,12 +556,8 @@ func (d Design) Validate() error {
 	if d.Name == "" {
 		rs.add("design", IssueMissing, "name the design so its results can be reported against it")
 	}
-	if !d.Mass.supplied() {
-		rs.add("mass", IssueMissing, "supply the all-up mass")
-	} else if d.MassBasis == "" {
-		rs.add("mass", IssueMissing,
-			"state where the all-up mass came from, so a target mass is not read as a measured one")
-	}
+	d.validateMass(rs)
+	d.validateComponents(rs)
 	d.validateCases(rs)
 	for _, r := range d.Requirements {
 		r.validate(d, rs)
@@ -566,6 +566,24 @@ func (d Design) Validate() error {
 		return rs.issues
 	}
 	return nil
+}
+
+// validateMass checks the mass the design is judged at, in the mode it chose.
+// In the component mode the entered mass is not demanded and not read: the
+// inventory is what the aircraft weighs, and its completeness is reported by
+// the mass properties rather than refused here.
+func (d Design) validateMass(rs *resultSet) {
+	if d.MassMode.resolved() == MassModeComponents {
+		return
+	}
+	if !d.Mass.supplied() {
+		rs.add("mass", IssueMissing, "supply the all-up mass")
+		return
+	}
+	if d.MassBasis == "" {
+		rs.add("mass", IssueMissing,
+			"state where the all-up mass came from, so a target mass is not read as a measured one")
+	}
 }
 
 func (d Design) validateCases(rs *resultSet) {

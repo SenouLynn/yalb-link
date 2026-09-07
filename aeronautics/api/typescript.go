@@ -22,9 +22,12 @@ var tsRoots = []any{
 	Discovery{}, Limits{}, Vocabulary{}, UnitInfo{}, Equation{}, Port{}, Source{}, Pattern{},
 	EvaluateRequest{}, BatchEvaluateRequest{}, BatchEvaluateResponse{},
 	ApplyRequest{}, ApplyResponse{}, PreviewRequest{}, PreviewResponse{},
+	SweepRequest{}, SweepResponse{}, SweepSettings{}, SweepOutput{}, SweepSample{}, SweepBound{},
 	Evaluation{}, Design{}, Wing{}, Airfoil{}, Tail{}, Surface{}, VTail{},
 	Case{}, CLmax{}, Requirement{}, Command{}, Scope{}, Angles{},
-	SolvedWing{}, Parameter{}, Point{}, Check{}, Bound{}, Contribution{},
+	Component{}, Position{}, MassProperties{}, MassContribution{}, CaseLoad{},
+	SolvedWing{}, Parameter{}, Point{}, SketchView{}, SketchCurve{}, SketchDimension{}, Explanation{},
+	Check{}, Bound{}, Contribution{},
 	MassRange{}, Conflict{}, Alternative{}, Change{}, Trace{}, Substitution{},
 	Quantity{}, Issue{}, Request{},
 }

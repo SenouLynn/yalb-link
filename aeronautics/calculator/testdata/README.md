@@ -8,6 +8,9 @@ precision, with its tolerances and its discrepancies.
 - [wing-planform-book-example.md](wing-planform-book-example.md) — the CODE Lab
   Wing Planform Sizing worked example, Task 03, plus the independent Reynolds
   fixture.
+- [cg-book-example.md](cg-book-example.md) — the CODE Lab Center of gravity
+  worked example, Task 07. Task 07's own placement fixture is independent of the
+  book and is described in `calculator/mass_test.go`.
 
 Task 02's lift fixtures are synthetic and are described in
 [docs/reference/sources.md](../../docs/reference/sources.md).

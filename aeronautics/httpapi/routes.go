@@ -101,6 +101,27 @@ func apply(service *api.Service) http.Handler {
 	})
 }
 
+// sweep answers a sensitivity request. It echoes the identity like the other
+// evaluation routes, and the body also carries the input snapshot and the
+// settings fingerprint, so a client can tell whether an answer still belongs to
+// the question it is asking.
+func sweep(service *api.Service) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request, err := decodeBody[api.SweepRequest](r)
+		if err != nil {
+			writeFailure(w, err)
+			return
+		}
+		result, err := service.Sweep(r.Context(), request)
+		if err != nil {
+			writeFailure(w, err)
+			return
+		}
+		writeIdentity(w, result.Request)
+		writeJSON(w, http.StatusOK, result)
+	})
+}
+
 func preview(service *api.Service) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		request, err := decodeBody[api.PreviewRequest](r)

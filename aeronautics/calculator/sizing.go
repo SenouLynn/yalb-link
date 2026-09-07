@@ -216,9 +216,14 @@ func (d Design) AreaLowerBound(scope CaseScope) (SizingBound, error) {
 		return SizingBound{}, err
 	}
 	bound := SizingBound{Subject: SubjectWingArea, Direction: BoundLower}
+	// The mass is read through the design's mode rather than off the entered
+	// field, so a component inventory sizes the wing the same way an entered
+	// figure does. An unestablished mass leaves the zero Quantity, which each
+	// contribution then reports as missing in its own right.
+	mass := d.massReading()
 	for n := range ceilings {
 		c := &ceilings[n]
-		result, evalErr := MinimumWingArea(c.designCase.Case, d.Mass, c.requirement.effectiveMaximum())
+		result, evalErr := MinimumWingArea(c.designCase.Case, mass.Value, c.requirement.effectiveMaximum())
 		bound.Contributions = append(bound.Contributions,
 			contribute(c.designCase.Case.Name, result, evalErr))
 	}

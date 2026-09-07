@@ -6,7 +6,15 @@
 // decides what an edit means physically.
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
-import type { Command, Design, Issue, UnitInfo } from './api/contract.ts'
+import type {
+  Command,
+  Design,
+  Evaluation,
+  Issue,
+  Quantity,
+  SweepSettings,
+  UnitInfo,
+} from './api/contract.ts'
 import { CONTRACT_VERSION } from './api/contract.ts'
 import type { Discovered, Transport } from './api/client.ts'
 import { BoundaryError, TransportError } from './api/client.ts'
@@ -20,6 +28,7 @@ import {
   nextIdentity,
   reduce,
   staleResult,
+  staleSweep,
 } from './state/worksheet.ts'
 import type { Snapshot, SnapshotContext } from './state/drafts.ts'
 import { LoadFailure, buildSnapshot, loadNamed, modelChanged, saveNamed, savedNames } from './state/drafts.ts'
@@ -35,6 +44,17 @@ export interface WorksheetApi {
   readonly canRedo: boolean
   readonly draftNames: readonly string[]
   readonly notice: string | null
+  /** sweeping reports whether a sensitivity request is outstanding. */
+  readonly sweeping: boolean
+  /** staleSweep reports whether the plotted curve describes an earlier revision. */
+  readonly staleSweep: boolean
+  /** selection is the parameter key a dimension or a field has selected. */
+  readonly selection: string | null
+  select(key: string | null): void
+  runSweep(settings: SweepSettings): Promise<void>
+  runSweepCandidate(driver: string, value: Quantity): Promise<boolean>
+  discardSweep(): void
+  previewCommand(command: Command): Promise<Evaluation | null>
   selectJourney(journey: JourneyId): void
   setDraft(field: string, text: string): void
   discardDraft(field: string): void
@@ -80,11 +100,15 @@ export function useWorksheet(
 
   // A request has to carry its identity out to the transport before the reducer
   // ever sees a response, so the identity is minted here and the reducer mints
-  // the matching one when it records the request. The two counters agree
-  // because every mint below is paired with exactly one 'request-started'
-  // dispatch, in that order; nothing else starts a request. Adding a second
-  // caller that does one without the other would put them out of step, and a
-  // pending identity that never matches an answer discards every response.
+  // the matching one when it records the request.
+  //
+  // The two counters agree because every mint below is paired with exactly one
+  // dispatch that advances the reducer's counter, in that order: an evaluation
+  // and an apply through 'request-started', a sweep through 'sweep-started',
+  // and a preview through 'preview-started', which exists for no other reason.
+  // A mint without its dispatch puts them out of step, and a pending identity
+  // that never matches an answer then discards every response after it.
+  // TestEveryRequestKindKeepsTheCountersInStep holds this.
   const sequence = useRef(0)
   const mintIdentity = useCallback(() => {
     sequence.current += 1
@@ -134,6 +158,45 @@ export function useWorksheet(
         // away what the builder typed, and retrying is then one keystroke.
         dispatch({ type: 'failed', failure: asFailure(error) })
         return false
+      }
+    },
+    [transport, design, mintIdentity],
+  )
+
+  // A sweep is a question about candidates the design does not hold. It is
+  // never committed and never joins the history; what it shares with an
+  // evaluation is the identity discipline, plus one clause of its own: the
+  // answer is matched against the settings as well as the design, because a
+  // different range is a different question.
+  const runSweep = useCallback(
+    async (settings: SweepSettings) => {
+      const identity = mintIdentity()
+      dispatch({ type: 'sweep-started', settings, sequence: identity.sequence })
+      try {
+        const response = await transport.sweep({ request: identity, design, settings })
+        dispatch({ type: 'swept', response, snapshot: response.snapshot })
+      } catch (error) {
+        dispatch({ type: 'failed', failure: asFailure(error) })
+      }
+    },
+    [transport, design, mintIdentity],
+  )
+
+  // previewCommand asks what an edit would do without doing it. It is what a
+  // drag in progress reads: the placement is not committed until the drag ends,
+  // and a preview describes a design the worksheet does not hold, so it never
+  // becomes the current result.
+  const previewCommand = useCallback(
+    async (command: Command): Promise<Evaluation | null> => {
+      const identity = mintIdentity()
+      dispatch({ type: 'preview-started', sequence: identity.sequence })
+      try {
+        return await transport.preview({ request: identity, design, command })
+      } catch {
+        // A refused preview is not an error a builder needs to act on: the drag
+        // is still in progress and nothing has been committed. The placement
+        // controls show the last good answer until one arrives.
+        return null
       }
     },
     [transport, design, mintIdentity],
@@ -230,6 +293,21 @@ export function useWorksheet(
     canRedo: canRedo(worksheet),
     draftNames,
     notice,
+    sweeping: worksheet.sweeping !== null,
+    staleSweep: staleSweep(worksheet),
+    selection: worksheet.selection,
+    select: (key) => { dispatch({ type: 'parameter-selected', key }) },
+    runSweep,
+    // Adopting a sampled candidate is the ordinary driver edit. It is a separate
+    // act from selecting one on the plot, and it goes through the same command,
+    // the same history and the same identity check as any other edit; the
+    // all-up mass is the one swept value that is not a size driver.
+    runSweepCandidate: async (driver, value) =>
+      driver === 'design.mass'
+        ? run([{ kind: 'set-mass', mass: value, basis: design.massBasis }])
+        : run([{ kind: 'set-driver', key: driver, value }]),
+    discardSweep: () => { dispatch({ type: 'sweep-discarded' }) },
+    previewCommand,
     selectJourney: (journey) => { dispatch({ type: 'journey-selected', journey }) },
     setDraft: (field, text) => { dispatch({ type: 'draft-changed', field, text }) },
     discardDraft: (field) => { dispatch({ type: 'draft-discarded', field }) },

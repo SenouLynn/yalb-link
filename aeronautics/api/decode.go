@@ -76,6 +76,7 @@ func (d *decoder) design(design Design) calculator.Design {
 		MassBasis:     design.MassBasis,
 		Mass:          d.quantity("design.mass", design.Mass),
 		Configuration: enumOrEmpty(d, configurations, "design.configuration", design.Configuration),
+		MassMode:      enumOrEmpty(d, massModes, "design.massMode", design.MassMode),
 		Wing:          d.wing(design.Wing),
 	}
 	if design.Tail != nil {
@@ -100,7 +101,59 @@ func (d *decoder) design(design Design) calculator.Design {
 		out.Requirements = append(out.Requirements,
 			d.requirement("design.requirements["+strconv.Itoa(n)+"]", design.Requirements[n]))
 	}
+	if len(design.Components) > MaxComponents {
+		d.add("design.components", "unsupported",
+			"a design may carry at most "+strconv.Itoa(MaxComponents)+" components, received "+
+				strconv.Itoa(len(design.Components)))
+		return out
+	}
+	for n := range design.Components {
+		out.Components = append(out.Components,
+			d.component("design.components["+strconv.Itoa(n)+"]", design.Components[n]))
+	}
 	return out
+}
+
+// component converts one mass item. A coordinate that is absent stays absent:
+// the core reports an unplaced component as unplaced rather than assuming an
+// origin for it.
+func (d *decoder) component(field string, c Component) calculator.MassItem {
+	return calculator.MassItem{
+		Name:     c.Name,
+		Basis:    c.Basis,
+		Role:     enumOrEmpty(d, componentRoles, field+".role", c.Role),
+		Mass:     d.quantity(field+".mass", c.Mass),
+		Position: d.position(field+".position", &c.Position),
+	}
+}
+
+func (d *decoder) position(field string, p *Position) calculator.Point {
+	if p == nil {
+		return calculator.Point{}
+	}
+	return calculator.Point{
+		X: d.quantity(field+".x", p.X),
+		Y: d.quantity(field+".y", p.Y),
+		Z: d.quantity(field+".z", p.Z),
+	}
+}
+
+// sweepSettings converts a sweep request's settings. Whether the design holds
+// the named driver, and whether the range and the sample count are usable, are
+// the core's answers: this reads the shape and hands the rest over.
+func (d *decoder) sweepSettings(field string, s SweepSettings) calculator.SweepSettings {
+	driver, issue := parseSweepDriverKey(field+".driver", s.Driver)
+	d.take(issue)
+	return calculator.SweepSettings{
+		Driver:  driver,
+		From:    d.quantity(field+".from", &s.From),
+		To:      d.quantity(field+".to", &s.To),
+		Samples: s.Samples,
+		Output: calculator.SweepOutput{
+			Subject: enumOrEmpty(d, subjects, field+".output.subject", s.Output.Subject),
+			Case:    s.Output.Case,
+		},
+	}
 }
 
 func (d *decoder) wing(wing Wing) calculator.WingDefinition {

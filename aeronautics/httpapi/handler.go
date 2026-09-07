@@ -41,6 +41,7 @@ func Handler(service *api.Service) http.Handler {
 	mux.Handle("POST "+Prefix+"/evaluate-batch", evaluateBatch(service))
 	mux.Handle("POST "+Prefix+"/apply", apply(service))
 	mux.Handle("POST "+Prefix+"/preview", preview(service))
+	mux.Handle("POST "+Prefix+"/sweep", sweep(service))
 	return route(mux)
 }
 
