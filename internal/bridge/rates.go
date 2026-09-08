@@ -40,7 +40,10 @@ func (r RateRequest) IntervalUs() int32 {
 // These are the families the instrument view reads, at the slowest rate that
 // still looks live: attitude drives the artificial horizon and is the only one
 // that needs to be smooth, position and speed update the numbers, and the
-// health families change slowly enough that 1 Hz is generous. Nothing here is
+// health families change slowly enough that 1 Hz is generous. MISSION_CURRENT
+// is here because the mission panel's active-item highlight reads it through
+// the same freshness TTL as any instrument: an unrequested family is a stale
+// family, and a stale family never marks an item active. Nothing here is
 // negotiated with the vehicle — an autopilot that cannot honour a rate says so
 // in its COMMAND_ACK and streams what it can.
 var DefaultRates = []RateRequest{
@@ -51,6 +54,7 @@ var DefaultRates = []RateRequest{
 	{MsgID: 1, Hz: 1},   // SYS_STATUS
 	{MsgID: 147, Hz: 1}, // BATTERY_STATUS
 	{MsgID: 193, Hz: 1}, // EKF_STATUS_REPORT
+	{MsgID: 42, Hz: 1},  // MISSION_CURRENT
 }
 
 // RateRequester asks a vehicle for the telemetry the display needs, as soon as

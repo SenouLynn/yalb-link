@@ -4,7 +4,7 @@ import { MissionItemSchema, MissionSnapshotSchema } from '@/gen/gcs/v1/missions_
 import { MavCmd, MavFrame } from '@/gen/gcs/v1/types_pb';
 import type { VehicleView } from '@/fleet/state';
 import { TELEMETRY_TTL_MS } from '@/fleet/state';
-import { activeMissionSequence, missionGeometry } from './model';
+import { activeMissionSequence, commandName, frameName, missionGeometry } from './model';
 
 describe('mission geometry', () => {
   it('keeps ordered supported positions and explains every omission', () => {
@@ -30,5 +30,37 @@ describe('active mission sequence', () => {
     expect(activeMissionSequence(view, 100)).toBe(3);
     expect(activeMissionSequence(view, 100 + TELEMETRY_TTL_MS)).toBeNull();
     expect(activeMissionSequence({ ...view, familySeenMs: {} }, 100)).toBeNull();
+  });
+});
+
+// MAV_CMD_NAV_SPLINE_WAYPOINT (82) and MAV_FRAME_GLOBAL_TERRAIN_ALT (10) stand in
+// for anything a vehicle flies that this contract does not enumerate. The wire
+// value survives a reverse lookup that has no name for it; `undefined` would be
+// rendered straight into the operator's item list.
+describe('unenumerated command and frame values', () => {
+  // TypeScript will not let an unenumerated literal be written as a MavCmd,
+  // but the wire has no such restriction: `fromJson` yields whatever number
+  // protojson emitted for a value this build has no name for. The casts model
+  // the decoded snapshot, which is the only place these values come from.
+  const SPLINE_WAYPOINT = 82 as MavCmd;
+  const UNKNOWN_FRAME = 9999 as MavFrame;
+
+  it('names a command the generated enum does not carry', () => {
+    expect(commandName(SPLINE_WAYPOINT)).toBe('UNNAMED_COMMAND(82)');
+    expect(commandName(MavCmd.NAV_WAYPOINT)).toBe('NAV_WAYPOINT');
+  });
+
+  it('names a frame the generated enum does not carry', () => {
+    expect(frameName(UNKNOWN_FRAME)).toBe('UNNAMED_FRAME(9999)');
+    expect(frameName(MavFrame.GLOBAL_INT)).toBe('GLOBAL_INT');
+  });
+
+  it('explains an unenumerated item instead of omitting it silently', () => {
+    const snapshot = create(MissionSnapshotSchema, { items: [
+      create(MissionItemSchema, { seq: 0, frame: MavFrame.GLOBAL_RELATIVE_ALT_INT, command: SPLINE_WAYPOINT, x: 47.1, y: -122.1 }),
+    ] });
+    const result = missionGeometry(snapshot);
+    expect(result.points).toEqual([]);
+    expect(result.omitted[0]).toBe('command UNNAMED_COMMAND(82) is non-positional');
   });
 });

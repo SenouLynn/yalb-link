@@ -17,3 +17,16 @@ export function emptyMissionState(key: VehicleKey): MissionViewState {
 export function visibleMissionState(state: MissionViewState, key: VehicleKey): MissionViewState {
   return state.key === key ? state : emptyMissionState(key);
 }
+
+/**
+ * Narrows mission state to what the panel renders.
+ *
+ * `key` is dropped deliberately. It is a `VehicleKey`, and React treats a
+ * `key` prop as a reconciliation key rather than passing it through, so
+ * spreading the full state into a component silently loses it and logs an
+ * error. Keeping the panel's props free of `key` makes that unrepresentable
+ * rather than something each call site has to remember.
+ */
+export function missionPanelState({ status, snapshot, error }: MissionViewState) {
+  return { status, snapshot, error };
+}

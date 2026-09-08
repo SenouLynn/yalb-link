@@ -8,10 +8,10 @@ import {
   type GeoCoordinate,
 } from '@/logic/trajectory';
 import { MapPanel } from '@/map/MapPanel';
-import { downloadMission } from '@/mission/client';
+import { missionLoaderFor } from '@/mission/source';
 import { MissionPanel } from '@/mission/MissionPanel';
 import { activeMissionSequence, missionGeometry } from '@/mission/model';
-import { emptyMissionState, visibleMissionState, type MissionViewState } from '@/mission/state';
+import { emptyMissionState, missionPanelState, visibleMissionState, type MissionViewState } from '@/mission/state';
 import type { ReplayEventSource } from '@/stream/replay';
 import type { StreamSource } from '@/stream/select';
 
@@ -78,7 +78,7 @@ function SelectedFlightDisplay({
   onSelect: (key: VehicleKey) => void;
 }) {
   const readings = readFlight(view, nowMs);
-  const mission = useMission(view.key, view.sysId, view.compId);
+  const mission = useMission(view.key, view.sysId, view.compId, source);
   const geometry = missionGeometry(mission.snapshot);
   const activeSeq = activeMissionSequence(view, nowMs);
   const { position, flightPath, battery } = readings;
@@ -149,12 +149,21 @@ function SelectedFlightDisplay({
         mission={geometry}
       />
 
-      <MissionPanel {...mission} geometry={geometry} activeSeq={activeSeq} />
+      {/* Passed field by field: MissionViewState carries a `key`, and spreading
+          it hands React a reconciliation key instead of a prop. */}
+      <MissionPanel
+        status={mission.status}
+        snapshot={mission.snapshot}
+        error={mission.error}
+        geometry={geometry}
+        activeSeq={activeSeq}
+        onDownload={mission.onDownload}
+      />
     </div>
   );
 }
 
-function useMission(key: VehicleKey, sysId: number, compId: number) {
+function useMission(key: VehicleKey, sysId: number, compId: number, source: StreamSource) {
   const [state, setState] = useState<MissionViewState>(() => emptyMissionState(key));
   const request = useRef<AbortController | null>(null);
 
@@ -165,19 +174,20 @@ function useMission(key: VehicleKey, sysId: number, compId: number) {
   }, [key]);
 
   const visible = visibleMissionState(state, key);
+  const load = missionLoaderFor(source);
   const onDownload = () => {
     request.current?.abort();
     const controller = new AbortController();
     request.current = controller;
     setState({ key, status: 'loading', snapshot: null, error: null });
-    void downloadMission(sysId, compId, controller.signal).then((snapshot) => {
+    void load(sysId, compId, controller.signal).then((snapshot) => {
       if (request.current === controller) setState({ key, status: 'complete', snapshot, error: null });
     }).catch((error: unknown) => {
       if (request.current !== controller || controller.signal.aborted) return;
       setState({ key, status: 'error', snapshot: null, error: error instanceof Error ? error.message : 'Mission download failed' });
     });
   };
-  return { ...visible, onDownload };
+  return { ...missionPanelState(visible), onDownload };
 }
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { missionFeatures } from './MapPanel';
+import { buildStyle, flightLayers, missionFeatures } from './MapPanel';
+import { DEFAULT_BASEMAP } from './tileSource';
 
 describe('missionFeatures', () => {
   it('emits no invalid line for an empty mission', () => {
@@ -36,5 +37,22 @@ describe('missionFeatures', () => {
       },
     });
     expect(features).toHaveLength(3);
+  });
+});
+
+describe('map style capabilities', () => {
+  // MapLibre cannot rasterise `text-field` without a `glyphs` endpoint. The
+  // style carries no font dependency on purpose — the public raster basemap is
+  // the only network dependency this prototype accepts — so a symbol layer
+  // added without also adding glyphs renders nothing at all, silently, and no
+  // geometry test notices. Mission sequence numbers are DOM markers for this
+  // reason; see `createMissionLabelElement`.
+  it('asks for no text the style has no glyphs to draw', () => {
+    const style = buildStyle(DEFAULT_BASEMAP);
+    const wantsText = [...flightLayers(), ...style.layers]
+      .filter((layer) => layer.type === 'symbol' && layer.layout?.['text-field'] !== undefined)
+      .map((layer) => layer.id);
+
+    expect(style.glyphs === undefined ? wantsText : []).toEqual([]);
   });
 });

@@ -18,11 +18,13 @@ import {
   EkfStatusReportSchema,
   GlobalPositionSchema,
   GpsRawSchema,
+  MissionCurrentSchema,
   SystemStatusSchema,
   TelemetryEventSchema,
   VfrHudSchema,
 } from '@/gen/gcs/v1/telemetry_pb';
-import { GpsFixType, MavAutopilot, MavState, MavType } from '@/gen/gcs/v1/types_pb';
+import { MOCK_MISSION_LENGTH } from '@/mission/fixtures';
+import { GpsFixType, MavAutopilot, MavState, MavType, MissionState } from '@/gen/gcs/v1/types_pb';
 import { HeartbeatStateSchema, VehicleIdSchema } from '@/gen/gcs/v1/vehicle_pb';
 
 import type { StreamEvent } from './events';
@@ -181,6 +183,25 @@ function systemStatusAt(index: number) {
   };
 }
 
+/**
+ * Walks the active item through the fixture mission.
+ *
+ * The panel marks an item active only while MISSION_CURRENT is inside the
+ * telemetry freshness TTL, so the mock has to keep sending it exactly as a
+ * vehicle does. A single frame at startup would go stale and the highlight
+ * would silently vanish, which is the live defect this family had.
+ */
+function missionCurrentAt(index: number) {
+  return {
+    case: 'missionCurrent' as const,
+    value: create(MissionCurrentSchema, {
+      seq: Math.floor(index / 10) % MOCK_MISSION_LENGTH,
+      total: MOCK_MISSION_LENGTH,
+      missionState: MissionState.ACTIVE,
+    }),
+  };
+}
+
 /** Attitude solution present, filter initialised: the arm-permitting state. */
 const EKF_HEALTHY_FLAGS = 0b0000_0000_1111_1111;
 
@@ -213,6 +234,8 @@ export function mockFrames(cycles = 60): MockFrame[] {
     frames.push(telemetryFrame(vfrHudAt, i));
     frames.push(telemetryFrame(attitudeAt, i));
     frames.push(telemetryFrame(globalPositionAt, i));
+
+    frames.push(telemetryFrame(missionCurrentAt, i));
 
     if (i % 10 === 0) {
       frames.push(telemetryFrame(gpsRawAt, i));

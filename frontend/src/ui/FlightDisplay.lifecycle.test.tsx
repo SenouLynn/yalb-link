@@ -96,4 +96,5 @@ describe('FlightDisplay lifecycle', () => {
       root.unmount();
     });
   });
+
 });

@@ -1,10 +1,10 @@
 ---
 id: T-008
 title: Accept live mission inspection with Copter and Plane
-status: backlog
+status: ready
 priority: 0
 owner: unassigned
-depends_on: T-006, T-007
+depends_on: T-006, T-007, T-010
 ---
 
 ## Motivation and evidence
@@ -59,4 +59,28 @@ future slices even though they share MAVLink message families.
 
 ## Notes
 
-None.
+Promoted from backlog once T-010 (defects only a live link or a real browser
+can show) and T-011 (the same UI, demonstrable with no backend) were done. The
+mission UI has now been seen rendering — with fixtures, in a browser — so this
+card is about interoperability with ArduPilot, not about first contact with the
+display.
+
+Carry into the session:
+
+- ArduPilot reports the home position as mission item `seq 0`, and counts it.
+  A mission of N waypoints loaded by an external ground station is expected to
+  download as N+1 items with item 0 at home. Confirm this against the actual
+  vehicles before recording a count mismatch as a defect, and say which
+  convention the recorded procedure uses.
+- Downloads are single-attempt by design (T-005): one dropped datagram fails
+  the transfer on the 5 s per-response timeout. Over Compose loopback this
+  should be rare, but the criterion about a subsequent request succeeding is
+  the one most likely to expose it. If it does show up, that is evidence for
+  the bounded retry policy T-005 deferred, and belongs in a new card rather
+  than in this one.
+- The map does not yet frame a downloaded mission (T-012). Expect to pan or
+  zoom out to see the route, and do not record that as a new defect.
+- `MISSION_CURRENT` is now requested at 1 Hz by the rate policy, so the active
+  item highlight should appear without external setup. It is worth checking
+  explicitly, because it was unreachable before T-010 and no test covers the
+  live path.

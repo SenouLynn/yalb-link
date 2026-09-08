@@ -43,12 +43,26 @@ export function missionGeometry(snapshot: MissionSnapshot | null): MissionGeomet
   return { points, omitted };
 }
 
+/**
+ * Names a command or frame, falling back to its wire value.
+ *
+ * The generated enums carry only the subset of MAVLink this contract
+ * enumerates, and a reverse lookup of any other value is `undefined` rather
+ * than an error. An unenumerated command is still a real item the vehicle is
+ * going to fly, so it has to read as its number: `NAV_SPLINE_WAYPOINT` (82)
+ * and `DO_SET_CAM_TRIGG_DIST` (206) are both absent here and both ordinary in
+ * an ArduPilot mission.
+ */
+function nameOrValue(name: string | undefined, kind: string, value: number): string {
+  return name ?? `UNNAMED_${kind}(${String(value)})`;
+}
+
 export function commandName(value: MavCmd): string {
-  return MavCmd[value];
+  return nameOrValue(MavCmd[value], 'COMMAND', value);
 }
 
 export function frameName(value: MavFrame): string {
-  return MavFrame[value];
+  return nameOrValue(MavFrame[value], 'FRAME', value);
 }
 
 export function activeMissionSequence(view: VehicleView, nowMs: number): number | null {

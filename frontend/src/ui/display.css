@@ -273,6 +273,19 @@ body {
 .mission-list li > div:first-child { display: flex; justify-content: space-between; gap: 0.5rem; }
 .mission-list__active { border-left-color: #c7f0ff !important; background: rgb(199 240 255 / 6%); }
 
+/* Sequence badge for a mission point. Sized to sit inside the 10px-radius
+   circle drawn by the mission-points layer, which shares its coordinate. */
+.mission-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #c7f0ff;
+  font: 600 0.62rem/1 var(--data);
+  pointer-events: none;
+}
+
 .vehicle-marker {
   width: 28px;
   height: 28px;

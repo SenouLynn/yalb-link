@@ -48,11 +48,19 @@ The repository currently has:
   cancellation, and delivery-uncertain failure states;
 - an operator-attested resolution for an ambiguous arm/disarm outcome, which
   records the observed armed state beside the unchanged terminal state and
-  reopens commanding only after a bounded stale-ACK quarantine.
+  reopens commanding only after a bounded stale-ACK quarantine;
+- a read-only onboard mission download — correlated by full vehicle identity
+  and mission type, served as protobuf JSON from
+  `GET /api/vehicles/{system_id}/{component_id}/mission`, and shown in the
+  browser as an ordered item list and a distinct commanded route on the map,
+  with a fixture mission at `?source=mock`. It has not yet been demonstrated
+  against live SITL; that is the next outcome below.
 
 It is read-only unless `GCS_COMMANDS_ENABLED=true`; even then, the only operator
-commands are guarded arm/disarm and its resolution. The project does not have a
-generic command or mission surface, authentication, or MAVLink signing.
+commands are guarded arm/disarm and its resolution. Missions can be read but
+never written: the project has no mission upload, clear, start, or set-current
+operation, no generic command surface, no authentication, and no MAVLink
+signing.
 Transactions carry the fixed label `local-operator`, which records that a human
 acted rather than who. SQLite reuses pages freed by recording retention, but the
 database file does not shrink automatically.

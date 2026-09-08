@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { StreamEvent } from './events';
-import { MOCK_COMP_ID, MOCK_SYS_ID } from './fixtures';
+import { MOCK_COMP_ID, MOCK_SYS_ID, mockFrames } from './fixtures';
 import { MockEventSource, type Cancel } from './mock';
 
 const START_MS = 1_700_000_000_000;
@@ -131,5 +131,20 @@ describe('MockEventSource', () => {
 
     // The bounded script is shorter than 400 steps; looping keeps producing.
     expect(events.length).toBeGreaterThan(300);
+  });
+});
+
+describe('mock mission state', () => {
+  // The mission panel marks an item active only while MISSION_CURRENT is
+  // inside the freshness TTL. The mock has to keep sending it, the same way
+  // the backend's rate policy makes a live vehicle keep sending it, or the
+  // no-backend display cannot demonstrate the highlight at all.
+  it('streams MISSION_CURRENT repeatedly rather than once at startup', () => {
+    const cases = mockFrames()
+      .map((frame) => frame.build(START_MS))
+      .filter((event): event is Extract<StreamEvent, { kind: 'telemetry' }> => event.kind === 'telemetry')
+      .filter((event) => event.event.payload.case === 'missionCurrent');
+
+    expect(cases.length).toBeGreaterThan(1);
   });
 });

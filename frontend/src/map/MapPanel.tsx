@@ -25,13 +25,15 @@ const TRACK_LAYER = 'track-line';
 const TRAJECTORY_SOURCE = 'trajectory';
 const TRAJECTORY_LAYER = 'trajectory-line';
 const MISSION_SOURCE = 'mission';
+const MISSION_LINE_LAYER = 'mission-line';
+const MISSION_POINT_LAYER = 'mission-points';
 
 /** The single coordinate-order flip: this codebase is lat-first, MapLibre is lng-first. */
 export function toLngLat(latDeg: number, lonDeg: number): [number, number] {
   return [lonDeg, latDeg];
 }
 
-function buildStyle(tileSource: TileSource): maplibregl.StyleSpecification {
+export function buildStyle(tileSource: TileSource): maplibregl.StyleSpecification {
   return {
     version: 8,
     sources: {
@@ -61,6 +63,58 @@ function lineFeature(points: GeoCoordinate[]) {
   };
 }
 
+/**
+ * The overlay layers, separated from the map so their capabilities can be
+ * asserted without a WebGL context.
+ *
+ * Every layer here draws geometry only. Mission sequence numbers are text, and
+ * `text-field` needs a symbol layer, which needs a glyph server the style
+ * deliberately does not have — so they are DOM markers instead. See
+ * `missionLabelMarkers`.
+ */
+export function flightLayers(): maplibregl.LayerSpecification[] {
+  return [
+    {
+      id: TRACK_LAYER,
+      type: 'line',
+      source: TRACK_SOURCE,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: { 'line-color': '#74d7ff', 'line-width': 2.5, 'line-opacity': 0.9 },
+    },
+    {
+      id: TRAJECTORY_LAYER,
+      type: 'line',
+      source: TRAJECTORY_SOURCE,
+      layout: { 'line-cap': 'round', 'line-join': 'round' },
+      paint: {
+        'line-color': '#d9a441',
+        'line-width': 3,
+        'line-opacity': 0.95,
+        'line-dasharray': [2, 2],
+      },
+    },
+    {
+      id: MISSION_LINE_LAYER,
+      type: 'line',
+      source: MISSION_SOURCE,
+      filter: ['==', '$type', 'LineString'],
+      paint: { 'line-color': '#c7f0ff', 'line-width': 3 },
+    },
+    {
+      id: MISSION_POINT_LAYER,
+      type: 'circle',
+      source: MISSION_SOURCE,
+      filter: ['==', '$type', 'Point'],
+      paint: {
+        'circle-radius': 10,
+        'circle-color': '#14171c',
+        'circle-stroke-color': '#c7f0ff',
+        'circle-stroke-width': 2,
+      },
+    },
+  ];
+}
+
 function addFlightLayers(
   map: maplibregl.Map,
   track: GeoPoint[],
@@ -68,32 +122,12 @@ function addFlightLayers(
   mission: MissionGeometry,
 ): void {
   map.addSource(TRACK_SOURCE, { type: 'geojson', data: lineFeature(track) });
-  map.addLayer({
-    id: TRACK_LAYER,
-    type: 'line',
-    source: TRACK_SOURCE,
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: { 'line-color': '#74d7ff', 'line-width': 2.5, 'line-opacity': 0.9 },
-  });
-
   map.addSource(TRAJECTORY_SOURCE, { type: 'geojson', data: lineFeature(trajectory) });
-  map.addLayer({
-    id: TRAJECTORY_LAYER,
-    type: 'line',
-    source: TRAJECTORY_SOURCE,
-    layout: { 'line-cap': 'round', 'line-join': 'round' },
-    paint: {
-      'line-color': '#d9a441',
-      'line-width': 3,
-      'line-opacity': 0.95,
-      'line-dasharray': [2, 2],
-    },
-  });
-
   map.addSource(MISSION_SOURCE, { type: 'geojson', data: missionFeatures(mission) });
-  map.addLayer({ id: 'mission-line', type: 'line', source: MISSION_SOURCE, filter: ['==', '$type', 'LineString'], paint: { 'line-color': '#c7f0ff', 'line-width': 3 } });
-  map.addLayer({ id: 'mission-points', type: 'circle', source: MISSION_SOURCE, filter: ['==', '$type', 'Point'], paint: { 'circle-radius': 10, 'circle-color': '#14171c', 'circle-stroke-color': '#c7f0ff', 'circle-stroke-width': 2 } });
-  map.addLayer({ id: 'mission-labels', type: 'symbol', source: MISSION_SOURCE, filter: ['==', '$type', 'Point'], layout: { 'text-field': ['get', 'label'], 'text-size': 11 }, paint: { 'text-color': '#c7f0ff' } });
+
+  for (const layer of flightLayers()) {
+    map.addLayer(layer);
+  }
 }
 
 export function missionFeatures(mission: MissionGeometry) {
@@ -105,6 +139,21 @@ export function missionFeatures(mission: MissionGeometry) {
     ...line,
     ...mission.points.map((point) => ({ type: 'Feature' as const, properties: { label: String(point.seq) }, geometry: { type: 'Point' as const, coordinates: toLngLat(point.latDeg, point.lonDeg) } })),
   ] };
+}
+
+/**
+ * Builds the sequence-number badge that sits inside a mission point.
+ *
+ * This is a DOM overlay rather than a `symbol` layer because MapLibre cannot
+ * rasterise `text-field` without a `glyphs` endpoint, and adding one would put
+ * a second public network dependency next to the prototyping basemap. The
+ * badge is centred on the same coordinate as its circle.
+ */
+function createMissionLabelElement(label: string): HTMLElement {
+  const element = document.createElement('div');
+  element.classList.add('mission-marker');
+  element.textContent = label;
+  return element;
 }
 
 function createVehicleMarkerElement(): HTMLElement {
@@ -131,6 +180,7 @@ export function MapPanel({
   const trackRef = useRef(track);
   const trajectoryRef = useRef(trajectory);
   const missionRef = useRef(mission);
+  const missionMarkersRef = useRef<maplibregl.Marker[]>([]);
 
   trackRef.current = track;
   trajectoryRef.current = trajectory;
@@ -163,6 +213,7 @@ export function MapPanel({
       map.remove();
       mapRef.current = null;
       markerRef.current = null;
+      missionMarkersRef.current = [];
       loadedRef.current = false;
       centredRef.current = false;
     };
@@ -234,6 +285,28 @@ export function MapPanel({
   useEffect(() => {
     const source = mapRef.current?.getSource<maplibregl.GeoJSONSource>(MISSION_SOURCE);
     if (loadedRef.current && source !== undefined) source.setData(missionFeatures(mission));
+  }, [mission]);
+
+  // Sequence numbers are markers, not a layer, so they are rebuilt here rather
+  // than following the source data. Missions are tens of items, so replacing
+  // the whole set costs less than reconciling it.
+  useEffect(() => {
+    for (const marker of missionMarkersRef.current) {
+      marker.remove();
+    }
+
+    const map = mapRef.current;
+
+    if (map === null) {
+      missionMarkersRef.current = [];
+      return;
+    }
+
+    missionMarkersRef.current = mission.points.map((point) =>
+      new maplibregl.Marker({ element: createMissionLabelElement(String(point.seq)) })
+        .setLngLat(toLngLat(point.latDeg, point.lonDeg))
+        .addTo(map),
+    );
   }, [mission]);
 
   return (

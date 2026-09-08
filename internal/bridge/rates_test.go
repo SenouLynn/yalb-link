@@ -155,6 +155,7 @@ func TestRateRequestsOnDiscovery(t *testing.T) {
 		{TargetSystem: 1, TargetComponent: 1, MsgID: 1, IntervalUs: 1_000_000},   // SYS_STATUS 1 Hz
 		{TargetSystem: 1, TargetComponent: 1, MsgID: 147, IntervalUs: 1_000_000}, // BATTERY_STATUS 1 Hz
 		{TargetSystem: 1, TargetComponent: 1, MsgID: 193, IntervalUs: 1_000_000}, // EKF_STATUS_REPORT 1 Hz
+		{TargetSystem: 1, TargetComponent: 1, MsgID: 42, IntervalUs: 1_000_000},  // MISSION_CURRENT 1 Hz
 	}
 
 	got := intervalCommands(t, src.snapshot())
@@ -168,6 +169,32 @@ func TestRateRequestsOnDiscovery(t *testing.T) {
 			t.Errorf("request %d = %+v, want %+v", i, got[i], want[i])
 		}
 	}
+}
+
+// TestDefaultRatesRequestsMissionCurrent pins one family by the display feature
+// that depends on it, rather than by its position in the pinned policy list.
+//
+// The mission panel marks an item active only while MISSION_CURRENT is inside
+// the telemetry freshness TTL. Nothing else in the system asks for it, and the
+// project deliberately does not rely on firmware stream defaults, so dropping
+// it here does not degrade the highlight — it removes it, silently, with every
+// frontend test still passing.
+func TestDefaultRatesRequestsMissionCurrent(t *testing.T) {
+	const missionCurrentMsgID = 42
+
+	for _, req := range DefaultRates {
+		if req.MsgID == missionCurrentMsgID {
+			if req.Hz <= 0 {
+				t.Fatalf("MISSION_CURRENT requested at %v Hz, want a positive rate", req.Hz)
+			}
+
+			return
+		}
+	}
+
+	t.Fatalf("DefaultRates does not request MISSION_CURRENT (%d); "+
+		"the mission panel's active-item highlight cannot become fresh without it",
+		missionCurrentMsgID)
 }
 
 // TestRateRequestsAddressTheObservedLink keeps the requests on the link the
