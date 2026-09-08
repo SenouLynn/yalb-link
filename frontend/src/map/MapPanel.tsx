@@ -98,8 +98,11 @@ function addFlightLayers(
 
 export function missionFeatures(mission: MissionGeometry) {
   const coordinates = mission.points.map((point) => toLngLat(point.latDeg, point.lonDeg));
-  return { type: 'FeatureCollection' as const, features: [
+  const line = coordinates.length < 2 ? [] : [
     { type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates } },
+  ];
+  return { type: 'FeatureCollection' as const, features: [
+    ...line,
     ...mission.points.map((point) => ({ type: 'Feature' as const, properties: { label: String(point.seq) }, geometry: { type: 'Point' as const, coordinates: toLngLat(point.latDeg, point.lonDeg) } })),
   ] };
 }

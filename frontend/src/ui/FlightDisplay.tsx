@@ -1,6 +1,6 @@
 /** The assembled mini flight display for one selected vehicle. */
 
-import type { FleetState, VehicleKey } from '@/fleet/state';
+import type { FleetState, VehicleKey, VehicleView } from '@/fleet/state';
 import type { TelemetrySample } from '@/logic/sample';
 import {
   projectTrajectoryToGeo,
@@ -51,6 +51,32 @@ export function FlightDisplay({
     return <EmptyFleet connected={fleet.connected} source={source} controls={controls} />;
   }
 
+  return <SelectedFlightDisplay
+    fleet={fleet}
+    view={view}
+    nowMs={nowMs}
+    source={source}
+    controls={controls}
+    onSelect={onSelect}
+  />;
+}
+
+/** Owns state that exists only while a vehicle is selected. */
+function SelectedFlightDisplay({
+  fleet,
+  view,
+  nowMs,
+  source,
+  controls,
+  onSelect,
+}: {
+  fleet: FleetState;
+  view: VehicleView;
+  nowMs: number;
+  source: StreamSource;
+  controls: React.ReactNode;
+  onSelect: (key: VehicleKey) => void;
+}) {
   const readings = readFlight(view, nowMs);
   const mission = useMission(view.key, view.sysId, view.compId);
   const geometry = missionGeometry(mission.snapshot);
