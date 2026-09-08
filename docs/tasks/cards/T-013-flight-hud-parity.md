@@ -83,12 +83,19 @@ cd frontend && pnpm typecheck && pnpm lint && pnpm vitest run
   recovered from git; it has to be supplied or described before parity means
   anything. This is what keeps the card in `backlog`.
 - Whether the log is a panel in the display or a separate surface.
-- Whether `STATUSTEXT` should be recorded, which touches the recording schema
-  rather than the UI.
+- Raw message inspection versus vehicle status messages: the candidate local
+  reference has a general MAVLink stream log; T-016 covers only STATUSTEXT.
+  STATUSTEXT is already recorded generically, as documented in T-016.
 - How much of the density is layout and how much is genuinely missing data.
   Not answerable until the reference is available.
 
 ## Notes
+
+2026-09-08 source discovery: see the provisional
+[reference inventory](../../reference/ui-reference-review.md). The local
+`flight-path-hud/apps/gcs` contains an inspectable candidate; confirmation of
+the operator's reference name is pending. T-017 separates the first workspace
+shell from this larger parity outcome so layout need not wait for T-015/T-016.
 
 Raised 2026-09-08 after the operator reviewed the mission UI and judged the
 display as a whole — not only the mission panel — well short of the benchmark.
