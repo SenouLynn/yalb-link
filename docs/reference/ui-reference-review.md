@@ -8,7 +8,7 @@ code observations, not browser-verified visual acceptance.
 
 | Surface | Reference evidence | YALB state / implication |
 |---|---|---|
-| Fleet → vehicle workspace | `App.tsx`, `fleet/FleetView.tsx`, `NodeView.tsx` | Fleet state and selection exist; no fleet overview map/roster workspace. |
+| Fleet → vehicle workspace | `App.tsx`, `fleet/FleetView.tsx`, `NodeView.tsx` | Fleet state and selection exist; T-022 scopes the fleet overview map/roster and navigation. |
 | Persistent shell and feed | `App.tsx` owns feed above view switch | Preserve YALB's stream and fleet ownership in `frontend/src/App.tsx`. |
 | Compact context sidebar | `NodeView.tsx`, `index.css` | Current status, selection and arm controls are stacked above instruments. Group by operator purpose. |
 | Selectable panes | `ViewsMenu.tsx`, named grid areas in `index.css` | Current display is a 60rem vertical stack. Establish responsive workspace composition before adding readouts. |
@@ -61,3 +61,10 @@ Board evidence: T-001–T-003 record trajectory acceptance; T-004–T-011 contai
 completed mission implementation and hardening except T-008, whose live
 Copter/Plane mission acceptance remains ready and incomplete. This review did
 not rerun their verification and does not claim new live acceptance.
+
+
+The operator subsequently supplied screenshots of both fleet and vehicle views.
+They confirm the fleet's compact left roster/dominant shared map and the vehicle
+view's context sidebar, central map and right-hand instruments/inspection.
+[T-022](../tasks/cards/T-022-fleet-overview.md) owns the first fleet navigation
+slice; these screenshots inform hierarchy and density, not new backend controls.

@@ -25,19 +25,42 @@ An unchanged downloaded mission retains its marker instances as telemetry ages.
 
 ## Acceptance criteria
 
-- [ ] Download a mission and count marker creation/removal across freshness ticks;
-      unchanged snapshots do not rebuild markers.
-- [ ] Refresh and vehicle switches update/remove the correct markers.
-- [ ] Freshness still invalidates trajectory and active-sequence posture.
+- [ ] An unchanged snapshot retains the same mission geometry object across
+      telemetry renders and 250 ms freshness ticks. Over a 2 s settled browser
+      observation, an unchanged four-point mission causes zero mission-marker
+      additions/removals (baseline: 108 of each), with no map remount.
+- [ ] Refreshing with changed items replaces the route/labels; an empty mission
+      removes them. Switching A → B → A never shows A's old route for B or
+      revives A's discarded snapshot. Existing request cancellation is preserved.
+- [ ] Stale position/heading/speed still remove prediction at the existing TTL;
+      stale MISSION_CURRENT removes the active highlight without removing the
+      downloaded mission. Restoring telemetry restores the appropriate display.
+- [ ] A focused regression fails on the existing allocation behavior and passes
+      with the fix. Existing map geometry and mission lifecycle checks still pass.
 
 ## Verification
 
-Frontend typecheck, lint, Vitest; browser MutationObserver on `.mission-marker`
-while a downloaded mission remains unchanged for at least 2 seconds.
+```sh
+cd frontend && pnpm typecheck && pnpm lint && pnpm vitest run && pnpm build
+./scripts/kanban check
+```
+
+Use the existing createRoot/happy-dom lifecycle test style to observe mission
+prop identity or marker lifecycle during clock/telemetry changes, then changed
+snapshot and selection transitions. Avoid testing only that a memo hook exists.
+
+Browser: download the four-point mock mission, wait for completion, then count
+`.mission-marker` child additions/removals with MutationObserver over 2 s.
+Repeat on a known downloaded live SITL mission with the real backend and UI.
+Change/clear that mission externally and refresh to verify invalidation; pause
+telemetry >5 s and confirm freshness behavior. Record actual counts and artifacts
+in the development runbook. This performance check does not require flight.
 
 ## Open questions
 
-None. Measure the allocation impact before broadening the fix.
+None for the bounded fix. Prefer stabilizing geometry at the snapshot owner;
+only change the MapPanel reconciliation strategy if evidence requires it.
+Prediction caching and route framing remain outside this chunk.
 
 ## Notes
 
@@ -47,3 +70,12 @@ object and `[mission]` effect. No claim of a measured frame-rate regression.
 Browser MutationObserver confirmed 108 marker additions and 108 removals
 over 2000 ms for an unchanged 4-point mock mission during telemetry.
 See `docs/runbooks/evidence/t017/marker-churn.json`. No frame-rate claim.
+
+
+Selected next during the fleet-view planning pass. This is one reviewable fix:
+`SelectedFlightDisplay` geometry ownership, a focused lifecycle regression, and
+browser/SITL allocation evidence. No telemetry inspection fields, fleet UI,
+transport changes or unrelated rendering optimization are bundled into it.
+Keep status ready until implementation begins, then claim before editing code.
+After this chunk, resume T-015; T-022 now holds the separately actionable fleet
+navigation work. Sequencing is a recommendation, not a new dependency chain.
