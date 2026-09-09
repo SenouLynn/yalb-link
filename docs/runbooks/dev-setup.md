@@ -56,11 +56,23 @@ Generated Go and TypeScript files are committed. Do not edit them directly.
 
 ## Run SITL
 
+This is the default development source under the
+[SITL-first development policy](../../README.md#sitl-first-development).
+Open the normal UI URL to consume simulator traffic through the backend;
+`?source=mock` selects browser fixtures instead and bypasses that path.
+Keep real flight controllers disconnected from the development feed during
+this phase.
+
 ```sh
 docker compose up
 docker compose --profile multi-sitl up
 docker compose --profile ui up
 ```
+
+For the UI with the mixed fleet, combine the existing profiles:
+`docker compose --profile multi-sitl --profile ui up`. Starting the stack
+establishes connectivity; use the scenario procedures below and each task's
+acceptance criteria to validate behavior.
 
 The default stack starts Copter SITL and the backend. SITL sends MAVLink
 to `gcs-backend:14550`; the backend publishes UDP 14550 for host-side tools.

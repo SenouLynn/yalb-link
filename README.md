@@ -54,7 +54,7 @@ The repository currently has:
   `GET /api/vehicles/{system_id}/{component_id}/mission`, and shown in the
   browser as an ordered item list and a distinct commanded route on the map,
   with a fixture mission at `?source=mock`. It has not yet been demonstrated
-  against live SITL; that is the next outcome below.
+  against live SITL; that acceptance remains outstanding in T-008.
 
 It is read-only unless `GCS_COMMANDS_ENABLED=true`; even then, the only operator
 commands are guarded arm/disarm and its resolution. Missions can be read but
@@ -69,11 +69,24 @@ No project license has been selected or committed.
 
 ### Next demonstrable outcome
 
-A read-only onboard mission download shown in the browser for live Copter and
-Plane SITL. The operator can request the selected vehicle's mission, inspect its
-ordered items on the map and in a list, and distinguish an empty mission from a
-failed or incomplete transfer. Mission upload, clear, start, and set-current
-operations remain unavailable.
+A reference-informed vehicle workspace that makes the existing capabilities
+usable and exposes integration defects through end-to-end operation. The
+backend already supplies telemetry, recording/replay, guarded arm/disarm and
+read-only mission download; the next phase uses those paths to test the system
+through the UI. See [T-017](docs/tasks/cards/T-017-reference-workspace-shell.md)
+for the first workspace slice and the
+[reference review](docs/reference/ui-reference-review.md) for the provisional
+comparison with the original interface.
+
+Visual review with fixtures is only part of acceptance. Exercise applicable
+workflows with live SITL and recording replay, including disconnect/reconnect,
+stale or absent data, vehicle switches and failed requests. Complete
+[T-008](docs/tasks/cards/T-008-live-mission-inspection-acceptance.md) alongside
+this phase to demonstrate mission inspection against both Copter and Plane.
+Backend changes should address concrete workflow gaps discovered in these
+slices; no broad infrastructure expansion is currently identified as a
+prerequisite. This is sequencing guidance, not a claim that live acceptance is
+complete.
 
 Local/offline imagery and future 3D tile support are deliberately deferred. The
 current public raster basemap remains a prototyping dependency; no tile storage
@@ -83,6 +96,41 @@ Operator authentication is deliberately deferred rather than pending. The system
 runs in a trusted local environment with one operator, so a network identity
 boundary waits for a deployment that needs one; multi-user and TAK identity wait
 with it.
+
+### SITL-first development
+
+SITL is the default development environment until a specific validation need
+requires hardware. Exercise simulated vehicles through the actual MAVLink UDP,
+backend, SSE, UI and recording paths before beginning real flight-controller
+ingestion. The aim is fidelity to the deployed data path: ArduPilot runs in
+simulation while this application's normal infrastructure stays in the loop.
+The current setup uses Docker Compose; this does not require replacing it with
+a native host installation.
+
+Develop against repeatable scenarios representing normal flight and failure
+conditions: mission execution, vehicle selection, link loss/recovery, missing
+or stale telemetry and rejected or timed-out operations, as applicable to the
+feature. Record scenario setup, expected behavior and observed results. A
+running simulator or a moving instrument alone is not feature acceptance.
+
+Build trust through explicit claims and traceable evidence: begin with one
+simple scenario, check autopilot response and captured telemetry against backend
+state and UI output, then exercise failure and recovery. Expand to compound
+patterns after that foundation works. Preserve scenario intent—crossings and
+turn reversals, or sustained travel—while allowing the simulated aircraft to
+respond naturally. Each acceptance result states what was proved, under which
+conditions, and what remains unproven.
+
+The browser's `?source=mock` uses synthetic fixtures and bypasses the backend;
+it remains useful for fast UI iteration and isolated edge cases. It does not
+replace SITL acceptance. Replay supplements SITL with reproducible captured
+behavior. Name limitations that require hardware evidence, such as physical
+radio behavior or device-specific timing, and move to hardware only for an
+identified gap after the relevant SITL scenarios pass.
+
+See the [development runbook](docs/runbooks/dev-setup.md#run-sitl) for the
+existing stack and [task conventions](docs/tasks/README.md#sitl-first-validation)
+for how to record scenario acceptance.
 
 ### What the display refuses to do
 

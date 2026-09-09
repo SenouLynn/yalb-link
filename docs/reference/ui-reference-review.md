@@ -17,6 +17,28 @@ code observations, not browser-verified visual acceptance.
 | Mission/map interaction | `NodeView.tsx` | Selecting a waypoint pans the map and releases follow. T-012 covers initial mission framing; YALB already has download/list/route state. |
 | Video and guided workflows | `video/VideoPanel.tsx`, `NodeView.tsx` | Additional capabilities, not buttons to copy into an unsupported UI. Current YALB command surface is guarded arm/disarm only. |
 
+## Recovered motion profiles
+
+Source: sibling `flight-path-hud` at commit `29426a9`,
+`apps/mavlink-bridge/src/flightProfiles.js`, `mockNodes.js`,
+`mockFleetRunner.js` and `flightProfiles.test.js`.
+
+- Snake: integrated travel at a nominal 18 m/s, heading oscillating ±20° about
+  180° with angular frequency 0.25 rad/s. Bank is derived from turn rate;
+  pitch, speed and climb also vary. The route continues away from its origin.
+- Figure-eight: analytic position on a Gerono lemniscate, spanning 300 m east/
+  west and 200 m north/south, repeating every 60 s without integration drift.
+  Height varies around 100 m by ±25 m. Velocity, turn rate and bank derive
+  from the curve; pitch is approximated by flight-path angle. These are
+  synthetic kinematics, not an aerodynamic aircraft model.
+- The roster assigns snake system 1 and figure-eight system 2 separate origins
+  and missions. The figure-eight mission samples four lobe extremes.
+- The runner serializes envelopes as JSON datagrams over UDP. It does not run
+  ArduPilot SITL or emit the binary MAVLink frames YALB's receiver expects.
+
+These patterns are useful inputs for repeatable validation design. T-018 plans
+SITL adaptation; no equivalent SITL scenarios have been demonstrated here.
+
 ## Existing constraints to preserve
 
 ADRs 0001–0003 establish SQLite recording, bounded resource use, deterministic

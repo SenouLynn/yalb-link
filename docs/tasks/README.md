@@ -60,3 +60,50 @@ branch.
 
 Copy [TEMPLATE.md](TEMPLATE.md) into `cards/`, allocate the next unused numeric
 ID, and run `./scripts/kanban check`.
+
+## SITL-first validation
+
+For runtime capabilities, default to SITL-generated MAVLink through the real
+backend and UI before ingesting real flight-controller data. Use synthetic
+browser fixtures for fast iteration and isolated cases, and recordings for
+replay regression; neither substitutes for applicable SITL acceptance.
+
+Cards should define repeatable scenarios with vehicle/firmware, initial state,
+mission or inputs, actions or fault injection, expected behavior and observed
+results. Include relevant normal and failure paths, and identify which faults
+are introduced by a test harness rather than the simulator itself. Reuse
+existing runbook procedures and add reproducible procedures when exercised.
+Document unsupported scenarios and remaining hardware-only questions explicitly.
+
+Build confidence from simple behaviors before combining them: stationary,
+straight flight, a single turn, then crossings and repeated reversals. Port the
+validation purpose of reference scenarios rather than their implementation or
+exact synthetic trajectory. First establish one repeatable scenario with an
+evidence chain from setup and autopilot response through received MAVLink,
+backend state and visible behavior, including failure and recovery.
+
+For each claim, record:
+
+- The observable expectation and applicable tolerance or deadline, chosen
+  before judging the result; separate the commanded route from actual flight.
+- The evidence source and time alignment. Compare captured MAVLink and
+  simulator/autopilot logs with backend and UI output using checks independent
+  of the application's own projection. Replay alone can reproduce the same bug.
+- Relevant checks below the UI: decoding, units, coordinate frames, altitude
+  datum, vehicle identity, timestamps and freshness. Reuse existing tests and
+  add focused regression checks for uncovered behavior or discovered defects.
+- Fault setup and expected uncertainty/recovery behavior, including relevant
+  interruption, reconnect, restart, vehicle-switch and request-failure cases.
+- Actual results, artifact locations, conditions proved and remaining limits.
+  Keep completed evidence distinct from planned or unexecuted verification.
+
+For trajectory claims, compare predictions with actual later positions at the
+same prediction horizon using aligned timestamps. Establish a straight-flight
+baseline before turns, state model assumptions and acceptable error, and report
+limitations when maneuvering invalidates those assumptions. A visually plausible
+curve alone does not establish predictive accuracy.
+
+Do not make real hardware a default prerequisite. A hardware transition must
+name the validation gap SITL cannot answer and the relevant SITL evidence
+already obtained. Simulation success supports structural and workflow
+confidence; it does not establish physical hardware equivalence.
