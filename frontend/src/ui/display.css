@@ -580,3 +580,7 @@ html, body, #root { height: 100%; overflow: hidden; }
   font-size: 0.75rem;
   line-height: 1.4;
 }
+
+.map-actions { position: absolute; top: 0.6rem; left: 0.6rem; z-index: 2; display: flex; gap: 0.4rem; }
+.map-actions button { background: var(--panel); color: var(--lume); border: 1px solid var(--bezel); padding: 0.4rem 0.6rem; font: 0.7rem var(--data); cursor: pointer; }
+.map-actions button:disabled { opacity: 0.5; cursor: default; }

@@ -1,9 +1,9 @@
 ---
 id: T-020
 title: Retain mission markers across unchanged telemetry renders
-status: ready
+status: in_progress
 priority: 1
-owner: unassigned
+owner: codex
 depends_on: none
 ---
 

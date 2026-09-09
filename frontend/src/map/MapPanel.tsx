@@ -2,13 +2,15 @@
 
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import type { GeoPoint } from '@/logic/geoTrack';
 import type { PositionResult } from '@/logic/position';
 import type { GeoCoordinate } from '@/logic/trajectory';
 import { MISSION_ROUTE_COLOR } from '@/ui/palette';
 import type { MissionGeometry } from '@/mission/model';
+
+import { framePoints, nextFollowMode, shouldFollow, type FollowMode } from './camera';
 
 import { DEFAULT_BASEMAP, type TileSource } from './tileSource';
 
@@ -18,6 +20,9 @@ export interface MapPanelProps {
   /** Five-second prediction; empty means the inputs are unavailable or stale. */
   trajectory?: GeoCoordinate[];
   mission?: MissionGeometry;
+  /** Snapshot identity: frame only a completed download, never a telemetry render. */
+  missionRevision?: object | null;
+  vehicleKey?: string;
   tileSource?: TileSource;
 }
 
@@ -172,8 +177,16 @@ export function MapPanel({
   track,
   trajectory = [],
   mission = { points: [], omitted: {} },
+  missionRevision = null,
+  vehicleKey,
   tileSource = DEFAULT_BASEMAP,
 }: MapPanelProps) {
+  const [mode, setMode] = useState<FollowMode>('follow');
+  const modeRef = useRef<FollowMode>('follow');
+  const changeMode = (action: 'pan' | 'follow' | 'mission', hasPoints = true) => {
+    modeRef.current = nextFollowMode(modeRef.current, action, hasPoints);
+    setMode(modeRef.current);
+  };
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const markerRef = useRef<maplibregl.Marker | null>(null);
@@ -202,6 +215,7 @@ export function MapPanel({
     });
     mapRef.current = map;
 
+    map.on('movestart', (event) => { if (event.originalEvent) changeMode('pan'); });
     map.on('load', () => {
       loadedRef.current = true;
       addFlightLayers(map, trackRef.current, trajectoryRef.current, missionRef.current);
@@ -260,13 +274,30 @@ export function MapPanel({
       markerRef.current.setLngLat(lngLat);
     }
 
+    if (!shouldFollow(modeRef.current, map.isMoving())) return;
     if (!centredRef.current) {
       map.jumpTo({ center: lngLat, zoom: Math.min(16, tileSource.maxZoom) });
       centredRef.current = true;
     } else if (!map.isMoving()) {
       map.jumpTo({ center: lngLat });
     }
-  }, [position, tileSource.maxZoom]);
+  }, [position, tileSource.maxZoom, mode]);
+
+  useEffect(() => {
+    centredRef.current = false;
+    changeMode('follow');
+  }, [vehicleKey]);
+
+  const fitMission = () => {
+    const frame = framePoints(missionRef.current.points, Math.min(16, tileSource.maxZoom));
+    if (!frame || !mapRef.current) return;
+    changeMode('mission');
+    if ('bounds' in frame) mapRef.current.fitBounds(frame.bounds, { padding: 40, maxZoom: frame.maxZoom, duration: 0 });
+    else mapRef.current.jumpTo(frame);
+  };
+  useEffect(() => {
+    if (missionRevision !== null) fitMission();
+  }, [missionRevision]);
 
   useEffect(() => {
     const source = mapRef.current?.getSource<maplibregl.GeoJSONSource>(TRACK_SOURCE);
@@ -313,6 +344,10 @@ export function MapPanel({
 
   return (
     <div className="map-shell">
+      <div className="map-actions">
+        <button type="button" onClick={fitMission} disabled={mission.points.length === 0}>Fit mission</button>
+        <button type="button" onClick={() => { changeMode('follow'); }} disabled={position === null} aria-pressed={mode === 'follow'}>Follow vehicle</button>
+      </div>
       <div ref={containerRef} className="map-panel" aria-label="Vehicle position map" />
       {trajectory.length > 1 ? <div className="trajectory-key">5 s prediction</div> : null}
       {mission.points.length > 0 ? <div className="mission-key">Commanded mission</div> : null}

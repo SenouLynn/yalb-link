@@ -104,6 +104,8 @@ function SelectedFlightDisplay({
         track={view.track}
         trajectory={displayTrajectory(readings, view.sample)}
         mission={geometry}
+        missionRevision={mission.snapshot}
+        vehicleKey={view.key}
       />,
       mission: <MissionPanel
         status={mission.status}

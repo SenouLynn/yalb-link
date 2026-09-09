@@ -1,7 +1,7 @@
 ---
 id: T-012
 title: Bring the commanded mission into the map viewport
-status: ready
+status: done
 priority: 1
 owner: unassigned
 depends_on: T-011
@@ -39,13 +39,13 @@ it, and the vehicle-following behaviour that exists today is not lost.
 
 ## Acceptance criteria
 
-- [ ] Completing a download frames the mission's positional items, including
+- [x] Completing a download frames the mission's positional items, including
       when they lie outside the current viewport.
-- [ ] An empty mission and a single-point mission do not produce an invalid or
+- [x] An empty mission and a single-point mission do not produce an invalid or
       degenerate viewport.
-- [ ] Vehicle position updates do not immediately undo the mission framing, and
+- [x] Vehicle position updates do not immediately undo the mission framing, and
       an operator's own pan is still not fought by the map.
-- [ ] The behaviour is decided by pure, tested logic; only the camera call
+- [x] The behaviour is decided by pure, tested logic; only the camera call
       itself is untested.
 
 ## Verification
@@ -67,3 +67,12 @@ cd frontend && pnpm dev --port 3001   # then /?source=mock, download, observe
 Found while getting first eyes on the mission UI, not by a failing test. The
 pure-geometry tests pass either way because the defect is entirely in the
 camera.
+
+
+Completed: a completed snapshot frames its positional items once. Mission framing
+and user pan suspend following until Follow vehicle is clicked; Fit mission is
+also available explicitly. Empty missions do not move the camera, single points
+use zoom <=16, and date-line bounds use the shortest longitude arc.
+Typecheck/lint and 91 map/UI tests pass. Browser at 1440×900 confirmed all four
+mock mission markers are inside the viewport after download, with following off.
+Evidence: `docs/runbooks/evidence/t012/framing.json` and `mission.png`.
