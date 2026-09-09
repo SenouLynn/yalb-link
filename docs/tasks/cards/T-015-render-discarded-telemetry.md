@@ -9,7 +9,7 @@ depends_on: none
 
 ## Motivation and evidence
 
-The codec decodes twelve telemetry families; `projectTelemetry`
+The codec decodes twelve telemetry families; `sampleFromEvent`
 (`frontend/src/logic/sample.ts`) projects eight. Three of the remainder reach
 the browser fully decoded and typed, then lose their payload to the `default`
 branch, which keeps only `sourceMessage` and `receivedAtMs` for freshness.
@@ -75,8 +75,8 @@ docker compose --profile ui up --build   # NAV_CONTROLLER_OUTPUT against live SI
   and on request rather than streamed, which decides whether a rate request
   applies at all. Confirm against ArduPilot before adding one — an unnecessary
   `SET_MESSAGE_INTERVAL` for a non-streamed family is noise on the link.
-- Where guidance state belongs on screen. Placement is T-013's subject; this
-  card should not invent a layout that T-013 then has to undo.
+- Place guidance and the detailed inspection tier below primary readings in
+  the instruments pane established by T-017; its body scrolls independently.
 
 ## Notes
 

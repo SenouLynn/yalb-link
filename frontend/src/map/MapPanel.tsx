@@ -7,6 +7,7 @@ import { useEffect, useRef } from 'react';
 import type { GeoPoint } from '@/logic/geoTrack';
 import type { PositionResult } from '@/logic/position';
 import type { GeoCoordinate } from '@/logic/trajectory';
+import { MISSION_ROUTE_COLOR } from '@/ui/palette';
 import type { MissionGeometry } from '@/mission/model';
 
 import { DEFAULT_BASEMAP, type TileSource } from './tileSource';
@@ -72,7 +73,7 @@ function lineFeature(points: GeoCoordinate[]) {
  * deliberately does not have — so they are DOM markers instead. See
  * `missionLabelMarkers`.
  */
-export function flightLayers(): maplibregl.LayerSpecification[] {
+export function flightLayers(missionColor = MISSION_ROUTE_COLOR): maplibregl.LayerSpecification[] {
   return [
     {
       id: TRACK_LAYER,
@@ -98,7 +99,7 @@ export function flightLayers(): maplibregl.LayerSpecification[] {
       type: 'line',
       source: MISSION_SOURCE,
       filter: ['==', '$type', 'LineString'],
-      paint: { 'line-color': '#c7f0ff', 'line-width': 3 },
+      paint: { 'line-color': missionColor, 'line-width': 3 },
     },
     {
       id: MISSION_POINT_LAYER,
@@ -108,7 +109,7 @@ export function flightLayers(): maplibregl.LayerSpecification[] {
       paint: {
         'circle-radius': 10,
         'circle-color': '#14171c',
-        'circle-stroke-color': '#c7f0ff',
+        'circle-stroke-color': missionColor,
         'circle-stroke-width': 2,
       },
     },
@@ -125,7 +126,8 @@ function addFlightLayers(
   map.addSource(TRAJECTORY_SOURCE, { type: 'geojson', data: lineFeature(trajectory) });
   map.addSource(MISSION_SOURCE, { type: 'geojson', data: missionFeatures(mission) });
 
-  for (const layer of flightLayers()) {
+  const missionColor = getComputedStyle(map.getContainer()).getPropertyValue('--mission-route').trim();
+  for (const layer of flightLayers(missionColor || undefined)) {
     map.addLayer(layer);
   }
 }

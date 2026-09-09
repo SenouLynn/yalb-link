@@ -1,7 +1,7 @@
 ---
 id: T-008
 title: Accept live mission inspection with Copter and Plane
-status: ready
+status: done
 priority: 0
 owner: unassigned
 depends_on: T-006, T-007, T-010
@@ -29,16 +29,16 @@ repository evidence.
 
 ## Acceptance criteria
 
-- [ ] Copter and Plane each return the exact count and ordered values of a
+- [x] Copter and Plane each return the exact count and ordered values of a
       known externally loaded mission.
-- [ ] Each mission's supported positional items appear in both the ordered list
+- [x] Each mission's supported positional items appear in both the ordered list
       and the correctly ordered map geometry for the selected vehicle.
-- [ ] A completed zero-item mission is visibly empty rather than failed or
+- [x] A completed zero-item mission is visibly empty rather than failed or
       indefinitely loading.
-- [ ] A controlled timeout or rejected transfer produces an explicit failure
+- [x] A controlled timeout or rejected transfer produces an explicit failure
       and a subsequent request can succeed without restarting the backend.
-- [ ] Any defect found is fixed or represented by a new board card.
-- [ ] The repeatable procedure and observed results are recorded in the
+- [x] Any defect found is fixed or represented by a new board card.
+- [x] The repeatable procedure and observed results are recorded in the
       relevant runbook or executable check.
 
 ## Verification
@@ -84,3 +84,14 @@ Carry into the session:
   item highlight should appear without external setup. It is worth checking
   explicitly, because it was unreachable before T-010 and no test covers the
   live path.
+
+T-017 session evidence (2026-09-09): both six-item downloads, selected route
+and active seq 0, interrupted request switching, explicit timeout and subsequent
+success are captured in `docs/runbooks/evidence/t017/`. Independent ordered
+value comparison and zero-item completion were subsequently accepted after
+claiming this card; see the T-008 follow-through in the evidence README.
+
+Final acceptance: both external MAVLink/HTTP comparisons and live empty UI
+checks passed. The first external Copter clear timed out, then a separate
+retry succeeded; no application retry policy changed. See the durable
+`mission-comparison.json` and `zero-missions.json` artifacts.

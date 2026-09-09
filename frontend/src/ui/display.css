@@ -41,14 +41,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-.display {
-  max-width: 60rem;
-  margin: 0 auto;
-  padding: var(--gap);
-  display: grid;
-  gap: var(--gap);
-}
-
 /* --- shared panel chrome ------------------------------------------------- */
 
 .panel {
@@ -238,8 +230,8 @@ body {
 
 .map-panel {
   width: 100%;
-  height: clamp(18rem, 48vw, 30rem);
-  min-height: 18rem;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
   background: var(--panel-deep);
   border: 1px solid var(--bezel);
@@ -252,26 +244,26 @@ body {
   top: 0.75rem;
   left: 0.75rem;
   padding: 0.3rem 0.5rem;
-  color: var(--amber);
+  color: var(--caution);
   background: rgb(13 16 19 / 88%);
   border: 1px solid var(--bezel);
   border-radius: 0.25rem;
-  font: 600 0.72rem/1 var(--mono);
+  font: 600 0.72rem/1 var(--data);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   pointer-events: none;
 }
 
-.mission-key { position: absolute; z-index: 1; top: 2.8rem; left: 0.75rem; padding: 0.3rem 0.5rem; color: #c7f0ff; background: rgb(13 16 19 / 88%); border: 1px solid #c7f0ff; font: 600 0.72rem/1 var(--data); text-transform: uppercase; }
+.mission-key { position: absolute; z-index: 1; top: 2.8rem; left: 0.75rem; padding: 0.3rem 0.5rem; color: var(--mission-route); background: rgb(13 16 19 / 88%); border: 1px solid var(--mission-route); font: 600 0.72rem/1 var(--data); text-transform: uppercase; }
 .mission-panel__header { display: flex; justify-content: space-between; gap: var(--gap); align-items: center; }
-.mission-panel button { background: var(--panel-deep); border: 1px solid #c7f0ff; color: var(--lume); padding: 0.55rem 0.8rem; font: 600 0.72rem var(--data); }
+.mission-panel button { background: var(--panel-deep); border: 1px solid var(--mission-route); color: var(--lume); padding: 0.55rem 0.8rem; font: 600 0.72rem var(--data); }
 .mission-panel button:disabled { border-color: var(--dead); color: var(--dead); }
 .mission-panel__state, .mission-panel__empty, .mission-panel__error { color: var(--lume-dim); font: 0.75rem var(--data); }
 .mission-panel__error, .mission-list__note { color: var(--caution); }
 .mission-list { display: grid; gap: 0.5rem; margin: 0.75rem 0 0; padding-left: 2rem; font: 0.7rem/1.5 var(--data); }
 .mission-list li { padding: 0.5rem; border-left: 2px solid var(--bezel); }
 .mission-list li > div:first-child { display: flex; justify-content: space-between; gap: 0.5rem; }
-.mission-list__active { border-left-color: #c7f0ff !important; background: rgb(199 240 255 / 6%); }
+.mission-list li.mission-list__active { border-left-color: var(--mission-route); background: color-mix(in srgb, var(--mission-route) 6%, transparent); }
 
 /* Sequence badge for a mission point. Sized to sit inside the 10px-radius
    circle drawn by the mission-points layer, which shares its coordinate. */
@@ -281,7 +273,7 @@ body {
   justify-content: center;
   width: 20px;
   height: 20px;
-  color: #c7f0ff;
+  color: var(--mission-route);
   font: 600 0.62rem/1 var(--data);
   pointer-events: none;
 }
@@ -492,3 +484,60 @@ body {
 .replay__pick:hover {
   border-color: var(--caution);
 }
+
+/* Workspace composition: stable DOM order, CSS placement for all pane subsets. */
+html, body, #root { height: 100%; overflow: hidden; }
+.workspace { height: 100dvh; display: grid; grid-template: "topbar topbar" auto "sidebar main" minmax(0, 1fr) / minmax(16rem, 18rem) minmax(0, 1fr); }
+.workspace *, .pane { min-width: 0; min-height: 0; }
+.workspace__topbar { grid-area: topbar; display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); padding: 0.65rem 1rem; border-bottom: 1px solid var(--bezel); }
+.workspace__topbar h1 { margin: 0; font: 600 0.9rem var(--data); letter-spacing: 0.08em; }
+.workspace__topbar h1 span { margin-left: 0.5rem; }
+.workspace__visibility { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-left: auto; }
+.workspace__topbar .replay { width: 100%; }
+.workspace__sidebar { grid-area: sidebar; overflow-y: auto; border-right: 1px solid var(--bezel); padding: var(--gap); }
+.workspace__sidebar .panel { padding: 0.75rem 0; border: 0; border-bottom: 1px solid var(--bezel); border-radius: 0; background: transparent; }
+.workspace__sidebar .status { align-items: stretch; flex-direction: column; gap: 0.5rem; }
+.workspace__sidebar .chip { justify-content: space-between; border: 0; padding: 0.2rem 0; }
+.workspace__sidebar .command-control { flex-wrap: wrap; }
+.workspace__position { margin-top: 1rem; font: 0.7rem var(--data); color: var(--lume-dim); overflow-wrap: anywhere; }
+.workspace__main { grid-area: main; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
+.workspace__main.has-instruments { grid-template-areas: "instruments"; }
+.workspace__main.has-map { grid-template-areas: "map"; }
+.workspace__main.has-mission { grid-template-areas: "mission"; }
+.workspace__main.has-instruments.has-map { grid-template-areas: "instruments map"; grid-template-columns: minmax(20rem, 0.9fr) minmax(0, 1.4fr); }
+.workspace__main.has-instruments.has-mission { grid-template-areas: "instruments mission"; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.workspace__main.has-map.has-mission { grid-template-areas: "map mission"; grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 1fr); }
+.workspace__main.has-instruments.has-map.has-mission { grid-template-areas: "instruments map" "mission map"; grid-template-columns: minmax(20rem, 0.9fr) minmax(0, 1.4fr); grid-template-rows: minmax(0, 1.6fr) minmax(0, 1fr); }
+.pane { display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--bezel); border-bottom: 1px solid var(--bezel); }
+.pane[hidden] { display: none; }
+.pane--instruments { grid-area: instruments; }
+.pane--map { grid-area: map; }
+.pane--mission { grid-area: mission; }
+.pane__title { flex: none; margin: 0; padding: 0.65rem var(--gap); font: 600 0.625rem var(--label); letter-spacing: 0.14em; text-transform: uppercase; color: var(--lume-dim); border-bottom: 1px solid var(--bezel); }
+.pane__body { flex: 1; overflow-y: auto; padding: var(--gap); }
+.pane__body .panel { border: 0; border-bottom: 1px solid var(--bezel); border-radius: 0; padding: 0.5rem; }
+.pane--map .pane__body { padding: 0; overflow: hidden; }
+.pane--map .map-shell { height: 100%; }
+.pane--map .map-panel { border: 0; border-radius: 0; }
+.pane--instruments .instruments { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.4rem; }
+.pane--instruments .readouts { gap: 0.4rem; }
+.pane--instruments .value { font-size: 1.2rem; }
+.workspace__prompt { margin: auto; padding: 2rem; color: var(--lume-dim); }
+@media (max-width: 900px) {
+  .workspace { grid-template: "topbar" auto "sidebar" minmax(0, auto) "main" minmax(0, 1fr) / minmax(0, 1fr); }
+  .workspace__sidebar { max-height: 10rem; border-right: 0; border-bottom: 1px solid var(--bezel); }
+  .workspace__sidebar .status { flex-direction: row; flex-wrap: wrap; }
+  .workspace__sidebar .status .chip { gap: 0.5rem; }
+  .workspace__sidebar .status__spacer { display: none; }
+  .workspace__main[class] { display: flex; flex-direction: column; overflow-y: auto; }
+  .pane { grid-area: auto; flex: 0 0 auto; border-right: 0; }
+  .pane--instruments { min-height: 26rem; }
+  .pane--map { height: 28rem; }
+  .pane--mission { max-height: 30rem; }
+  .pane__body { flex-basis: auto; }
+  .workspace__visibility { margin-left: 0; }
+}
+
+.pane--instruments .instrument { gap: 0.4rem; }
+.pane--instruments .instrument svg { max-height: 10rem; }
+.pane--instruments .instrument--heading svg { max-height: 4rem; }

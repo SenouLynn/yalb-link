@@ -27,7 +27,7 @@ export function HeadingIndicator({ reading }: HeadingIndicatorProps) {
   const ticks = heading === null ? [] : headingTicks(heading.headingDeg);
 
   return (
-    <div className="panel instrument">
+    <div className="panel instrument instrument--heading">
       <div className="label">
         Heading
         {heading?.isFallback === true ? ' · fallback source' : ''}

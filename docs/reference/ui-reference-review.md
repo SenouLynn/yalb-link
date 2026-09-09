@@ -1,8 +1,9 @@
 # UI reference review
 
 Source review on 2026-09-08: local sibling `flight-path-hud`, primarily
-`apps/gcs/src`. Its origin is `SenouLynn/flight-path-hud`. Confirmation that this
-is the operator's named `flight-hud-trajectory` reference is pending. These are
+`apps/gcs/src`. Its origin is `SenouLynn/flight-path-hud`. The user-supplied reviewed T-017 plan (2026-09-09) carries operator
+confirmation that this is the named `flight-hud-trajectory` reference, pinned
+to `29426a9`, primarily `apps/gcs/src`. These are
 code observations, not browser-verified visual acceptance.
 
 | Surface | Reference evidence | YALB state / implication |
@@ -16,6 +17,12 @@ code observations, not browser-verified visual acceptance.
 | Message inspection | `log/LogsPanel.tsx`, `log/LogPanel.tsx` | Raw stream tab has timestamps, vehicle identity, message name, sequence, filtering, pause and clear. T-016's STATUSTEXT log alone does not provide this. |
 | Mission/map interaction | `NodeView.tsx` | Selecting a waypoint pans the map and releases follow. T-012 covers initial mission framing; YALB already has download/list/route state. |
 | Video and guided workflows | `video/VideoPanel.tsx`, `NodeView.tsx` | Additional capabilities, not buttons to copy into an unsupported UI. Current YALB command surface is guarded arm/disarm only. |
+
+Trajectory-era commits `bccf549`, `9288986`, and `5f73e30` survive in
+`packages/hud-ui/src/components/HudPredictiveTrajectory.tsx`; the current GCS
+uses `HudUnifiedInstrument` instead. T-013 owns instrument parity. Guided and
+video panels assume backend capabilities YALB does not expose; their exclusion
+is a backend constraint, not merely a layout choice.
 
 ## Recovered motion profiles
 

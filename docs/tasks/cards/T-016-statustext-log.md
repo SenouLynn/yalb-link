@@ -83,3 +83,7 @@ Held in `backlog` rather than `ready` because of the reconnect-retention
 question. An earlier estimate in conversation called this "a small feature";
 that was before the chunking and hub-retention constraints were checked, and it
 is better described as small in UI and real in state handling.
+
+T-017 defines a future `messages` pane in the main workspace with an independently
+scrolling body. Add it to the workspace-owned inventory when this card is shaped;
+no empty placeholder ships with the shell. Raw-message inspection remains T-013.

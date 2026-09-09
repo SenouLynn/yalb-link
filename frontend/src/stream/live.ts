@@ -24,8 +24,9 @@ export interface LiveOptions {
 /**
  * LiveEventSource follows `/api/events`.
  *
- * Reconnection is left to the browser, which retries an EventSource on its
- * own. The backend's contract makes that safe: every reconnect gets a fresh
+ * The browser retries transient disconnects. A terminal CLOSED state (for
+ * example a development proxy returning HTTP 500) needs a new EventSource.
+ * The backend's contract makes that safe: every reconnect gets a fresh
  * bootstrap of retained state, so a resumed stream cannot leave the display
  * showing values from before the gap.
  */
@@ -41,44 +42,64 @@ export class LiveEventSource implements TelemetryStream {
   }
 
   start(onEvent: (event: StreamEvent) => void): () => void {
-    const source = this.create(this.url);
+    let stopped = false;
+    let retry: ReturnType<typeof globalThis.setTimeout> | undefined;
+    let detach: (() => void) | undefined;
+    const connect = () => {
+      if (stopped) return;
+      const source = this.create(this.url);
 
-    const forward = (name: string) => (message: MessageEvent<string>) => {
-      const parsed = parseStreamEvent(name, message.data, this.wallNow());
+      const forward = (name: string) => (message: MessageEvent<string>) => {
+        const parsed = parseStreamEvent(name, message.data, this.wallNow());
 
-      if (parsed !== null) {
-        onEvent(parsed);
-      }
+        if (parsed !== null) {
+          onEvent(parsed);
+        }
+      };
+
+      const onFleet = forward(EVENT_FLEET);
+      const onTelemetry = forward(EVENT_TELEMETRY);
+      const onCommand = forward(EVENT_COMMAND);
+
+      const onOpen = () => {
+        onEvent({ kind: 'connection', connected: true, receivedAtMs: this.wallNow() });
+      };
+
+      // EventSource reports every failure as a bare `error`, including the ones
+      // it is about to retry. Reporting it as a disconnect is correct either
+      // way: until the next `open`, the browser is not receiving telemetry.
+      const onError = () => {
+        onEvent({ kind: 'connection', connected: false, receivedAtMs: this.wallNow() });
+        // CONNECTING already has a native retry. CLOSED never retries itself.
+        if (source.readyState === 2 && retry === undefined && !stopped) {
+          detach?.();
+          retry = globalThis.setTimeout(() => {
+            retry = undefined;
+            connect();
+          }, 2000);
+        }
+      };
+
+      source.addEventListener(EVENT_FLEET, onFleet as EventListener);
+      source.addEventListener(EVENT_TELEMETRY, onTelemetry as EventListener);
+      source.addEventListener(EVENT_COMMAND, onCommand as EventListener);
+      source.addEventListener('open', onOpen);
+      source.addEventListener('error', onError);
+
+      detach = () => {
+        source.removeEventListener(EVENT_FLEET, onFleet as EventListener);
+        source.removeEventListener(EVENT_TELEMETRY, onTelemetry as EventListener);
+        source.removeEventListener(EVENT_COMMAND, onCommand as EventListener);
+        source.removeEventListener('open', onOpen);
+        source.removeEventListener('error', onError);
+        source.close();
+      };
     };
-
-    const onFleet = forward(EVENT_FLEET);
-    const onTelemetry = forward(EVENT_TELEMETRY);
-    const onCommand = forward(EVENT_COMMAND);
-
-    const onOpen = () => {
-      onEvent({ kind: 'connection', connected: true, receivedAtMs: this.wallNow() });
-    };
-
-    // EventSource reports every failure as a bare `error`, including the ones
-    // it is about to retry. Reporting it as a disconnect is correct either
-    // way: until the next `open`, the browser is not receiving telemetry.
-    const onError = () => {
-      onEvent({ kind: 'connection', connected: false, receivedAtMs: this.wallNow() });
-    };
-
-    source.addEventListener(EVENT_FLEET, onFleet as EventListener);
-    source.addEventListener(EVENT_TELEMETRY, onTelemetry as EventListener);
-    source.addEventListener(EVENT_COMMAND, onCommand as EventListener);
-    source.addEventListener('open', onOpen);
-    source.addEventListener('error', onError);
-
+    connect();
     return () => {
-      source.removeEventListener(EVENT_FLEET, onFleet as EventListener);
-      source.removeEventListener(EVENT_TELEMETRY, onTelemetry as EventListener);
-      source.removeEventListener(EVENT_COMMAND, onCommand as EventListener);
-      source.removeEventListener('open', onOpen);
-      source.removeEventListener('error', onError);
-      source.close();
+      stopped = true;
+      globalThis.clearTimeout(retry);
+      detach?.();
     };
   }
 }

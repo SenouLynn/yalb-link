@@ -1,0 +1,86 @@
+{
+  "log": [
+    {
+      "name": "copter-download",
+      "at": "2026-09-09T14:40:48.443Z",
+      "text": "YALB VEHICLE WORKSPACE\nLIVE\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nVEHICLE\n1:1\nSTATE\nDISARMED\nMODE\n0\nGPS\nRTK FIX · 10\nEKF\nOK\nVEHICLE LINK\nHEARD\nSOURCE\nLIVE\nARM\nNo command issued\nPOSITION · TRACK\n\n37.774900, -122.419400\n\n23 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n0.1°\nPITCH\n0.1°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n-0.0m\nGLOBAL_POSITION_INT\n0.0s\nGROUND SPEED\n0.0m/s\nVFR_HUD\n0.0s\nCLIMB\n-0.0m/s\nVFR_HUD\n0.0s\nBATTERY\n12.60V\nBATTERY_STATUS\n0.6s\nREMAINING\n100%\nBATTERY_STATUS\n0.6s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n001°\nVFR_HUD\n0.0s\nMAP\n0\n1\n2\n3\n4\n5\n© OpenStreetMap contributors\n5 S PREDICTION\nCOMMANDED MISSION\nMISSION\nONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nActive\nframe GLOBAL · lat/x 37.7748999 · lon/y -122.4194 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "selected": "1:1",
+      "mission": "ONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nActive\nframe GLOBAL · lat/x 37.7748999 · lon/y -122.4194 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "stale": 0,
+      "canvas": true
+    },
+    {
+      "name": "pending-after-toggle",
+      "at": "2026-09-09T14:40:49.197Z",
+      "text": "YALB VEHICLE WORKSPACE\nLIVE\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nVEHICLE\n1:1\nSTATE\nDISARMED\nMODE\n0\nGPS\nRTK FIX · 10\nEKF\nOK\nVEHICLE LINK\nHEARD\nSOURCE\nLIVE\nARM\nNo command issued\nPOSITION · TRACK\n\n37.774900, -122.419400\n\n27 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n0.1°\nPITCH\n0.1°\nATTITUDE\n0.1s\nALTITUDE · ABOVE HOME\n-0.0m\nGLOBAL_POSITION_INT\n0.1s\nGROUND SPEED\n0.0m/s\nVFR_HUD\n0.1s\nCLIMB\n+0.0m/s\nVFR_HUD\n0.1s\nBATTERY\n12.60V\nBATTERY_STATUS\n0.3s\nREMAINING\n100%\nBATTERY_STATUS\n0.3s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n001°\nVFR_HUD\n0.1s\nMAP\n© OpenStreetMap contributors\n5 S PREDICTION\nMISSION\nONBOARD MISSION\nLoading current vehicle…\nDownloading…",
+      "selected": "1:1",
+      "mission": "ONBOARD MISSION\nLoading current vehicle…\nDownloading…",
+      "stale": 0,
+      "canvas": true
+    },
+    {
+      "name": "switch-to-plane-during-copter-request",
+      "at": "2026-09-09T14:40:49.207Z",
+      "text": "YALB VEHICLE WORKSPACE\nLIVE\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nVEHICLE\n2:1\nSTATE\nDISARMED\nMODE\n0\nGPS\nRTK FIX · 10\nEKF\nOK\nVEHICLE LINK\nHEARD\nSOURCE\nLIVE\nARM\nNo command issued\nPOSITION · TRACK\n\n37.774900, -122.419400\n\n28 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n0.1°\nPITCH\n0.1°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n0.1m\nGLOBAL_POSITION_INT\n0.0s\nGROUND SPEED\n0.0m/s\nVFR_HUD\n0.0s\nCLIMB\n+0.0m/s\nVFR_HUD\n0.0s\nBATTERY\n12.60V\nBATTERY_STATUS\n0.3s\nREMAINING\n99%\nBATTERY_STATUS\n0.3s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n000°\nVFR_HUD\n0.0s\nMAP\n© OpenStreetMap contributors\n5 S PREDICTION\nMISSION\nONBOARD MISSION\nNot downloaded\nDownload mission",
+      "selected": "2:1",
+      "mission": "ONBOARD MISSION\nNot downloaded\nDownload mission",
+      "stale": 0,
+      "canvas": true
+    },
+    {
+      "name": "plane-download",
+      "at": "2026-09-09T14:40:49.915Z",
+      "text": "YALB VEHICLE WORKSPACE\nLIVE\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nVEHICLE\n2:1\nSTATE\nDISARMED\nMODE\n0\nGPS\nRTK FIX · 10\nEKF\nOK\nVEHICLE LINK\nHEARD\nSOURCE\nLIVE\nARM\nNo command issued\nPOSITION · TRACK\n\n37.774900, -122.419400\n\n32 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n0.1°\nPITCH\n0.1°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n0.1m\nGLOBAL_POSITION_INT\n0.0s\nGROUND SPEED\n0.0m/s\nVFR_HUD\n0.0s\nCLIMB\n+0.0m/s\nVFR_HUD\n0.0s\nBATTERY\n12.60V\nBATTERY_STATUS\n0.0s\nREMAINING\n99%\nBATTERY_STATUS\n0.0s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n000°\nVFR_HUD\n0.0s\nMAP\n0\n1\n2\n3\n4\n5\n© OpenStreetMap contributors\n5 S PREDICTION\nCOMMANDED MISSION\nMISSION\nONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nActive\nframe GLOBAL · lat/x 37.7748998 · lon/y -122.41939989999999 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "selected": "2:1",
+      "mission": "ONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nActive\nframe GLOBAL · lat/x 37.7748998 · lon/y -122.41939989999999 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "stale": 0,
+      "canvas": true
+    },
+    {
+      "name": "copter-stale-after-pause",
+      "at": "2026-09-09T14:40:55.424Z",
+      "text": "YALB VEHICLE WORKSPACE\nLIVE\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nVEHICLE\n1:1\nSTATE\nDISARMED\nMODE\n0\nGPS\n- - -\nEKF\n- - -\nVEHICLE LINK\nHEARD\nSOURCE\nLIVE\nARM\nNo command issued\nPOSITION · TRACK\n\nPosition unavailable\n\n27 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n- - -°\nPITCH\n- - -°\nATTITUDE\n6s\nALTITUDE · DATUM UNKNOWN\n- - -m\nGLOBAL_POSITION_INT\n6s\nGROUND SPEED\n- - -m/s\nVFR_HUD\n6s\nCLIMB\n- - -m/s\nVFR_HUD\n6s\nBATTERY\n- - -V\nBATTERY_STATUS\n7s\nREMAINING\n- - -%\nBATTERY_STATUS\n7s\nHEADING\nBEARING · 90° SHOWN\n- - -°\nVFR_HUD\n6s\nMAP\n© OpenStreetMap contributors\nMISSION\nONBOARD MISSION\nNot downloaded\nDownload mission",
+      "selected": "1:1",
+      "mission": "ONBOARD MISSION\nNot downloaded\nDownload mission",
+      "stale": 7,
+      "canvas": true
+    },
+    {
+      "name": "explicit-timeout",
+      "at": "2026-09-09T14:41:01.031Z",
+      "text": "YALB VEHICLE WORKSPACE\nLIVE\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nVEHICLE\n1:1\nSTATE\nDISARMED\nMODE\n0\nGPS\n- - -\nEKF\n- - -\nVEHICLE LINK\nHEARD\nSOURCE\nLIVE\nARM\nNo command issued\nPOSITION · TRACK\n\nPosition unavailable\n\n27 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n- - -°\nPITCH\n- - -°\nATTITUDE\n12s\nALTITUDE · DATUM UNKNOWN\n- - -m\nGLOBAL_POSITION_INT\n12s\nGROUND SPEED\n- - -m/s\nVFR_HUD\n12s\nCLIMB\n- - -m/s\nVFR_HUD\n12s\nBATTERY\n- - -V\nBATTERY_STATUS\n12s\nREMAINING\n- - -%\nBATTERY_STATUS\n12s\nHEADING\nBEARING · 90° SHOWN\n- - -°\nVFR_HUD\n12s\nMAP\n© OpenStreetMap contributors\nMISSION\nONBOARD MISSION\nDownload failed — no current snapshot\nDownload mission\n\nvehicle stopped responding during mission download",
+      "selected": "1:1",
+      "mission": "ONBOARD MISSION\nDownload failed — no current snapshot\nDownload mission\n\nvehicle stopped responding during mission download",
+      "stale": 7,
+      "canvas": true
+    },
+    {
+      "name": "recovered-and-downloaded",
+      "at": "2026-09-09T14:41:03.922Z",
+      "text": "YALB VEHICLE WORKSPACE\nLIVE\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nVEHICLE\n1:1\nSTATE\nDISARMED\nMODE\n0\nGPS\nRTK FIX · 10\nEKF\nOK\nVEHICLE LINK\nHEARD\nSOURCE\nLIVE\nARM\nNo command issued\nPOSITION · TRACK\n\n37.774900, -122.419400\n\n44 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n0.1°\nPITCH\n0.1°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n-0.0m\nGLOBAL_POSITION_INT\n0.0s\nGROUND SPEED\n0.0m/s\nVFR_HUD\n0.0s\nCLIMB\n-0.0m/s\nVFR_HUD\n0.0s\nBATTERY\n12.60V\nBATTERY_STATUS\n0.0s\nREMAINING\n100%\nBATTERY_STATUS\n0.0s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n001°\nVFR_HUD\n0.0s\nMAP\n0\n1\n2\n3\n4\n5\n© OpenStreetMap contributors\n5 S PREDICTION\nCOMMANDED MISSION\nMISSION\nONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nActive\nframe GLOBAL · lat/x 37.7748999 · lon/y -122.4194 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "selected": "1:1",
+      "mission": "ONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nActive\nframe GLOBAL · lat/x 37.7748999 · lon/y -122.4194 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "stale": 0,
+      "canvas": true
+    },
+    {
+      "name": "backend-disconnected",
+      "at": "2026-09-09T14:41:09.683Z",
+      "text": "YALB VEHICLE WORKSPACE\nDISCONNECTED\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nVEHICLE\n1:1\nSTATE\nDISARMED\nMODE\n0\nGPS\n- - -\nEKF\n- - -\nVEHICLE LINK\nHEARD\nSOURCE\nDISCONNECTED\nARM\nNo command issued\nPOSITION · TRACK\n\nPosition unavailable\n\n44 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n- - -°\nPITCH\n- - -°\nATTITUDE\n6s\nALTITUDE · DATUM UNKNOWN\n- - -m\nGLOBAL_POSITION_INT\n6s\nGROUND SPEED\n- - -m/s\nVFR_HUD\n6s\nCLIMB\n- - -m/s\nVFR_HUD\n6s\nBATTERY\n- - -V\nBATTERY_STATUS\n6s\nREMAINING\n- - -%\nBATTERY_STATUS\n6s\nHEADING\nBEARING · 90° SHOWN\n- - -°\nVFR_HUD\n6s\nMAP\n0\n1\n2\n3\n4\n5\n© OpenStreetMap contributors\nCOMMANDED MISSION\nMISSION\nONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nframe GLOBAL · lat/x 37.7748999 · lon/y -122.4194 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "selected": "1:1",
+      "mission": "ONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nframe GLOBAL · lat/x 37.7748999 · lon/y -122.4194 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "stale": 7,
+      "canvas": true
+    },
+    {
+      "name": "backend-reconnected",
+      "at": "2026-09-09T14:41:15.465Z",
+      "text": "YALB VEHICLE WORKSPACE\nDISCONNECTED\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nVEHICLE\n1:1\nSTATE\nDISARMED\nMODE\n0\nGPS\n- - -\nEKF\n- - -\nVEHICLE LINK\nHEARD\nSOURCE\nDISCONNECTED\nARM\nNo command issued\nPOSITION · TRACK\n\nPosition unavailable\n\n44 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n- - -°\nPITCH\n- - -°\nATTITUDE\n11s\nALTITUDE · DATUM UNKNOWN\n- - -m\nGLOBAL_POSITION_INT\n11s\nGROUND SPEED\n- - -m/s\nVFR_HUD\n11s\nCLIMB\n- - -m/s\nVFR_HUD\n11s\nBATTERY\n- - -V\nBATTERY_STATUS\n11s\nREMAINING\n- - -%\nBATTERY_STATUS\n11s\nHEADING\nBEARING · 90° SHOWN\n- - -°\nVFR_HUD\n11s\nMAP\n0\n1\n2\n3\n4\n5\n© OpenStreetMap contributors\nCOMMANDED MISSION\nMISSION\nONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nframe GLOBAL · lat/x 37.7748999 · lon/y -122.4194 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "selected": "1:1",
+      "mission": "ONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_WAYPOINT\nframe GLOBAL · lat/x 37.7748999 · lon/y -122.4194 · alt/z 10.099999\nparams [0, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.775099999999995 · lon/y -122.4191 · alt/z 21\nparams [0, 0, 0, 0] · autocontinue yes\n#2 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7753 · lon/y -122.4194 · alt/z 22\nparams [0, 0, 0, 0] · autocontinue yes\n#3 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7755 · lon/y -122.4191 · alt/z 23\nparams [0, 0, 0, 0] · autocontinue yes\n#4 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7757 · lon/y -122.4194 · alt/z 24\nparams [0, 0, 0, 0] · autocontinue yes\n#5 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT · lat/x 37.7759 · lon/y -122.4191 · alt/z 25\nparams [0, 0, 0, 0] · autocontinue yes",
+      "stale": 7,
+      "canvas": true
+    }
+  ],
+  "errors": []
+}

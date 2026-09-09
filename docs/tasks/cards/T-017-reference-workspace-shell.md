@@ -1,7 +1,7 @@
 ---
 id: T-017
 title: Establish the reference-driven vehicle workspace before adding panels
-status: backlog
+status: done
 priority: 0
 owner: unassigned
 depends_on: none
@@ -12,7 +12,7 @@ depends_on: none
 The operator requested a UI-led phase using the original interface as a strong
 signal for layout, modularity, hierarchy and features while retaining this
 repository's backend. [Source review](../../reference/ui-reference-review.md)
-identifies a candidate reference and concrete composition differences.
+identifies the confirmed reference and concrete composition differences.
 T-013 currently waits for T-015/T-016; a usable workspace shell need not wait
 for every telemetry or log feature.
 
@@ -36,21 +36,21 @@ the confirmed reference, with deliberate space for subsequent inspection work.
 
 ## Acceptance criteria
 
-- [ ] Confirm the reference location and primary view before promotion to ready.
-- [ ] At 1440×900, map and instruments are visible together; the mission list
+- [x] Confirm the reference location and primary view before promotion to ready.
+- [x] At 1440×900, map and instruments are visible together; the mission list
       scrolls within its pane and does not push the map below the page.
-- [ ] At 768×1024, panes remain reachable without horizontal document overflow.
-- [ ] Pane visibility changes do not restart the event source, reset selected
+- [x] At 768×1024, panes remain reachable without horizontal document overflow.
+- [x] Pane visibility changes do not restart the event source, reset selected
       vehicle state, or lose an in-flight mission request.
-- [ ] Mock, live, replay, stale/absent readings, selected-vehicle isolation and
+- [x] Mock, live, replay, stale/absent readings, selected-vehicle isolation and
       guarded arm transaction behavior retain their existing semantics.
-- [ ] Capture browser comparisons with the reference at both sizes and exercise
+- [x] Capture browser comparisons with the reference at both sizes and exercise
       download, pane toggles, vehicle switch, replay and disconnected posture.
-- [ ] Record results for applicable workflows in mock, live SITL and recording
+- [x] Record results for applicable workflows in mock, live SITL and recording
       replay, including disconnect/reconnect, stale/absent data, vehicle switches
       during requests, and explicit request failures. State unsupported paths
       and unexecuted checks rather than counting fixture success as live evidence.
-- [ ] Fix discovered integration defects in scope or create follow-up cards with
+- [x] Fix discovered integration defects in scope or create follow-up cards with
       reproduction steps; unresolved defects affecting this outcome block completion.
 
 ## Verification
@@ -67,12 +67,14 @@ lifecycle tests. Record actual commands and evidence during implementation.
 
 ## Open questions
 
-- Is the local `flight-path-hud/apps/gcs` the intended reference? An operator
-  clarification is pending; the source inventory remains explicitly provisional.
+- None for the shell. The user supplied the reviewed T-017 implementation plan
+  on 2026-09-09, carrying operator confirmation of `flight-path-hud/apps/gcs/src`
+  at `29426a9`. Instrument parity remains T-013.
 
 ## Notes
 
-Planning slice only. T-013 remains the larger parity outcome. After confirming
+Implementation follows the user-supplied reviewed plan
+`alrighty-let-s-take-a-cozy-thompson.md` (2026-09-09). T-013 remains the larger parity outcome. After confirming
 the reference, implement this shell first, place T-015/T-016 inside it, and use
 T-012/T-008 to exercise mission capability. Coordinate T-014 with the reference
 palette instead of treating the current stylesheet as an immutable design.
@@ -88,3 +90,10 @@ remain outside this slice under the existing local-operator scope.
 Record executed procedures and observed results in the development runbook
 when verification occurs. The checks above are planned acceptance, not evidence
 that those scenarios have already passed.
+
+
+Completed execution evidence: [T-017 run](../../runbooks/evidence/t017/README.md).
+Frontend 287 tests, typecheck/lint/build and backend race baseline passed.
+Fixed terminal SSE reconnect after real proxy failure, plus arm confirmation
+isolation on vehicle switch. Follow-ups: T-020 marker churn and T-021 Compose
+recording path. T-008 was subsequently completed under a separate claim in the same session.

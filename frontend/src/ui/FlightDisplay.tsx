@@ -1,4 +1,4 @@
-/** The assembled mini flight display for one selected vehicle. */
+/** Composes the existing flight features in a persistent vehicle workspace. */
 
 import type { FleetState, VehicleKey, VehicleView } from '@/fleet/state';
 import type { TelemetrySample } from '@/logic/sample';
@@ -15,16 +15,14 @@ import { emptyMissionState, missionPanelState, visibleMissionState, type Mission
 import type { ReplayEventSource } from '@/stream/replay';
 import type { StreamSource } from '@/stream/select';
 
-import { AttitudeIndicator } from './AttitudeIndicator';
 import { ArmControl } from './ArmControl';
-import { HeadingIndicator } from './HeadingIndicator';
-import { NO_VALUE, num, signed } from './format';
 import { hasDisplayValue, readFlight } from './readings';
-import { Readout } from './Readout';
 import { ReplayControls } from './ReplayControls';
 import { StatusBar } from './StatusBar';
 import { VehicleSelector } from './VehicleSelector';
 import { useEffect, useRef, useState } from 'react';
+import { InstrumentPanel } from './InstrumentPanel';
+import { WorkspaceShell, WorkspacePanes, PaneControls, DEFAULT_VISIBILITY, type PaneVisibility } from '@/workspace/Workspace';
 
 export interface FlightDisplayProps {
   fleet: FleetState;
@@ -47,18 +45,27 @@ export function FlightDisplay({
   const view = fleet.selected === null ? undefined : fleet.vehicles[fleet.selected];
   const controls = source === 'replay' ? <ReplayControls source={replay} /> : null;
 
-  if (view === undefined) {
-    return <EmptyFleet connected={fleet.connected} source={source} controls={controls} />;
-  }
-
-  return <SelectedFlightDisplay
-    fleet={fleet}
-    view={view}
-    nowMs={nowMs}
-    source={source}
-    controls={controls}
-    onSelect={onSelect}
-  />;
+  const [visible, setVisible] = useState(DEFAULT_VISIBILITY);
+  const toggle = (id: keyof PaneVisibility) => {
+    const pane = document.getElementById(`pane-${id}`);
+    if (visible[id] && pane?.contains(document.activeElement)) {
+      document.querySelector<HTMLButtonElement>(`[aria-controls="pane-${id}"]`)?.focus();
+    }
+    setVisible((previous) => ({ ...previous, [id]: !previous[id] }));
+  };
+  const sourceLabel = source === 'live' ? (fleet.connected ? 'LIVE' : 'DISCONNECTED') : source.toUpperCase();
+  return <WorkspaceShell topbar={<>
+    <span className={`chip chip--${sourceLabel === 'LIVE' ? 'active' : 'caution'}`}>{sourceLabel}</span>
+    <VehicleSelector fleet={fleet} onSelect={onSelect} />
+    <PaneControls visible={visible} onToggle={toggle} />
+    {controls}
+  </>}>
+    {view === undefined ? <>
+      <aside className="workspace__sidebar" aria-label="Vehicle context"><div className="label">No vehicle selected</div></aside>
+      <main className="workspace__main"><div className="panel empty"><div className="label">No vehicle</div>
+        <p className="empty__hint">{emptyHint(source, fleet.connected)}</p></div></main>
+    </> : <SelectedFlightDisplay fleet={fleet} view={view} nowMs={nowMs} source={source} visible={visible} />}
+  </WorkspaceShell>;
 }
 
 /** Owns state that exists only while a vehicle is selected. */
@@ -67,100 +74,47 @@ function SelectedFlightDisplay({
   view,
   nowMs,
   source,
-  controls,
-  onSelect,
+  visible,
 }: {
   fleet: FleetState;
   view: VehicleView;
   nowMs: number;
   source: StreamSource;
-  controls: React.ReactNode;
-  onSelect: (key: VehicleKey) => void;
+  visible: PaneVisibility;
 }) {
   const readings = readFlight(view, nowMs);
   const mission = useMission(view.key, view.sysId, view.compId, source);
   const geometry = missionGeometry(mission.snapshot);
   const activeSeq = activeMissionSequence(view, nowMs);
-  const { position, flightPath, battery } = readings;
-
-  const altitude = hasDisplayValue(position) ? position.value : null;
-  const path = hasDisplayValue(flightPath) ? flightPath.value : null;
-  const power = hasDisplayValue(battery) ? battery.value : null;
-
-  return (
-    <div className="display">
+  return <>
+    <aside className="workspace__sidebar" aria-label="Vehicle context">
       <StatusBar view={view} nowMs={nowMs} connected={fleet.connected} source={source} />
-
-      <ArmControl view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} nowMs={nowMs} />
-
-      {controls}
-
-      <VehicleSelector fleet={fleet} onSelect={onSelect} />
-
-      <div className="instruments">
-        <AttitudeIndicator reading={readings.attitude} />
-
-        <div className="readouts">
-          <Readout
-            label="Altitude"
-            note={altitude === null ? 'datum unknown' : datumNote(altitude.altRef)}
-            value={altitude === null ? NO_VALUE : num(altitude.altM)}
-            unit="m"
-            reading={position}
-            wide
-          />
-
-          <Readout
-            label="Ground speed"
-            value={path === null ? NO_VALUE : num(path.groundSpeedMps)}
-            unit="m/s"
-            reading={flightPath}
-          />
-
-          <Readout
-            label="Climb"
-            value={path === null ? NO_VALUE : signed(path.climbMps)}
-            unit="m/s"
-            reading={flightPath}
-          />
-
-          <Readout
-            label="Battery"
-            value={power === null ? NO_VALUE : num(power.voltageV, 2)}
-            unit="V"
-            reading={battery}
-          />
-
-          <Readout
-            label="Remaining"
-            value={power === null ? NO_VALUE : num(power.remainingPct, 0)}
-            unit="%"
-            reading={battery}
-          />
-        </div>
+      <ArmControl key={view.key} view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} nowMs={nowMs} />
+      <div className="workspace__position"><span className="label">Position · track</span>
+        <p>{hasDisplayValue(readings.position)
+          ? `${readings.position.value.latDeg.toFixed(6)}, ${readings.position.value.lonDeg.toFixed(6)}`
+          : 'Position unavailable'}</p><p>{view.track.length} / 500 track points</p>
       </div>
-
-      <HeadingIndicator reading={readings.heading} />
-
+    </aside>
+    <WorkspacePanes visible={visible} panes={{
+      instruments: <InstrumentPanel readings={readings} />,
+      map:
       <MapPanel
         position={hasDisplayValue(readings.position) ? readings.position.value : null}
         track={view.track}
         trajectory={displayTrajectory(readings, view.sample)}
         mission={geometry}
-      />
-
-      {/* Passed field by field: MissionViewState carries a `key`, and spreading
-          it hands React a reconciliation key instead of a prop. */}
-      <MissionPanel
+      />,
+      mission: <MissionPanel
         status={mission.status}
         snapshot={mission.snapshot}
         error={mission.error}
         geometry={geometry}
         activeSeq={activeSeq}
         onDownload={mission.onDownload}
-      />
-    </div>
-  );
+      />,
+    }} />
+  </>;
 }
 
 function useMission(key: VehicleKey, sysId: number, compId: number, source: StreamSource) {
@@ -232,32 +186,6 @@ function displayTrajectory(
   }
 
   return projectTrajectoryToGeo(readings.position.value, offsets);
-}
-
-/** Names the altitude datum explicitly; the two differ by field elevation. */
-function datumNote(ref: 'RELATIVE' | 'MSL'): string {
-  return ref === 'RELATIVE' ? 'above home' : 'above sea level';
-}
-
-function EmptyFleet({
-  connected,
-  source,
-  controls,
-}: {
-  connected: boolean;
-  source: StreamSource;
-  controls: React.ReactNode;
-}) {
-  return (
-    <div className="display">
-      {controls}
-
-      <div className="panel empty">
-        <div className="label">No vehicle</div>
-        <p className="empty__hint">{emptyHint(source, connected)}</p>
-      </div>
-    </div>
-  );
 }
 
 function emptyHint(source: StreamSource, connected: boolean): string {

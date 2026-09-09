@@ -20,7 +20,7 @@ styling gap and should not be scoped as one.
 
 Much of the missing state is already arriving and being thrown away. The codec
 decodes twelve telemetry families (`internal/codec/message.go`), but
-`projectTelemetry` (`frontend/src/logic/sample.ts`) projects only eight into
+`sampleFromEvent` (`frontend/src/logic/sample.ts`) projects only eight into
 `TelemetrySample`. Four reach the browser fully decoded and lose their payload
 to the `default` branch, which keeps nothing but `sourceMessage` and
 `receivedAtMs` for freshness:
@@ -79,22 +79,21 @@ cd frontend && pnpm typecheck && pnpm lint && pnpm vitest run
 
 ## Open questions
 
-- The reference artifact itself. It is not in this repository and cannot be
-  recovered from git; it has to be supplied or described before parity means
-  anything. This is what keeps the card in `backlog`.
+- Reference resolved by the user-supplied reviewed T-017 plan on 2026-09-09:
+  `flight-path-hud/apps/gcs/src` at `29426a9`. This card stays in backlog
+  pending T-015 and T-016.
 - Whether the log is a panel in the display or a separate surface.
-- Raw message inspection versus vehicle status messages: the candidate local
+- Raw message inspection versus vehicle status messages: the confirmed local
   reference has a general MAVLink stream log; T-016 covers only STATUSTEXT.
   STATUSTEXT is already recorded generically, as documented in T-016.
 - How much of the density is layout and how much is genuinely missing data.
-  Not answerable until the reference is available.
+  Compare against the pinned reference and T-017 browser evidence.
 
 ## Notes
 
-2026-09-08 source discovery: see the provisional
+2026-09-09 confirmation: see the
 [reference inventory](../../reference/ui-reference-review.md). The local
-`flight-path-hud/apps/gcs` contains an inspectable candidate; confirmation of
-the operator's reference name is pending. T-017 separates the first workspace
+`flight-path-hud/apps/gcs` is the confirmed reference at `29426a9`, per the supplied reviewed plan. T-017 separates the first workspace
 shell from this larger parity outcome so layout need not wait for T-015/T-016.
 
 Raised 2026-09-08 after the operator reviewed the mission UI and judged the

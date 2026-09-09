@@ -34,7 +34,9 @@ The repository currently has:
   aggregate age/count/live-size retention, and
   deterministic replay after a backend restart, served as paged JSON from
   `GET /api/recordings/{id}/events`;
-- a fleet-aware React flight display — artificial horizon, heading tape,
+- a responsive vehicle workspace with persistent panel visibility, a compact
+  context sidebar, and independently scrolling instruments/map/mission panes —
+  artificial horizon, heading tape,
   altitude with its datum, speed, climb, power, link health, and a live
   MapLibre position/track map with a freshness-gated five-second prediction —
   that also
@@ -53,8 +55,8 @@ The repository currently has:
   and mission type, served as protobuf JSON from
   `GET /api/vehicles/{system_id}/{component_id}/mission`, and shown in the
   browser as an ordered item list and a distinct commanded route on the map,
-  with a fixture mission at `?source=mock`. It has not yet been demonstrated
-  against live SITL; that acceptance remains outstanding in T-008.
+  with a fixture mission at `?source=mock`. Copter and Plane downloads, exact ordered values, empty missions and
+  timeout recovery were accepted in T-008.
 
 It is read-only unless `GCS_COMMANDS_ENABLED=true`; even then, the only operator
 commands are guarded arm/disarm and its resolution. Missions can be read but
@@ -69,24 +71,22 @@ No project license has been selected or committed.
 
 ### Next demonstrable outcome
 
-A reference-informed vehicle workspace that makes the existing capabilities
-usable and exposes integration defects through end-to-end operation. The
-backend already supplies telemetry, recording/replay, guarded arm/disarm and
-read-only mission download; the next phase uses those paths to test the system
-through the UI. See [T-017](docs/tasks/cards/T-017-reference-workspace-shell.md)
-for the first workspace slice and the
-[reference review](docs/reference/ui-reference-review.md) for the provisional
-comparison with the original interface.
+Add decoded telemetry inspection
+(T-015) below the instruments' primary readings and status messages (T-016) in
+a dedicated main pane. The reference-informed shell is implemented and exercised
+with live SITL, mock and recording replay; see
+[T-017 evidence](docs/runbooks/evidence/t017/README.md) and the
+[reference review](docs/reference/ui-reference-review.md). Mission framing and
+styling remain T-012 and T-014, with full HUD parity in T-013.
 
 Visual review with fixtures is only part of acceptance. Exercise applicable
 workflows with live SITL and recording replay, including disconnect/reconnect,
-stale or absent data, vehicle switches and failed requests. Complete
-[T-008](docs/tasks/cards/T-008-live-mission-inspection-acceptance.md) alongside
+stale or absent data, vehicle switches and failed requests. The completed
+[T-008](docs/tasks/cards/T-008-live-mission-inspection-acceptance.md) accompanied
 this phase to demonstrate mission inspection against both Copter and Plane.
 Backend changes should address concrete workflow gaps discovered in these
 slices; no broad infrastructure expansion is currently identified as a
-prerequisite. This is sequencing guidance, not a claim that live acceptance is
-complete.
+prerequisite. Acceptance is limited to the scenarios recorded in the runbook.
 
 Local/offline imagery and future 3D tile support are deliberately deferred. The
 current public raster basemap remains a prototyping dependency; no tile storage

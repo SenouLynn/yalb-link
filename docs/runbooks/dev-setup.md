@@ -326,3 +326,32 @@ blocks another arm/disarm for that vehicle for this process session; restart
 The endpoint's origin, fetch-metadata, and JSON content-type checks are
 local-development CSRF protection, not authentication. Do not expose it to an
 untrusted network.
+
+## Accept the vehicle workspace (T-017)
+
+Executed 2026-09-09 against current host Vite on port 3001 and rebuilt backend,
+Copter 4.7.0 and Plane 4.6.3. See [procedures, screenshots and observations](evidence/t017/README.md).
+All eight pane combinations at 1440×900 and 768×1024 preserved viewport bounds.
+Mission scrolling, pane lifecycle, selected-vehicle isolation, live timeout and
+recovery, stale posture and persisted replay passed. Backend restart exposed a
+terminal EventSource failure; the fixed rerun recovered in 1010 ms.
+
+Frontend typecheck, lint, 287 Vitest tests and production build passed. Go race
+suite passed on unchanged backend code. Bazel remains unavailable at the required
+8.7.0 pin (8.3.1 installed), and golangci-lint is absent. These are not passing
+gates. The frontend build retains its existing large-chunk warning.
+
+The workspace inventory belongs to `frontend/src/workspace/Workspace.tsx`.
+Feature modules retain their own state and lifecycle; hidden panes stay mounted.
+T-015 inspection extends the instruments scroll body below primary readings;
+T-016 adds an independently scrolling messages pane in main. App retains sole
+stream/freshness-clock ownership. All-hidden leaves the topbar controls reachable.
+
+Recording-enabled Compose currently needs an explicit writable database path;
+T-021 tracks fixing the default launch. The acceptance override and external
+mission preloader are documented with the evidence. No YALB mission mutation
+endpoint was added.
+
+T-008 was completed in the same session after a separate claim: independent
+MAVLink/HTTP ordered-value comparison and true zero-item mission downloads
+passed for Copter and Plane. See the evidence README's T-008 follow-through.

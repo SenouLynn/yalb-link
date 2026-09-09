@@ -1,0 +1,17 @@
+{
+  "log": [
+    {
+      "selected": "1:1",
+      "mission": "ONBOARD MISSION\nComplete · empty\nRefresh mission\n\nVehicle reported an empty mission.",
+      "route": false,
+      "markers": 0
+    },
+    {
+      "selected": "2:1",
+      "mission": "ONBOARD MISSION\nComplete · empty\nRefresh mission\n\nVehicle reported an empty mission.",
+      "route": false,
+      "markers": 0
+    }
+  ],
+  "errors": []
+}

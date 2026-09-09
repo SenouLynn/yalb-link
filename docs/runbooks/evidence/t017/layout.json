@@ -1,0 +1,1301 @@
+{
+  "results": [
+    {
+      "width": 1440,
+      "height": 900,
+      "mask": 7,
+      "documentWidth": 1440,
+      "clientWidth": 1440,
+      "bodyHeight": 900,
+      "main": {
+        "x": 288,
+        "y": 46.375,
+        "width": 1152,
+        "height": 853.625,
+        "scrollHeight": 854,
+        "clientHeight": 854
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": false,
+          "x": 288,
+          "y": 46.375,
+          "width": 450.78125,
+          "height": 525.296875,
+          "scrollHeight": 524,
+          "clientHeight": 524,
+          "body": {
+            "x": 288,
+            "y": 80.15625,
+            "width": 449.78125,
+            "height": 490.515625,
+            "scrollHeight": 491,
+            "clientHeight": 491
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": false,
+          "x": 738.78125,
+          "y": 46.375,
+          "width": 701.21875,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 738.78125,
+            "y": 80.15625,
+            "width": 700.21875,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": false,
+          "x": 288,
+          "y": 571.671875,
+          "width": 450.78125,
+          "height": 328.328125,
+          "scrollHeight": 327,
+          "clientHeight": 327,
+          "body": {
+            "x": 288,
+            "y": 605.453125,
+            "width": 449.78125,
+            "height": 293.546875,
+            "scrollHeight": 651,
+            "clientHeight": 294
+          }
+        }
+      ],
+      "canvas": {
+        "x": 738.78125,
+        "y": 80.15625,
+        "width": 700,
+        "height": 819,
+        "scrollHeight": 819,
+        "clientHeight": 819
+      },
+      "text": "INSTRUMENTS\nATTITUDE\nROLL\n7.7°\nPITCH\n1.3°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n25.5m\nGLOBAL_POSITION_INT\n0.4s\nGROUND SPEED\n5.9m/s\nVFR_HUD\n0.1s\nCLIMB\n+0.4m/s\nVFR_HUD\n0.1s\nBATTERY\n12.40V\nSYS_STATUS\n2s\nREMAINING\n87%\nSYS_STATUS\n2s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n006°\nVFR_HUD\n0.1s\nMAP\n0\n1\n3\n4\n© OpenS"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "mask": 6,
+      "documentWidth": 1440,
+      "clientWidth": 1440,
+      "bodyHeight": 900,
+      "main": {
+        "x": 288,
+        "y": 46.375,
+        "width": 1152,
+        "height": 853.625,
+        "scrollHeight": 854,
+        "clientHeight": 854
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": false,
+          "x": 288,
+          "y": 46.375,
+          "width": 671.984375,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 288,
+            "y": 80.15625,
+            "width": 670.984375,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": false,
+          "x": 959.984375,
+          "y": 46.375,
+          "width": 480,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 959.984375,
+            "y": 80.15625,
+            "width": 479,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        }
+      ],
+      "canvas": {
+        "x": 288,
+        "y": 80.15625,
+        "width": 671,
+        "height": 819,
+        "scrollHeight": 819,
+        "clientHeight": 819
+      },
+      "text": "MAP\n0\n1\n3\n4\n© OpenStreetMap contributors\n5 S PREDICTION\nCOMMANDED MISSION\nMISSION\nONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_TAKEOFF\nActive\nframe GLOBAL_RELATIVE_ALT_INT · lat/x 37.7749 · lon/y -122.4194 · alt/z 25\nparams [15, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_R"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "mask": 5,
+      "documentWidth": 1440,
+      "clientWidth": 1440,
+      "bodyHeight": 900,
+      "main": {
+        "x": 288,
+        "y": 46.375,
+        "width": 1152,
+        "height": 853.625,
+        "scrollHeight": 854,
+        "clientHeight": 854
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": false,
+          "x": 288,
+          "y": 46.375,
+          "width": 576,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 288,
+            "y": 80.15625,
+            "width": 575,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": false,
+          "x": 864,
+          "y": 46.375,
+          "width": 576,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 864,
+            "y": 80.15625,
+            "width": 575,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "clientHeight": 0
+      },
+      "text": "INSTRUMENTS\nATTITUDE\nROLL\n9.1°\nPITCH\n1.6°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n25.7m\nGLOBAL_POSITION_INT\n0.4s\nGROUND SPEED\n6.0m/s\nVFR_HUD\n0.1s\nCLIMB\n+0.5m/s\nVFR_HUD\n0.1s\nBATTERY\n12.40V\nSYS_STATUS\n3s\nREMAINING\n87%\nSYS_STATUS\n3s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n007°\nVFR_HUD\n0.1s\nMISSION\nONBOARD MIS"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "mask": 4,
+      "documentWidth": 1440,
+      "clientWidth": 1440,
+      "bodyHeight": 900,
+      "main": {
+        "x": 288,
+        "y": 46.375,
+        "width": 1152,
+        "height": 853.625,
+        "scrollHeight": 854,
+        "clientHeight": 854
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": false,
+          "x": 288,
+          "y": 46.375,
+          "width": 1152,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 288,
+            "y": 80.15625,
+            "width": 1151,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "clientHeight": 0
+      },
+      "text": "MISSION\nONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_TAKEOFF\nActive\nframe GLOBAL_RELATIVE_ALT_INT · lat/x 37.7749 · lon/y -122.4194 · alt/z 25\nparams [15, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT_INT · lat/x 37.776900000000005 · lon/y -122.4194 · alt/z 40\npa"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "mask": 3,
+      "documentWidth": 1440,
+      "clientWidth": 1440,
+      "bodyHeight": 900,
+      "main": {
+        "x": 288,
+        "y": 46.375,
+        "width": 1152,
+        "height": 853.625,
+        "scrollHeight": 854,
+        "clientHeight": 854
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": false,
+          "x": 288,
+          "y": 46.375,
+          "width": 450.78125,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 288,
+            "y": 80.15625,
+            "width": 449.78125,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": false,
+          "x": 738.78125,
+          "y": 46.375,
+          "width": 701.21875,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 738.78125,
+            "y": 80.15625,
+            "width": 700.21875,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        }
+      ],
+      "canvas": {
+        "x": 738.78125,
+        "y": 80.15625,
+        "width": 700,
+        "height": 819,
+        "scrollHeight": 819,
+        "clientHeight": 819
+      },
+      "text": "INSTRUMENTS\nATTITUDE\nROLL\n10.5°\nPITCH\n1.9°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n25.8m\nGLOBAL_POSITION_INT\n0.1s\nGROUND SPEED\n6.0m/s\nVFR_HUD\n0.3s\nCLIMB\n+0.5m/s\nVFR_HUD\n0.3s\nBATTERY\n12.40V\nSYS_STATUS\n3s\nREMAINING\n87%\nSYS_STATUS\n3s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n007°\nVFR_HUD\n0.3s\nMAP\n0\n1\n3\n4\n© Open"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "mask": 2,
+      "documentWidth": 1440,
+      "clientWidth": 1440,
+      "bodyHeight": 900,
+      "main": {
+        "x": 288,
+        "y": 46.375,
+        "width": 1152,
+        "height": 853.625,
+        "scrollHeight": 854,
+        "clientHeight": 854
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": false,
+          "x": 288,
+          "y": 46.375,
+          "width": 1152,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 288,
+            "y": 80.15625,
+            "width": 1151,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        }
+      ],
+      "canvas": {
+        "x": 288,
+        "y": 80.15625,
+        "width": 1151,
+        "height": 819,
+        "scrollHeight": 819,
+        "clientHeight": 819
+      },
+      "text": "MAP\n0\n1\n3\n4\n© OpenStreetMap contributors\n5 S PREDICTION\nCOMMANDED MISSION"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "mask": 1,
+      "documentWidth": 1440,
+      "clientWidth": 1440,
+      "bodyHeight": 900,
+      "main": {
+        "x": 288,
+        "y": 46.375,
+        "width": 1152,
+        "height": 853.625,
+        "scrollHeight": 854,
+        "clientHeight": 854
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": false,
+          "x": 288,
+          "y": 46.375,
+          "width": 1152,
+          "height": 853.625,
+          "scrollHeight": 853,
+          "clientHeight": 853,
+          "body": {
+            "x": 288,
+            "y": 80.15625,
+            "width": 1151,
+            "height": 818.84375,
+            "scrollHeight": 819,
+            "clientHeight": 819
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "clientHeight": 0
+      },
+      "text": "INSTRUMENTS\nATTITUDE\nROLL\n10.5°\nPITCH\n1.9°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n25.9m\nGLOBAL_POSITION_INT\n0.0s\nGROUND SPEED\n6.0m/s\nVFR_HUD\n0.0s\nCLIMB\n+0.5m/s\nVFR_HUD\n0.0s\nBATTERY\n12.40V\nSYS_STATUS\n3s\nREMAINING\n87%\nSYS_STATUS\n3s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n008°\nVFR_HUD\n0.0s"
+    },
+    {
+      "width": 1440,
+      "height": 900,
+      "mask": 0,
+      "documentWidth": 1440,
+      "clientWidth": 1440,
+      "bodyHeight": 900,
+      "main": {
+        "x": 288,
+        "y": 46.375,
+        "width": 1152,
+        "height": 853.625,
+        "scrollHeight": 854,
+        "clientHeight": 854
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "clientHeight": 0
+      },
+      "text": "All panels hidden. Use the panel controls above to show a panel."
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "mask": 7,
+      "documentWidth": 768,
+      "clientWidth": 768,
+      "bodyHeight": 1024,
+      "main": {
+        "x": 0,
+        "y": 206.375,
+        "width": 768,
+        "height": 817.625,
+        "scrollHeight": 1420,
+        "clientHeight": 818
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": false,
+          "x": 0,
+          "y": 206.375,
+          "width": 768,
+          "height": 492.125,
+          "scrollHeight": 491,
+          "clientHeight": 491,
+          "body": {
+            "x": 0,
+            "y": 240.15625,
+            "width": 768,
+            "height": 457.34375,
+            "scrollHeight": 457,
+            "clientHeight": 457
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": false,
+          "x": 0,
+          "y": 698.5,
+          "width": 768,
+          "height": 448,
+          "scrollHeight": 447,
+          "clientHeight": 447,
+          "body": {
+            "x": 0,
+            "y": 732.28125,
+            "width": 768,
+            "height": 413.21875,
+            "scrollHeight": 413,
+            "clientHeight": 413
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": false,
+          "x": 0,
+          "y": 1146.5,
+          "width": 768,
+          "height": 480,
+          "scrollHeight": 479,
+          "clientHeight": 479,
+          "body": {
+            "x": 0,
+            "y": 1180.28125,
+            "width": 768,
+            "height": 445.21875,
+            "scrollHeight": 567,
+            "clientHeight": 445
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 732.28125,
+        "width": 768,
+        "height": 413,
+        "scrollHeight": 413,
+        "clientHeight": 413
+      },
+      "text": "INSTRUMENTS\nATTITUDE\nROLL\n11.8°\nPITCH\n2.1°\nATTITUDE\n0.1s\nALTITUDE · ABOVE HOME\n25.9m\nGLOBAL_POSITION_INT\n0.3s\nGROUND SPEED\n6.0m/s\nVFR_HUD\n0.0s\nCLIMB\n+0.6m/s\nVFR_HUD\n0.0s\nBATTERY\n12.40V\nSYS_STATUS\n4s\nREMAINING\n87%\nSYS_STATUS\n4s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n009°\nVFR_HUD\n0.0s\nMAP\n0\n1\n3\n4\n© Open"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "mask": 6,
+      "documentWidth": 768,
+      "clientWidth": 768,
+      "bodyHeight": 1024,
+      "main": {
+        "x": 0,
+        "y": 206.375,
+        "width": 768,
+        "height": 817.625,
+        "scrollHeight": 928,
+        "clientHeight": 818
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": false,
+          "x": 0,
+          "y": 206.375,
+          "width": 768,
+          "height": 448,
+          "scrollHeight": 447,
+          "clientHeight": 447,
+          "body": {
+            "x": 0,
+            "y": 240.15625,
+            "width": 768,
+            "height": 413.21875,
+            "scrollHeight": 413,
+            "clientHeight": 413
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": false,
+          "x": 0,
+          "y": 654.375,
+          "width": 768,
+          "height": 480,
+          "scrollHeight": 479,
+          "clientHeight": 479,
+          "body": {
+            "x": 0,
+            "y": 688.15625,
+            "width": 768,
+            "height": 445.21875,
+            "scrollHeight": 567,
+            "clientHeight": 445
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 240.15625,
+        "width": 768,
+        "height": 413,
+        "scrollHeight": 413,
+        "clientHeight": 413
+      },
+      "text": "MAP\n0\n1\n3\n4\n© OpenStreetMap contributors\n5 S PREDICTION\nCOMMANDED MISSION\nMISSION\nONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_TAKEOFF\nActive\nframe GLOBAL_RELATIVE_ALT_INT · lat/x 37.7749 · lon/y -122.4194 · alt/z 25\nparams [15, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_R"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "mask": 5,
+      "documentWidth": 768,
+      "clientWidth": 768,
+      "bodyHeight": 1024,
+      "main": {
+        "x": 0,
+        "y": 206.375,
+        "width": 768,
+        "height": 817.625,
+        "scrollHeight": 972,
+        "clientHeight": 818
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": false,
+          "x": 0,
+          "y": 206.375,
+          "width": 768,
+          "height": 492.125,
+          "scrollHeight": 491,
+          "clientHeight": 491,
+          "body": {
+            "x": 0,
+            "y": 240.15625,
+            "width": 768,
+            "height": 457.34375,
+            "scrollHeight": 457,
+            "clientHeight": 457
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": false,
+          "x": 0,
+          "y": 698.5,
+          "width": 768,
+          "height": 480,
+          "scrollHeight": 479,
+          "clientHeight": 479,
+          "body": {
+            "x": 0,
+            "y": 732.28125,
+            "width": 768,
+            "height": 445.21875,
+            "scrollHeight": 567,
+            "clientHeight": 445
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "clientHeight": 0
+      },
+      "text": "INSTRUMENTS\nATTITUDE\nROLL\n13.0°\nPITCH\n2.4°\nATTITUDE\n0.1s\nALTITUDE · ABOVE HOME\n26.0m\nGLOBAL_POSITION_INT\n0.3s\nGROUND SPEED\n6.1m/s\nVFR_HUD\n0.0s\nCLIMB\n+0.7m/s\nVFR_HUD\n0.0s\nBATTERY\n12.40V\nSYS_STATUS\n4s\nREMAINING\n87%\nSYS_STATUS\n4s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n010°\nVFR_HUD\n0.0s\nMISSION\nONBOARD MI"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "mask": 4,
+      "documentWidth": 768,
+      "clientWidth": 768,
+      "bodyHeight": 1024,
+      "main": {
+        "x": 0,
+        "y": 206.375,
+        "width": 768,
+        "height": 817.625,
+        "scrollHeight": 818,
+        "clientHeight": 818
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": false,
+          "x": 0,
+          "y": 206.375,
+          "width": 768,
+          "height": 480,
+          "scrollHeight": 479,
+          "clientHeight": 479,
+          "body": {
+            "x": 0,
+            "y": 240.15625,
+            "width": 768,
+            "height": 445.21875,
+            "scrollHeight": 567,
+            "clientHeight": 445
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "clientHeight": 0
+      },
+      "text": "MISSION\nONBOARD MISSION\nComplete · 6 items\nRefresh mission\n#0 NAV_TAKEOFF\nActive\nframe GLOBAL_RELATIVE_ALT_INT · lat/x 37.7749 · lon/y -122.4194 · alt/z 25\nparams [15, 0, 0, 0] · autocontinue yes\n#1 NAV_WAYPOINT\nframe GLOBAL_RELATIVE_ALT_INT · lat/x 37.776900000000005 · lon/y -122.4194 · alt/z 40\npa"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "mask": 3,
+      "documentWidth": 768,
+      "clientWidth": 768,
+      "bodyHeight": 1024,
+      "main": {
+        "x": 0,
+        "y": 206.375,
+        "width": 768,
+        "height": 817.625,
+        "scrollHeight": 940,
+        "clientHeight": 818
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": false,
+          "x": 0,
+          "y": 206.375,
+          "width": 768,
+          "height": 492.125,
+          "scrollHeight": 491,
+          "clientHeight": 491,
+          "body": {
+            "x": 0,
+            "y": 240.15625,
+            "width": 768,
+            "height": 457.34375,
+            "scrollHeight": 457,
+            "clientHeight": 457
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": false,
+          "x": 0,
+          "y": 698.5,
+          "width": 768,
+          "height": 448,
+          "scrollHeight": 447,
+          "clientHeight": 447,
+          "body": {
+            "x": 0,
+            "y": 732.28125,
+            "width": 768,
+            "height": 413.21875,
+            "scrollHeight": 413,
+            "clientHeight": 413
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 732.28125,
+        "width": 768,
+        "height": 413,
+        "scrollHeight": 413,
+        "clientHeight": 413
+      },
+      "text": "INSTRUMENTS\nATTITUDE\nROLL\n13.0°\nPITCH\n2.4°\nATTITUDE\n0.2s\nALTITUDE · ABOVE HOME\n26.1m\nGLOBAL_POSITION_INT\n0.1s\nGROUND SPEED\n6.1m/s\nVFR_HUD\n0.3s\nCLIMB\n+0.7m/s\nVFR_HUD\n0.3s\nBATTERY\n12.40V\nSYS_STATUS\n5s\nREMAINING\n87%\nSYS_STATUS\n5s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n010°\nVFR_HUD\n0.3s\nMAP\n0\n1\n3\n4\n© Open"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "mask": 2,
+      "documentWidth": 768,
+      "clientWidth": 768,
+      "bodyHeight": 1024,
+      "main": {
+        "x": 0,
+        "y": 206.375,
+        "width": 768,
+        "height": 817.625,
+        "scrollHeight": 818,
+        "clientHeight": 818
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": false,
+          "x": 0,
+          "y": 206.375,
+          "width": 768,
+          "height": 448,
+          "scrollHeight": 447,
+          "clientHeight": 447,
+          "body": {
+            "x": 0,
+            "y": 240.15625,
+            "width": 768,
+            "height": 413.21875,
+            "scrollHeight": 413,
+            "clientHeight": 413
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 240.15625,
+        "width": 768,
+        "height": 413,
+        "scrollHeight": 413,
+        "clientHeight": 413
+      },
+      "text": "MAP\n0\n1\n3\n4\n© OpenStreetMap contributors\n5 S PREDICTION\nCOMMANDED MISSION"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "mask": 1,
+      "documentWidth": 768,
+      "clientWidth": 768,
+      "bodyHeight": 1024,
+      "main": {
+        "x": 0,
+        "y": 206.375,
+        "width": 768,
+        "height": 817.625,
+        "scrollHeight": 818,
+        "clientHeight": 818
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": false,
+          "x": 0,
+          "y": 206.375,
+          "width": 768,
+          "height": 492.125,
+          "scrollHeight": 491,
+          "clientHeight": 491,
+          "body": {
+            "x": 0,
+            "y": 240.15625,
+            "width": 768,
+            "height": 457.34375,
+            "scrollHeight": 457,
+            "clientHeight": 457
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "clientHeight": 0
+      },
+      "text": "INSTRUMENTS\nATTITUDE\nROLL\n14.2°\nPITCH\n2.6°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n26.1m\nGLOBAL_POSITION_INT\n0.3s\nGROUND SPEED\n6.1m/s\nVFR_HUD\n0.0s\nCLIMB\n+0.7m/s\nVFR_HUD\n0.0s\nBATTERY\n12.40V\nSYS_STATUS\n5s\nREMAINING\n87%\nSYS_STATUS\n5s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n012°\nVFR_HUD\n0.0s"
+    },
+    {
+      "width": 768,
+      "height": 1024,
+      "mask": 0,
+      "documentWidth": 768,
+      "clientWidth": 768,
+      "bodyHeight": 1024,
+      "main": {
+        "x": 0,
+        "y": 206.375,
+        "width": 768,
+        "height": 817.625,
+        "scrollHeight": 818,
+        "clientHeight": 818
+      },
+      "panes": [
+        {
+          "id": "pane-instruments",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-map",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        },
+        {
+          "id": "pane-mission",
+          "hidden": true,
+          "x": 0,
+          "y": 0,
+          "width": 0,
+          "height": 0,
+          "scrollHeight": 0,
+          "clientHeight": 0,
+          "body": {
+            "x": 0,
+            "y": 0,
+            "width": 0,
+            "height": 0,
+            "scrollHeight": 0,
+            "clientHeight": 0
+          }
+        }
+      ],
+      "canvas": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0,
+        "scrollHeight": 0,
+        "clientHeight": 0
+      },
+      "text": "All panels hidden. Use the panel controls above to show a panel."
+    }
+  ],
+  "errors": []
+}

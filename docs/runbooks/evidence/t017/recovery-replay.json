@@ -1,0 +1,13 @@
+{
+  "disconnected": true,
+  "recoveryMs": 1010,
+  "recovered": true,
+  "initial": "YALB VEHICLE WORKSPACE\nREPLAY\nPANELS\nInstruments\nMap\nMission\nPlay\n0:00 / 1:13\nSPEED\n1×\n2×\n4×\n8×\nT-017 workspace live acceptance\nVEHICLE\n2:1\nSTATE\n- - -\nMODE\n- - -\nGPS\n- - -\nEKF\n- - -\nVEHICLE LINK\nHEARD\nSOURCE\nREPLAY\nARM\nNo command issued\nPOSITION · TRACK\n\n37.774900, -122.419400\n\n1 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n0.0°\nPITCH\n0.0°\nATTITUDE\n0.0s\nALTITUDE · ABOVE HOME\n0.1m\nGLOBAL_POSITION_INT\n0.0s\nGROUND SPEED\n0.0m/s\nVFR_HUD\n0.0s\nCLIMB\n-0.0m/s\nVFR_HUD\n0.0s\nBATTERY\n- - -V\nNO SOURCE\n- - -\nREMAINING\n- - -%\nNO SOURCE\n- - -\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n000°\nVFR_HUD\n0.0s\nMAP\n© OpenStreetMap contributors\n5 S PREDICTION\nMISSION\nONBOARD MISSION\nNot downloaded\nDownload mission",
+  "playing": "YALB VEHICLE WORKSPACE\nREPLAY\nFLEET · 2 VEHICLES\n1:1\n2:1\nPANELS\nInstruments\nMap\nMission\nPause\n0:01 / 1:13\nSPEED\n1×\n2×\n4×\n8×\nT-017 workspace live acceptance\nVEHICLE\n1:1\nSTATE\n- - -\nMODE\n- - -\nGPS\nRTK FIX · 10\nEKF\nOK\nVEHICLE LINK\nHEARD\nSOURCE\nREPLAY\nARM\nNo command issued\nPOSITION · TRACK\n\n37.774900, -122.419400\n\n9 / 500 track points\n\nINSTRUMENTS\nATTITUDE\nROLL\n0.1°\nPITCH\n0.0°\nATTITUDE\n0.1s\nALTITUDE · ABOVE HOME\n-0.0m\nGLOBAL_POSITION_INT\n0.2s\nGROUND SPEED\n0.0m/s\nVFR_HUD\n0.2s\nCLIMB\n+0.0m/s\nVFR_HUD\n0.2s\nBATTERY\n12.60V\nBATTERY_STATUS\n1.0s\nREMAINING\n100%\nBATTERY_STATUS\n1.0s\nHEADING\n330\nN\n30\nBEARING · 90° SHOWN\n003°\nVFR_HUD\n0.2s\nMAP\n© OpenStreetMap contributors\n5 S PREDICTION\nMISSION\nONBOARD MISSION\nNot downloaded\nDownload mission",
+  "controls": {
+    "topbar": 1,
+    "overflow": false,
+    "paused": "Play\n0:01 / 1:13\nSPEED\n1×\n2×\n4×\n8×\nT-017 workspace live acceptance"
+  },
+  "errors": []
+}
