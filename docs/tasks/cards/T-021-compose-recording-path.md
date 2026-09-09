@@ -1,7 +1,7 @@
 ---
 id: T-021
 title: Make the documented Compose recording launch writable
-status: ready
+status: done
 priority: 1
 owner: unassigned
 depends_on: none
@@ -24,19 +24,41 @@ The documented Compose recording command starts with a writable durable store.
 
 ## Acceptance criteria
 
-- [ ] Enabling recording in Compose starts a healthy backend without an override.
-- [ ] A recorded session survives container recreation using named storage.
-- [ ] Document reset and deletion explicitly; preserve recording-disabled startup.
+- [x] Enabling recording in Compose starts a healthy backend without an override.
+- [x] A recorded session survives container recreation using named storage.
+- [x] Document reset and deletion explicitly; preserve recording-disabled startup.
 
 ## Verification
 
-Compose config, recording start/stop/list, recreate backend and replay the session.
+```sh
+docker compose config --quiet
+./scripts/check-containers.sh
+GCS_RECORDING_ENABLED=true docker compose up -d --build --wait gcs-backend
+# Follow docs/runbooks/evidence/t021/README.md for the SITL recording,
+# recreation, replay comparison and recording-disabled acceptance.
+./scripts/kanban check
+```
 
 ## Open questions
 
-Choose a named-volume location writable by UID 10001.
+Settled: `/var/lib/gcs`, initialized in the image with UID/GID 10001 ownership,
+mounted as the Compose `recordings` named volume.
 
 ## Notes
 
 T-017 used an explicit `/tmp/t017-recordings.db` override for acceptance and
 exported the database. That workaround survives process restart, not recreation.
+
+
+Completed 2026-09-09: default Compose launch creates a healthy non-root backend
+with recording enabled, without a path override. A new named volume received
+UID/GID 10001 ownership; SQLite database, WAL and SHM files were writable.
+Recorded 651 events from stationary Copter 4.7.0 SITL, stopped the session,
+recreated only the backend, and compared all replay events and metadata for exact
+JSON equality. Recording-disabled recreation was healthy and recording routes
+returned 404. Compose config, container checks and diff checks passed.
+
+[Acceptance evidence](../../runbooks/evidence/t021/README.md) includes full replay
+before/after and the comparison result. The stack was shut down without deleting
+`yalb-gcs_recordings`; recording 1 remains available. Runbook documents ordinary
+shutdown, recreation, disabling recording, single-session deletion and full reset.

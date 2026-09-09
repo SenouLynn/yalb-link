@@ -279,6 +279,40 @@ curl -X DELETE -i http://localhost:8080/api/recordings/1
 
 Deletion frees pages for SQLite to reuse but does not shrink the database file.
 
+### Durable recordings in Compose
+
+```sh
+GCS_RECORDING_ENABLED=true docker compose up -d --build gcs-backend
+curl -X POST http://localhost:8080/api/recordings/start
+# Allow telemetry to arrive, then flush and stop the session.
+curl -X POST http://localhost:8080/api/recordings/stop
+curl http://localhost:8080/api/recordings
+GCS_RECORDING_ENABLED=true docker compose up -d --force-recreate gcs-backend
+```
+
+Compose stores SQLite and its journal files at `/var/lib/gcs/recordings.db` in
+the `recordings` named volume (`yalb-gcs_recordings` with the default project
+name). The image creates that directory owned by the backend's UID 10001;
+Docker initializes a new volume with those permissions. No host-directory
+permission override is needed. Container recreation and `docker compose down`
+preserve the recordings. Keep `GCS_RECORDING_ENABLED=true` on subsequent `up`
+commands to expose the recording endpoints; recording remains disabled by default.
+Disabling recording does not delete stored sessions.
+
+Delete individual stopped sessions with the DELETE endpoint above. To reset
+**all** recordings permanently, stop the stack and remove its named volume:
+
+```sh
+docker compose down
+docker volume rm yalb-gcs_recordings
+```
+
+For a custom Compose project name, use `<project>_recordings`. The next `up`
+creates an empty volume. `docker compose down --volumes` also deletes recordings
+and any other Compose-managed volumes; omit `--volumes` for ordinary shutdown.
+The named volume does not import databases from earlier `/tmp` overrides or
+native `go run` sessions.
+
 ## Replay a recorded flight
 
 Recordings are served as pages of protobuf-JSON events, cursored by sequence

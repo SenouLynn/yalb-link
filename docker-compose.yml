@@ -87,6 +87,9 @@ services:
       GCS_LOG_LEVEL: ${GCS_LOG_LEVEL:-info}
       GCS_COMMANDS_ENABLED: ${GCS_COMMANDS_ENABLED:-false}
       GCS_RECORDING_ENABLED: ${GCS_RECORDING_ENABLED:-false}
+      GCS_RECORDING_DB_PATH: /var/lib/gcs/recordings.db
+    volumes:
+      - recordings:/var/lib/gcs
     ports:
       - "8080:8080"
       # Host tools and SITL feed the same backend listener.
@@ -118,6 +121,9 @@ services:
     depends_on:
       - gcs-backend
     restart: unless-stopped
+
+volumes:
+  recordings:
 
 networks:
   default:

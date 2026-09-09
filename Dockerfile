@@ -25,7 +25,9 @@ FROM alpine:3.22
 
 # Unprivileged. Nothing this process does needs root, and it terminates
 # untrusted MAVLink frames from the network.
-RUN adduser -D -u 10001 gcs
+RUN adduser -D -u 10001 gcs \
+    && mkdir -p /var/lib/gcs \
+    && chown gcs:gcs /var/lib/gcs
 
 COPY --from=build /out/gcs /usr/local/bin/gcs
 
