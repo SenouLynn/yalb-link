@@ -20,7 +20,7 @@ import { hasDisplayValue, readFlight } from './readings';
 import { ReplayControls } from './ReplayControls';
 import { StatusBar } from './StatusBar';
 import { VehicleSelector } from './VehicleSelector';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { InstrumentPanel } from './InstrumentPanel';
 import { WorkspaceShell, WorkspacePanes, PaneControls, DEFAULT_VISIBILITY, type PaneVisibility } from '@/workspace/Workspace';
 
@@ -84,7 +84,7 @@ function SelectedFlightDisplay({
 }) {
   const readings = readFlight(view, nowMs);
   const mission = useMission(view.key, view.sysId, view.compId, source);
-  const geometry = missionGeometry(mission.snapshot);
+  const geometry = useMemo(() => missionGeometry(mission.snapshot), [mission.snapshot]);
   const activeSeq = activeMissionSequence(view, nowMs);
   return <>
     <aside className="workspace__sidebar" aria-label="Vehicle context">

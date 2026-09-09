@@ -1,9 +1,9 @@
 ---
 id: T-022
 title: Navigate from a live fleet overview into a vehicle workspace
-status: ready
+status: in_progress
 priority: 1
-owner: unassigned
+owner: codex
 depends_on: T-017
 ---
 

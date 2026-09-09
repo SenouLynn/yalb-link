@@ -253,22 +253,22 @@ describe('a transaction that predates a link gap', () => {
 
 
 it('retains geometry across clock ticks, replaces it on refresh, and isolates selection', async () => {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(toJson(MissionSnapshotSchema,
-    create(MissionSnapshotSchema, { vehicleId: { systemId: 1, componentId: 1 } }))))));
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(() => Promise.resolve(new Response(JSON.stringify(toJson(MissionSnapshotSchema,
+    create(MissionSnapshotSchema, { vehicleId: { systemId: 1, componentId: 1 } })))))));
   const container = document.createElement('div');
   const root = createRoot(container);
   const a = fleet(view(1));
   act(() => { root.render(display(a)); });
-  await act(async () => { container.querySelector<HTMLButtonElement>('.mission-panel button')?.click(); });
-  const geometry = maps.missions.at(-1);
+  await act(async () => { container.querySelector<HTMLButtonElement>('.mission-panel button')?.click(); await Promise.resolve(); });
+  const geometry = maps.missions[maps.missions.length - 1];
   const mounts = maps.mounts;
   for (let nowMs = 250; nowMs <= 2000; nowMs += 250) {
     act(() => { root.render(<FlightDisplay fleet={{ ...a }} nowMs={nowMs} source="live" onSelect={() => undefined} />); });
-    expect(maps.missions.at(-1)).toBe(geometry);
+    expect(maps.missions[maps.missions.length - 1]).toBe(geometry);
     expect(maps.mounts).toBe(mounts);
   }
-  await act(async () => { container.querySelector<HTMLButtonElement>('.mission-panel button')?.click(); });
-  expect(maps.missions.at(-1)).not.toBe(geometry);
+  await act(async () => { container.querySelector<HTMLButtonElement>('.mission-panel button')?.click(); await Promise.resolve(); });
+  expect(maps.missions[maps.missions.length - 1]).not.toBe(geometry);
   act(() => { root.render(display(fleet(view(2)))); });
   expect(container.textContent).toContain('Not downloaded');
   act(() => { root.render(display(a)); });
