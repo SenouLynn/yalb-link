@@ -89,7 +89,7 @@ function SelectedFlightDisplay({
   return <>
     <aside className="workspace__sidebar" aria-label="Vehicle context">
       <StatusBar view={view} nowMs={nowMs} connected={fleet.connected} source={source} />
-      <ArmControl key={view.key} view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} nowMs={nowMs} />
+      <ArmControl key={view.key} view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} staleLatest={fleet.commandsStale[view.key] === true} nowMs={nowMs} />
       <div className="workspace__position"><span className="label">Position · track</span>
         <p>{hasDisplayValue(readings.position)
           ? `${readings.position.value.latDeg.toFixed(6)}, ${readings.position.value.lonDeg.toFixed(6)}`

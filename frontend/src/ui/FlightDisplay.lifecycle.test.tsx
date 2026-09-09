@@ -2,6 +2,7 @@
 
 import { act, useEffect } from 'react';
 import { create, toJson } from '@bufbuild/protobuf';
+import { CommandState, CommandTransactionSchema } from '@/gen/gcs/v1/commands_pb';
 import { MissionSnapshotSchema } from '@/gen/gcs/v1/missions_pb';
 import { createRoot } from 'react-dom/client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -194,4 +195,58 @@ it('keeps command busy and unresolved state through pane toggles', async () => {
   act(() => { container.querySelector<HTMLButtonElement>('[aria-controls="pane-instruments"]')?.click(); });
   expect(container.textContent).toContain('OBSERVED DISARMED');
   act(() => { root.unmount(); });
+});
+
+describe('a transaction that predates a link gap', () => {
+  const accepted = create(CommandTransactionSchema, { id: 7, state: CommandState.ACCEPTED });
+  const gapped = (stale: boolean): FleetState => ({
+    ...fleet(view(1)),
+    connected: true,
+    commands: { '1:1': accepted },
+    commandsStale: stale ? { '1:1': true } : {},
+  });
+
+  it('is qualified rather than dropped, because the hub never replays it', () => {
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    act(() => { root.render(display(gapped(true))); });
+
+    const control = container.querySelector('.command-control');
+    expect(control?.textContent).toContain('Command accepted');
+    expect(control?.textContent).toContain('may be superseded');
+    act(() => { root.unmount(); });
+  });
+
+  it('reads plainly while the stream has missed nothing', () => {
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    act(() => { root.render(display(gapped(false))); });
+
+    const control = container.querySelector('.command-control');
+    expect(control?.textContent).toContain('Command accepted');
+    expect(control?.textContent).not.toContain('may be superseded');
+    act(() => { root.unmount(); });
+  });
+
+  it('drops the qualifier for a snapshot the operator just requested', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ id: 9, state: 'COMMAND_STATE_REJECTED' }),
+      { headers: { 'content-type': 'application/json' } },
+    )));
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    act(() => { root.render(display(gapped(true))); });
+    const arm = () => container.querySelector<HTMLButtonElement>('.command-control button');
+
+    act(() => { arm()?.click(); });
+    await act(async () => { arm()?.click(); await Promise.resolve(); });
+
+    // The answer came back on this request, so nothing about it is guesswork.
+    // The changed label proves the displayed snapshot is the response, not the
+    // carried-in transaction that the qualifier was attached to.
+    const control = container.querySelector('.command-control');
+    expect(control?.textContent).toContain('Command rejected');
+    expect(control?.textContent).not.toContain('may be superseded');
+    act(() => { root.unmount(); });
+  });
 });

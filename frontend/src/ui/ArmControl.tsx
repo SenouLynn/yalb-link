@@ -24,16 +24,21 @@ export function quarantineDurationMs(resolution: CommandResolution | undefined):
   return Math.max(0, seconds * 1000 + Math.round((until.nanos - attested.nanos) / 1e6));
 }
 
-export function ArmControl({ view, connected, source, latest, nowMs }: {
+export function ArmControl({ view, connected, source, latest, staleLatest = false, nowMs }: {
   view: VehicleView;
   connected: boolean;
   source: StreamSource;
   latest?: CommandTransaction | undefined;
+  /** Whether `latest` predates a stream gap. See `FleetState.commandsStale`. */
+  staleLatest?: boolean;
   nowMs: number;
 }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CommandTransaction | undefined>(latest);
+  // A snapshot this component received from its own request is current whatever
+  // the stream missed, so it is never labelled as predating a gap.
+  const [answered, setAnswered] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unresolved, setUnresolved] = useState<CommandTransaction | null>(null);
   const [quarantineMs, setQuarantineMs] = useState<number | null>(null);
@@ -41,6 +46,7 @@ export function ArmControl({ view, connected, source, latest, nowMs }: {
 
   useEffect(() => {
     setResult(latest);
+    setAnswered(false);
   }, [latest]);
   useEffect(() => {
     if (!confirming) return;
@@ -96,6 +102,7 @@ export function ArmControl({ view, connected, source, latest, nowMs }: {
     setError(null);
     try {
       setResult(await postArm(view.sysId, arm));
+      setAnswered(true);
     } catch (cause) {
       absorb(cause);
     } finally {
@@ -111,6 +118,7 @@ export function ArmControl({ view, connected, source, latest, nowMs }: {
       const resolved = await postResolve(view.sysId, unresolved.registryEpoch, unresolved.id, observed);
       setUnresolved(null);
       setResult(resolved);
+      setAnswered(true);
       // No automatic retry: the operator must decide again, deliberately.
       setQuarantineMs(quarantineDurationMs(resolved.resolution));
     } catch (cause) {
@@ -149,6 +157,7 @@ export function ArmControl({ view, connected, source, latest, nowMs }: {
     || busy
     || quarantined;
   const label = arm ? 'ARM' : 'DISARM';
+  const superseded = staleLatest && !answered && result !== undefined && error === null && !quarantined;
 
   return (
     <div className="panel command-control">
@@ -160,6 +169,9 @@ export function ArmControl({ view, connected, source, latest, nowMs }: {
           ? `Commanding paused for ${String(remainingS)}s after the resolution`
           : (error ?? (result === undefined ? 'No command issued' : stateLabel(result)))}
       </span>
+      {superseded && (
+        <span className="command-control__stale">Seen before a link gap; may be superseded</span>
+      )}
     </div>
   );
 }

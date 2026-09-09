@@ -32,3 +32,32 @@ it('recreates terminal sources, leaves native reconnect alone, and cancels pendi
   expect(create).toHaveBeenCalledTimes(2);
   expect(vi.getTimerCount()).toBe(0);
 });
+
+it('backs off to a ceiling while the backend stays down, and resets on the next open', () => {
+  vi.useFakeTimers();
+  const sources: FakeSource[] = [];
+  const create = vi.fn(() => { const source = new FakeSource(); sources.push(source); return source as unknown as EventSource; });
+  const stop = new LiveEventSource({ create }).start(vi.fn());
+  // Each new source is terminal the moment it is made, so every retry is a
+  // failed one and the delay should keep growing.
+  const fail = () => {
+    const source = sources[sources.length - 1];
+    if (source === undefined) throw new Error('no source');
+    source.readyState = 2;
+    source.dispatchEvent(new Event('error'));
+  };
+  for (const delay of [2000, 4000, 8000, 16000, 30000, 30000]) {
+    const before = create.mock.calls.length;
+    fail();
+    vi.advanceTimersByTime(delay - 1);
+    expect(create).toHaveBeenCalledTimes(before);
+    vi.advanceTimersByTime(1);
+    expect(create).toHaveBeenCalledTimes(before + 1);
+  }
+  sources[sources.length - 1]?.dispatchEvent(new Event('open'));
+  const reset = create.mock.calls.length;
+  fail();
+  vi.advanceTimersByTime(2000);
+  expect(create).toHaveBeenCalledTimes(reset + 1);
+  stop();
+});

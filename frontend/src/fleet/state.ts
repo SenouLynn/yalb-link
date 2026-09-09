@@ -93,6 +93,18 @@ export interface FleetState {
   connected: boolean;
   /** Latest command event per vehicle. Not used to infer armed state. */
   commands: Readonly<Record<VehicleKey, CommandTransaction>>;
+  /**
+   * Vehicles whose retained transaction predates a gap in the stream.
+   *
+   * ADR 0004 deliberately keeps command events out of the hub's bootstrap: a
+   * transaction is history, not current vehicle state. A reconnect therefore
+   * replays fleet and telemetry but never the commands issued while the
+   * browser was away, so what is still on screen may already have been
+   * superseded by a transaction this browser never saw. The entry is marked
+   * rather than dropped, because the operator did issue that command and a
+   * blank would read as "nothing happened".
+   */
+  commandsStale: Readonly<Record<VehicleKey, true>>;
 }
 
 export const initialFleetState: FleetState = {
@@ -102,6 +114,7 @@ export const initialFleetState: FleetState = {
   selectionPinned: false,
   connected: false,
   commands: {},
+  commandsStale: {},
 };
 
 /** A vehicle the operator can act on: seen, and not currently reported lost. */
@@ -147,10 +160,32 @@ export function fleetReducer(state: FleetState, action: FleetAction): FleetState
   }
 }
 
+/**
+ * Marks every vehicle whose transaction is currently on screen.
+ *
+ * EventSource reports a bare `error` for each failed attempt, so this runs
+ * repeatedly through one outage. It returns the existing map when there is
+ * nothing new to mark, so retrying does not re-render the fleet each time.
+ */
+function staleKeys(state: FleetState): Readonly<Record<VehicleKey, true>> {
+  const keys = Object.keys(state.commands);
+
+  if (keys.every((key) => state.commandsStale[key] === true)) {
+    return state.commandsStale;
+  }
+
+  return Object.fromEntries(keys.map((key) => [key, true]));
+}
+
 function applyStreamEvent(state: FleetState, event: StreamEvent): FleetState {
   switch (event.kind) {
     case 'connection':
-      return { ...state, connected: event.connected };
+      // Losing the stream is the moment command history stops arriving, so the
+      // mark goes on here rather than on the reconnect: while the browser is
+      // away the vehicle may answer a command it will never be told about.
+      return event.connected
+        ? { ...state, connected: true }
+        : { ...state, connected: false, commandsStale: staleKeys(state) };
 
     case 'fleet':
       return withVehicle(state, applyFleet(event.event, event.receivedAtMs));
@@ -159,10 +194,16 @@ function applyStreamEvent(state: FleetState, event: StreamEvent): FleetState {
       return withVehicle(state, applyTelemetry(event.event, event.receivedAtMs));
 
     case 'command': {
-		const id = event.event.vehicleId;
-		if (id === undefined) return state;
-		return { ...state, commands: { ...state.commands, [vehicleKey(id.systemId, id.componentId)]: event.event } };
-	}
+      const id = event.event.vehicleId;
+      if (id === undefined) return state;
+      const key = vehicleKey(id.systemId, id.componentId);
+      // A transaction that just arrived is current by definition, so it clears
+      // the mark for its own vehicle and leaves every other vehicle's alone.
+      const commandsStale = key in state.commandsStale
+        ? Object.fromEntries(Object.entries(state.commandsStale).filter(([marked]) => marked !== key))
+        : state.commandsStale;
+      return { ...state, commands: { ...state.commands, [key]: event.event }, commandsStale };
+    }
 
     case 'reset':
       // Everything accumulated is discarded, but an operator's explicit choice

@@ -20,6 +20,11 @@
   --caution: #d9a441;
   --dead: #4d5560;
 
+  /* The commanded route, distinct from both the flown track and the caution
+     amber. Mirrored in `ui/palette.ts` for MapLibre, which needs a resolved
+     value rather than a custom property. */
+  --mission-route: #c7f0ff;
+
   --gap: 0.75rem;
   --radius: 3px;
 
@@ -169,6 +174,8 @@ body {
 
 .command-control button:disabled { border-color: var(--dead); color: var(--dead); }
 .command-control__state { color: var(--lume-dim); font: 0.75rem var(--data); }
+/* Its own line: a qualifier on the state above, not a third control beside it. */
+.command-control__stale { flex-basis: 100%; color: var(--caution); font: 0.7rem var(--data); }
 
 .instruments {
   display: grid;

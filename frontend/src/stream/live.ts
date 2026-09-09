@@ -21,6 +21,10 @@ export interface LiveOptions {
   create?: (url: string) => EventSource;
 }
 
+/** First delay after a terminal source, and the ceiling the backoff reaches. */
+const RETRY_MIN_MS = 2000;
+const RETRY_MAX_MS = 30000;
+
 /**
  * LiveEventSource follows `/api/events`.
  *
@@ -29,6 +33,10 @@ export interface LiveOptions {
  * The backend's contract makes that safe: every reconnect gets a fresh
  * bootstrap of retained state, so a resumed stream cannot leave the display
  * showing values from before the gap.
+ *
+ * Those recreations back off exponentially to `RETRY_MAX_MS` and reset on the
+ * next `open`. A backend that is down for an hour is a normal condition here,
+ * and a fixed interval would spend that hour reconnecting at full rate.
  */
 export class LiveEventSource implements TelemetryStream {
   private readonly url: string;
@@ -43,6 +51,7 @@ export class LiveEventSource implements TelemetryStream {
 
   start(onEvent: (event: StreamEvent) => void): () => void {
     let stopped = false;
+    let attempt = 0;
     let retry: ReturnType<typeof globalThis.setTimeout> | undefined;
     let detach: (() => void) | undefined;
     const connect = () => {
@@ -62,6 +71,7 @@ export class LiveEventSource implements TelemetryStream {
       const onCommand = forward(EVENT_COMMAND);
 
       const onOpen = () => {
+        attempt = 0;
         onEvent({ kind: 'connection', connected: true, receivedAtMs: this.wallNow() });
       };
 
@@ -73,10 +83,12 @@ export class LiveEventSource implements TelemetryStream {
         // CONNECTING already has a native retry. CLOSED never retries itself.
         if (source.readyState === 2 && retry === undefined && !stopped) {
           detach?.();
+          const delay = Math.min(RETRY_MIN_MS * 2 ** attempt, RETRY_MAX_MS);
+          attempt += 1;
           retry = globalThis.setTimeout(() => {
             retry = undefined;
             connect();
-          }, 2000);
+          }, delay);
         }
       };
 

@@ -1,5 +1,4 @@
-import { type CSSProperties, type ReactNode } from 'react';
-import { MISSION_ROUTE_COLOR } from '@/ui/palette';
+import { type ReactNode } from 'react';
 
 /** Only composition knows the inventory; feature modules never register here. */
 export const PANES = [
@@ -23,7 +22,7 @@ export function PaneControls({ visible, onToggle }: {
 }
 
 export function WorkspaceShell({ topbar, children }: { topbar: ReactNode; children: ReactNode }) {
-  return <div className="workspace" style={{ '--mission-route': MISSION_ROUTE_COLOR } as CSSProperties}><header className="workspace__topbar">
+  return <div className="workspace"><header className="workspace__topbar">
     <h1>YALB <span className="label">Vehicle workspace</span></h1>{topbar}
   </header>{children}</div>;
 }

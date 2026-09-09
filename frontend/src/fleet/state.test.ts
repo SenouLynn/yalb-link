@@ -1,6 +1,7 @@
 import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
+import { CommandTransactionSchema } from '@/gen/gcs/v1/commands_pb';
 import { FleetEventSchema, FleetEventType } from '@/gen/gcs/v1/fleet_pb';
 import {
   AttitudeSchema,
@@ -558,5 +559,58 @@ describe('reset', () => {
     expect(state.selectionPinned).toBe(false);
 
     expect(withReset(state).selected).toBeNull();
+  });
+});
+
+describe('command staleness across a stream gap', () => {
+  const commandEvent = (sysId: number, txId: number): StreamEvent => ({
+    kind: 'command',
+    receivedAtMs: T0,
+    event: create(CommandTransactionSchema, { id: txId, vehicleId: id(sysId, 1) }),
+  });
+  const connection = (connected: boolean): StreamEvent => ({
+    kind: 'connection',
+    connected,
+    receivedAtMs: T0,
+  });
+
+  it('marks retained transactions when the stream drops, because none are replayed', () => {
+    const state = reduce(commandEvent(1, 7), commandEvent(2, 8), connection(false));
+
+    expect(state.commandsStale).toEqual({ [vehicleKey(1, 1)]: true, [vehicleKey(2, 1)]: true });
+    // The transaction itself is kept: the operator issued it, and dropping it
+    // would read as though no command had ever been sent.
+    expect(state.commands[vehicleKey(1, 1)]?.id).toBe(7);
+  });
+
+  it('survives the reconnect, since the hub bootstraps fleet and telemetry only', () => {
+    const state = reduce(commandEvent(1, 7), connection(false), connection(true));
+
+    expect(state.connected).toBe(true);
+    expect(state.commandsStale[vehicleKey(1, 1)]).toBe(true);
+  });
+
+  it('clears only the vehicle a fresh transaction arrives for', () => {
+    const state = reduce(
+      commandEvent(1, 7),
+      commandEvent(2, 8),
+      connection(false),
+      connection(true),
+      commandEvent(1, 9),
+    );
+
+    expect(state.commandsStale).toEqual({ [vehicleKey(2, 1)]: true });
+    expect(state.commands[vehicleKey(1, 1)]?.id).toBe(9);
+  });
+
+  it('keeps one identity through a long outage so retries do not re-render', () => {
+    const dropped = reduce(commandEvent(1, 7), connection(false));
+    const stillDown = fleetReducer(dropped, { type: 'stream', event: connection(false) });
+
+    expect(stillDown.commandsStale).toBe(dropped.commandsStale);
+  });
+
+  it('marks nothing when no command has been seen', () => {
+    expect(reduce(connection(false)).commandsStale).toEqual({});
   });
 });
