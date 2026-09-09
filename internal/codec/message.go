@@ -282,8 +282,10 @@ func decodeNavControllerOutput(msg message.Message) *gcsv1.TelemetryEvent {
 				TargetBearingDeg: int32(m.TargetBearing),
 				WpDistM:          uint32(m.WpDist),
 				AltErrorM:        m.AltError,
-				AspdErrorMS:      m.AspdError,
-				XtrackErrorM:     m.XtrackError,
+				// Preserve the wire value for recordings. ArduPlane sends cm/s;
+				// the display normalizes using heartbeat autopilot and vehicle type.
+				AspdErrorMS:  m.AspdError,
+				XtrackErrorM: m.XtrackError,
 			},
 		},
 	}

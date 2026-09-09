@@ -1,0 +1,16 @@
+{
+  "recording_id": 1,
+  "event_count": 520,
+  "families": {
+    "attitude": 200,
+    "globalPosition": 100,
+    "vfrHud": 100,
+    "systemStatus": 20,
+    "navControllerOutput": 20,
+    "missionCurrent": 20,
+    "gpsRaw": 20,
+    "ekfStatusReport": 20,
+    "batteryStatus": 20
+  },
+  "note": "Recorded from live Copter SITL over 20 s with GCS_RECORDING_DB_PATH=/tmp/recordings.db. No recording change was needed: persistable() stores the whole TelemetryEvent under KindTelemetry and finds observed_at by proto reflection over the payload oneof."
+}

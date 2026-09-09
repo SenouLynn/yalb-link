@@ -1,14 +1,18 @@
-import { create } from '@bufbuild/protobuf';
+import { create, fromJson } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
 import {
   AttitudeSchema,
   GlobalPositionSchema,
   GpsRawSchema,
+  HomePositionSchema,
+  NavControllerOutputSchema,
+  RadioStatusSchema,
   TelemetryEventSchema,
   VfrHudSchema,
 } from '@/gen/gcs/v1/telemetry_pb';
 
+import { resolveGuidance } from './guidance';
 import { sampleFromEvent } from './sample';
 import { FIXED_NOW_MS } from './testing';
 
@@ -108,5 +112,84 @@ describe('sampleFromEvent', () => {
     // Position is absent, not zero. A resolver needing it correctly returns
     // null until the fold merges a position partial in.
     expect(attitude.globalLatDeg).toBeUndefined();
+  });
+});
+
+describe('sampleFromEvent, families T-015 recovered from the default branch', () => {
+  it('projects NAV_CONTROLLER_OUTPUT', () => {
+    const event = create(TelemetryEventSchema, {
+      payload: {
+        case: 'navControllerOutput',
+        value: create(NavControllerOutputSchema, {
+          navBearingDeg: 91,
+          targetBearingDeg: 94,
+          wpDistM: 137,
+          altErrorM: -2.4,
+          aspdErrorMS: 0.6,
+          xtrackErrorM: 3.1,
+        }),
+      },
+    });
+
+    const sample = sampleFromEvent(event, FIXED_NOW_MS);
+
+    expect(sample.sourceMessage).toBe('NAV_CONTROLLER_OUTPUT');
+    expect(sample.navBearingDeg).toBe(91);
+    expect(sample.wpDistM).toBe(137);
+    expect(sample.aspdErrorRaw).toBeCloseTo(0.6, 6);
+  });
+
+  it('projects HOME_POSITION', () => {
+    const event = create(TelemetryEventSchema, {
+      payload: {
+        case: 'homePosition',
+        value: create(HomePositionSchema, { latDeg: 37.7749, lonDeg: -122.4194, altMslM: 10.1 }),
+      },
+    });
+
+    const sample = sampleFromEvent(event, FIXED_NOW_MS);
+
+    expect(sample.sourceMessage).toBe('HOME_POSITION');
+    expect(sample.homeLatDeg).toBeCloseTo(37.7749, 6);
+    expect(sample.homeAltMslM).toBeCloseTo(10.1, 4);
+  });
+
+  it('projects RADIO_STATUS', () => {
+    const event = create(TelemetryEventSchema, {
+      payload: {
+        case: 'radioStatus',
+        value: create(RadioStatusSchema, { rssi: 190, remrssi: 185, txbufPct: 92, rxerrors: 7 }),
+      },
+    });
+
+    const sample = sampleFromEvent(event, FIXED_NOW_MS);
+
+    expect(sample.sourceMessage).toBe('RADIO_STATUS');
+    expect(sample.radioRssi).toBe(190);
+    expect(sample.radioTxbufPct).toBe(92);
+  });
+
+  it('resolves guidance from a recorded event whose zero fields JSON omitted', () => {
+    // This is the exact shape GET /api/recordings/{id}/events returns: proto3
+    // JSON drops zero-valued scalars, so a stationary vehicle's recorded
+    // NAV_CONTROLLER_OUTPUT carries only navBearingDeg and observedAt. If the
+    // parse did not restore schema defaults, every one of the six fields would
+    // read undefined, the resolver would decline, and guidance would be blank
+    // on replay while working perfectly live.
+    const recorded = {
+      vehicleId: { systemId: 1, componentId: 1 },
+      navControllerOutput: {
+        navRollDeg: -0.00011957914,
+        navPitchDeg: 0.00010131222,
+        navBearingDeg: 1,
+        observedAt: '2026-09-09T17:29:29.691Z',
+      },
+    };
+
+    const sample = sampleFromEvent(fromJson(TelemetryEventSchema, recorded), FIXED_NOW_MS);
+
+    expect(sample.sourceMessage).toBe('NAV_CONTROLLER_OUTPUT');
+    expect(sample.wpDistM).toBe(0);
+    expect(resolveGuidance({ ...sample, sourceMessage: 'NAV_CONTROLLER_OUTPUT', receivedAtMs: FIXED_NOW_MS })).not.toBeNull();
   });
 });

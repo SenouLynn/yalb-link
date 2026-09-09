@@ -1,15 +1,17 @@
 import { AttitudeIndicator } from './AttitudeIndicator';
 import { HeadingIndicator } from './HeadingIndicator';
+import { InspectionPanel } from './InspectionPanel';
 import { NO_VALUE, num, signed } from './format';
 import { hasDisplayValue, readFlight } from './readings';
 import { Readout } from './Readout';
 
-/** Primary readings. T-015 inspection belongs below these in this pane's scroll body. */
+/** Primary readings, then the T-015 inspection tier in this pane's scroll body. */
 export function InstrumentPanel({ readings }: { readings: ReturnType<typeof readFlight> }) {
-  const { position, flightPath, battery } = readings;
+  const { position, flightPath, airspeed, battery } = readings;
   const altitude = hasDisplayValue(position) ? position.value : null;
   const path = hasDisplayValue(flightPath) ? flightPath.value : null;
   const power = hasDisplayValue(battery) ? battery.value : null;
+  const air = hasDisplayValue(airspeed) ? airspeed.value : null;
   return <>
       <div className="instruments">
         <AttitudeIndicator reading={readings.attitude} />
@@ -29,6 +31,13 @@ export function InstrumentPanel({ readings }: { readings: ReturnType<typeof read
             value={path === null ? NO_VALUE : num(path.groundSpeedMps)}
             unit="m/s"
             reading={flightPath}
+          />
+
+          <Readout
+            label="Airspeed"
+            value={air === null ? NO_VALUE : num(air.airspeedMps)}
+            unit="m/s"
+            reading={airspeed}
           />
 
           <Readout
@@ -55,6 +64,8 @@ export function InstrumentPanel({ readings }: { readings: ReturnType<typeof read
       </div>
 
       <HeadingIndicator reading={readings.heading} />
+
+      <InspectionPanel readings={readings} />
 
   </>;
 }

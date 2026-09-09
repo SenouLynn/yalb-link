@@ -18,7 +18,10 @@ import {
   EkfStatusReportSchema,
   GlobalPositionSchema,
   GpsRawSchema,
+  HomePositionSchema,
   MissionCurrentSchema,
+  NavControllerOutputSchema,
+  RadioStatusSchema,
   SystemStatusSchema,
   TelemetryEventSchema,
   VfrHudSchema,
@@ -219,6 +222,73 @@ function ekfAt() {
 }
 
 /**
+ * Guidance converging on the active waypoint.
+ *
+ * The distance walks down and the errors oscillate around zero so that a frozen
+ * guidance panel is as obvious as a frozen attitude indicator. Errors cross zero
+ * on purpose: a fixture that never renders a signed value would not exercise the
+ * sign the operator reads.
+ */
+function navControllerAt(index: number) {
+  const phase = index / 12;
+
+  return {
+    case: 'navControllerOutput' as const,
+    value: create(NavControllerOutputSchema, {
+      navRollDeg: Math.sin(phase) * 4,
+      navPitchDeg: Math.sin(phase / 2) * 2,
+      navBearingDeg: Math.round(((index * 1.15) % 360 + 360) % 360),
+      targetBearingDeg: Math.round(((index * 1.15 + 3) % 360 + 360) % 360),
+      wpDistM: Math.max(0, 240 - index * 2),
+      altErrorM: Math.sin(phase) * 1.8,
+      aspdErrorMS: Math.cos(phase) * 0.7,
+      xtrackErrorM: Math.sin(phase / 1.5) * 2.4,
+    }),
+  };
+}
+
+/**
+ * Home, matching the Compose SITL HOME_LOCATION.
+ *
+ * Constant on purpose: home does not move, and the mock would misrepresent the
+ * family by animating it. The fixture sends it repeatedly only because the mock
+ * has no other way to establish it; a real vehicle sends it once when home is set.
+ */
+function homePositionAt() {
+  return {
+    case: 'homePosition' as const,
+    value: create(HomePositionSchema, {
+      latDeg: 37.7749,
+      lonDeg: -122.4194,
+      altMslM: 10.1,
+    }),
+  };
+}
+
+/**
+ * A SiK radio that is present and degrading.
+ *
+ * This family cannot arrive on the Compose stack — MAVLink there is UDP with no
+ * radio in the path — so the fixture is the only place the link readouts can be
+ * demonstrated at all. Free buffer space falls into the back-pressure range and
+ * receive errors accumulate, which is the condition the readouts exist to show.
+ */
+function radioStatusAt(index: number) {
+  return {
+    case: 'radioStatus' as const,
+    value: create(RadioStatusSchema, {
+      rssi: 190 - Math.floor(index / 8),
+      remrssi: 185 - Math.floor(index / 10),
+      txbufPct: Math.max(2, 60 - index),
+      noise: 38 + (index % 5),
+      remnoise: 36 + (index % 4),
+      rxerrors: Math.floor(index / 3),
+      fixed: Math.floor(index / 12),
+    }),
+  };
+}
+
+/**
  * The fixture script.
  *
  * Fleet state first, matching the backend's bootstrap order, then a repeating
@@ -237,10 +307,20 @@ export function mockFrames(cycles = 60): MockFrame[] {
 
     frames.push(telemetryFrame(missionCurrentAt, i));
 
-    if (i % 10 === 0) {
+    // Guidance changes as fast as the flight state it describes.
+    frames.push(telemetryFrame(navControllerAt, i));
+
+    // Every fifth cycle, not every tenth. The health families are read through
+    // the same freshness TTL as everything else, so the gap between them has to
+    // stay inside TELEMETRY_TTL_MS or the mock renders permanent dashes for
+    // sensors it is actively sending. At ten the margin was already zero, and
+    // adding a sixth frame to the cycle consumed it. mock.test.ts pins this.
+    if (i % 5 === 0) {
       frames.push(telemetryFrame(gpsRawAt, i));
       frames.push(telemetryFrame(systemStatusAt, i));
       frames.push(telemetryFrame(ekfAt, i));
+      frames.push(telemetryFrame(homePositionAt, i));
+      frames.push(telemetryFrame(radioStatusAt, i));
     }
   }
 

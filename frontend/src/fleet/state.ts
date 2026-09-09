@@ -295,6 +295,7 @@ function mergeHeartbeat(
 
   return {
     ...sample,
+    autopilot: heartbeat.autopilot,
     vehicleType: heartbeat.type,
     customMode: heartbeat.customMode,
     systemStatus: heartbeat.systemStatus,

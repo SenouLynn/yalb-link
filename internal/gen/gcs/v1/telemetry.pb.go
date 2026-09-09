@@ -673,8 +673,8 @@ type NavControllerOutput struct {
 	NavBearingDeg    int32                  `protobuf:"varint,3,opt,name=nav_bearing_deg,json=navBearingDeg,proto3" json:"nav_bearing_deg,omitempty"`          // current desired heading, -180..+180
 	TargetBearingDeg int32                  `protobuf:"varint,4,opt,name=target_bearing_deg,json=targetBearingDeg,proto3" json:"target_bearing_deg,omitempty"` // bearing to active waypoint, -180..+180
 	WpDistM          uint32                 `protobuf:"varint,5,opt,name=wp_dist_m,json=wpDistM,proto3" json:"wp_dist_m,omitempty"`                            // distance to active waypoint, metres
-	AltErrorM        float32                `protobuf:"fixed32,6,opt,name=alt_error_m,json=altErrorM,proto3" json:"alt_error_m,omitempty"`                     // altitude error, metres (positive = too high)
-	AspdErrorMS      float32                `protobuf:"fixed32,7,opt,name=aspd_error_m_s,json=aspdErrorMS,proto3" json:"aspd_error_m_s,omitempty"`             // airspeed error, m/s
+	AltErrorM        float32                `protobuf:"fixed32,6,opt,name=alt_error_m,json=altErrorM,proto3" json:"alt_error_m,omitempty"`                     // altitude error, metres (positive = below target)
+	AspdErrorMS      float32                `protobuf:"fixed32,7,opt,name=aspd_error_m_s,json=aspdErrorMS,proto3" json:"aspd_error_m_s,omitempty"`             // wire airspeed error; m/s by spec, cm/s on ArduPlane
 	XtrackErrorM     float32                `protobuf:"fixed32,8,opt,name=xtrack_error_m,json=xtrackErrorM,proto3" json:"xtrack_error_m,omitempty"`            // crosstrack error, metres
 	ObservedAt       *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=observed_at,json=observedAt,proto3" json:"observed_at,omitempty"`
 	unknownFields    protoimpl.UnknownFields
@@ -1137,15 +1137,14 @@ func (x *BatteryStatus) GetObservedAt() *timestamppb.Timestamp {
 
 // RadioStatus mirrors RADIO_STATUS (#109).
 // Link quality from SiK-compatible radios (3DR, RFD900, Holybro SiK).
-// txbuf_pct is the most actionable field: high fill (> 90%) means the GCS
-// is producing more data than the radio can transmit — reduce stream rates.
+// txbuf_pct reports free transmitter buffer space; low values indicate congestion.
 type RadioStatus struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
-	Rssi          uint32                 `protobuf:"varint,1,opt,name=rssi,proto3" json:"rssi,omitempty"`                         // local signal strength, 0–254; 254 = unknown
+	Rssi          uint32                 `protobuf:"varint,1,opt,name=rssi,proto3" json:"rssi,omitempty"`                         // local signal strength, 0–254; 255 = unknown
 	Remrssi       uint32                 `protobuf:"varint,2,opt,name=remrssi,proto3" json:"remrssi,omitempty"`                   // remote (vehicle) signal strength, same scale
-	TxbufPct      uint32                 `protobuf:"varint,3,opt,name=txbuf_pct,json=txbufPct,proto3" json:"txbuf_pct,omitempty"` // transmit buffer fill %; high = back-pressure
-	Noise         uint32                 `protobuf:"varint,4,opt,name=noise,proto3" json:"noise,omitempty"`                       // local noise floor
-	Remnoise      uint32                 `protobuf:"varint,5,opt,name=remnoise,proto3" json:"remnoise,omitempty"`                 // remote noise floor
+	TxbufPct      uint32                 `protobuf:"varint,3,opt,name=txbuf_pct,json=txbufPct,proto3" json:"txbuf_pct,omitempty"` // free transmit buffer %; low = back-pressure
+	Noise         uint32                 `protobuf:"varint,4,opt,name=noise,proto3" json:"noise,omitempty"`                       // local noise floor; 255 = unknown
+	Remnoise      uint32                 `protobuf:"varint,5,opt,name=remnoise,proto3" json:"remnoise,omitempty"`                 // remote noise floor; 255 = unknown
 	Rxerrors      uint32                 `protobuf:"varint,6,opt,name=rxerrors,proto3" json:"rxerrors,omitempty"`                 // accumulated receive errors
 	Fixed         uint32                 `protobuf:"varint,7,opt,name=fixed,proto3" json:"fixed,omitempty"`                       // packets recovered by error correction
 	ObservedAt    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=observed_at,json=observedAt,proto3" json:"observed_at,omitempty"`

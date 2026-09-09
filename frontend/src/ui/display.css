@@ -548,3 +548,35 @@ html, body, #root { height: 100%; overflow: hidden; }
 .pane--instruments .instrument { gap: 0.4rem; }
 .pane--instruments .instrument svg { max-height: 10rem; }
 .pane--instruments .instrument--heading svg { max-height: 4rem; }
+
+/* --- inspection tier ----------------------------------------------------- */
+
+/* Guidance, home and link, below the primary readings in the instruments
+   pane's scroll body. Consulted rather than flown by, so it is separated from
+   the instruments by rule and spacing rather than by colour: nothing here
+   earns a hue the attitude indicator does not already own. */
+.inspection {
+  display: grid;
+  gap: var(--gap);
+  margin-top: var(--gap);
+}
+
+.inspection__group {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: var(--gap);
+  border-top: 1px solid var(--bezel);
+}
+
+.inspection__title {
+  margin: 0;
+}
+
+/* A family that has never arrived. Dimmed to the same colour as an absent
+   value, because that is what it is — not a warning, which stays amber. */
+.inspection__absent {
+  margin: 0;
+  color: var(--lume-dim);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}

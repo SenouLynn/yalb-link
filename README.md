@@ -30,6 +30,10 @@ The repository currently has:
 - deterministic vehicle discovery, loss, recovery, freshness, and route-table tests;
 - an in-memory event hub and a `GET /api/events` server-sent-event stream that
   bootstraps each browser from retained state;
+- a guidance, home and radio-link inspection tier below the primary readings,
+  projecting the three telemetry families the browser previously decoded and
+  discarded, with `NAV_CONTROLLER_OUTPUT` added to the rate policy because a
+  Copter sends none of it unasked;
 - opt-in, bounded SQLite recording with explicit start/stop/delete lifecycle,
   aggregate age/count/live-size retention, and
   deterministic replay after a backend restart, served as paged JSON from
@@ -59,7 +63,10 @@ The repository currently has:
   timeout recovery were accepted in T-008.
 
 It is read-only unless `GCS_COMMANDS_ENABLED=true`; even then, the only operator
-commands are guarded arm/disarm and its resolution. Missions can be read but
+commands are guarded arm/disarm and its resolution. `HOME_POSITION` is read but
+never requested: ArduPilot sends it when home is set, so a backend started after
+the vehicle set home will show home as not received rather than ask for it,
+which would need `MAV_CMD_GET_HOME_POSITION`. Missions can be read but
 never written: the project has no mission upload, clear, start, or set-current
 operation, no generic command surface, no authentication, and no MAVLink
 signing.
@@ -71,13 +78,21 @@ No project license has been selected or committed.
 
 ### Next demonstrable outcome
 
-Add decoded telemetry inspection
-(T-015) below the instruments' primary readings and status messages (T-016) in
-a dedicated main pane. The reference-informed shell is implemented and exercised
-with live SITL, mock and recording replay; see
+Decoded telemetry inspection (T-015) is done: guidance, home and link render
+below the instruments' primary readings, exercised against live SITL, mock
+fixtures and recording replay — see
+[T-015 evidence](docs/runbooks/evidence/t015/README.md). Status messages
+(T-016) remain, in a dedicated main pane. The reference-informed shell is
+implemented and exercised the same way; see
 [T-017 evidence](docs/runbooks/evidence/t017/README.md) and the
 [reference review](docs/reference/ui-reference-review.md). Mission framing and
 styling remain T-012 and T-014, with full HUD parity in T-013.
+
+T-015 acceptance surfaced one backend defect that predates it: after a vehicle
+restarts and returns on a new UDP source port, the backend logs
+`SOURCE_CONFLICT`, never marks it lost, and never re-issues its rate requests,
+so every requested family goes silent until the backend restarts. That is
+T-023.
 
 Visual review with fixtures is only part of acceptance. Exercise applicable
 workflows with live SITL and recording replay, including disconnect/reconnect,

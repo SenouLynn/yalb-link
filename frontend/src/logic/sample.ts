@@ -1,8 +1,9 @@
 /** Adapts generated telemetry events to the resolver-facing sample shape. */
 
+import type { MavAutopilot } from '@/gen/gcs/v1/types_pb';
 import type { TelemetryEvent } from '@/gen/gcs/v1/telemetry_pb';
 
-/** A partial, flat projection of vehicle state in SI units and degrees. */
+/** A partial, flat projection in SI units and degrees, except documented wire fields. */
 export interface TelemetrySample {
   // Attitude — radians
   rollRad?: number | undefined;
@@ -59,7 +60,34 @@ export interface TelemetrySample {
   ekfFlags?: number | undefined;
   missionCurrentSeq?: number | undefined;
 
+  // Guidance — NAV_CONTROLLER_OUTPUT. Bearings arrive signed, -180..+180.
+  navBearingDeg?: number | undefined;
+  targetBearingDeg?: number | undefined;
+  /** Distance to the active waypoint, metres. */
+  wpDistM?: number | undefined;
+  /** Altitude error, metres. Positive means the vehicle is below the target. */
+  altErrorM?: number | undefined;
+  /** Wire value: ArduPlane sends cm/s despite the legacy protobuf field name. */
+  aspdErrorRaw?: number | undefined;
+  /** Crosstrack error, metres: lateral offset from the commanded leg. */
+  xtrackErrorM?: number | undefined;
+
+  // Home — HOME_POSITION. The datum relative altitude is measured against.
+  homeLatDeg?: number | undefined;
+  homeLonDeg?: number | undefined;
+  homeAltMslM?: number | undefined;
+
+  // Link — RADIO_STATUS. Signal strengths are 0..254; 255 means unknown.
+  radioRssi?: number | undefined;
+  radioRemrssi?: number | undefined;
+  radioNoise?: number | undefined;
+  radioRemnoise?: number | undefined;
+  /** Free transmit buffer space, per cent. Low means back-pressure. */
+  radioTxbufPct?: number | undefined;
+  radioRxerrors?: number | undefined;
+
   /** Identity fields merged from HeartbeatState by the vehicle accumulator. */
+  autopilot?: MavAutopilot | undefined;
   vehicleType?: number | undefined;
   customMode?: number | undefined;
   systemStatus?: number | undefined;
@@ -159,6 +187,49 @@ export function sampleFromEvent(
         ekfFlags: payload.value.flags,
       };
 
+    case 'navControllerOutput':
+      // navRollDeg and navPitchDeg are the controller's commanded attitude, not
+      // the vehicle's. Showing them beside the artificial horizon would invite
+      // reading a demand as a measurement, so they are declined.
+      return {
+        sourceMessage: 'NAV_CONTROLLER_OUTPUT',
+        receivedAtMs,
+        navBearingDeg: payload.value.navBearingDeg,
+        targetBearingDeg: payload.value.targetBearingDeg,
+        wpDistM: payload.value.wpDistM,
+        altErrorM: payload.value.altErrorM,
+        aspdErrorRaw: payload.value.aspdErrorMS,
+        xtrackErrorM: payload.value.xtrackErrorM,
+      };
+
+    case 'homePosition':
+      // The local NED offset, attitude quaternion and approach vector are
+      // declined: they describe the EKF origin and a landing heading, and this
+      // display has nothing that consumes either. timeUsec is declined because
+      // familySeenMs already carries when home was last heard.
+      return {
+        sourceMessage: 'HOME_POSITION',
+        receivedAtMs,
+        homeLatDeg: payload.value.latDeg,
+        homeLonDeg: payload.value.lonDeg,
+        homeAltMslM: payload.value.altMslM,
+      };
+
+    case 'radioStatus':
+      // `fixed` counts packets error correction recovered. It is a radio
+      // self-diagnostic rather than a link-quality reading an operator acts on,
+      // so it is declined; rxerrors is kept because a rising count is actionable.
+      return {
+        sourceMessage: 'RADIO_STATUS',
+        receivedAtMs,
+        radioRssi: payload.value.rssi,
+        radioRemrssi: payload.value.remrssi,
+        radioNoise: payload.value.noise,
+        radioRemnoise: payload.value.remnoise,
+        radioTxbufPct: payload.value.txbufPct,
+        radioRxerrors: payload.value.rxerrors,
+      };
+
     default:
       // Unprojected families still contribute source and freshness.
       return {
@@ -171,14 +242,8 @@ export function sampleFromEvent(
 /** Maps a oneof case name to its MAVLink message name. */
 function sourceMessageFor(kind: TelemetryEvent['payload']['case']): string {
   switch (kind) {
-    case 'navControllerOutput':
-      return 'NAV_CONTROLLER_OUTPUT';
-    case 'radioStatus':
-      return 'RADIO_STATUS';
-    case 'missionCurrent':
-      return 'MISSION_CURRENT';
-    case 'homePosition':
-      return 'HOME_POSITION';
+    // STATUSTEXT is a sequence, not a latest-value-wins field, so it cannot be
+    // projected into TelemetrySample at all. It gets its own log in T-016.
     case 'statusText':
       return 'STATUSTEXT';
     default:

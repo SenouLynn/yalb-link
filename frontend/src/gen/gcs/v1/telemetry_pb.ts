@@ -485,14 +485,14 @@ export type NavControllerOutput = Message<"gcs.v1.NavControllerOutput"> & {
   wpDistM: number;
 
   /**
-   * altitude error, metres (positive = too high)
+   * altitude error, metres (positive = below target)
    *
    * @generated from field: float alt_error_m = 6;
    */
   altErrorM: number;
 
   /**
-   * airspeed error, m/s
+   * wire airspeed error; m/s by spec, cm/s on ArduPlane
    *
    * @generated from field: float aspd_error_m_s = 7;
    */
@@ -750,14 +750,13 @@ export const BatteryStatusSchema: GenMessage<BatteryStatus> = /*@__PURE__*/
 /**
  * RadioStatus mirrors RADIO_STATUS (#109).
  * Link quality from SiK-compatible radios (3DR, RFD900, Holybro SiK).
- * txbuf_pct is the most actionable field: high fill (> 90%) means the GCS
- * is producing more data than the radio can transmit — reduce stream rates.
+ * txbuf_pct reports free transmitter buffer space; low values indicate congestion.
  *
  * @generated from message gcs.v1.RadioStatus
  */
 export type RadioStatus = Message<"gcs.v1.RadioStatus"> & {
   /**
-   * local signal strength, 0–254; 254 = unknown
+   * local signal strength, 0–254; 255 = unknown
    *
    * @generated from field: uint32 rssi = 1;
    */
@@ -771,21 +770,21 @@ export type RadioStatus = Message<"gcs.v1.RadioStatus"> & {
   remrssi: number;
 
   /**
-   * transmit buffer fill %; high = back-pressure
+   * free transmit buffer %; low = back-pressure
    *
    * @generated from field: uint32 txbuf_pct = 3;
    */
   txbufPct: number;
 
   /**
-   * local noise floor
+   * local noise floor; 255 = unknown
    *
    * @generated from field: uint32 noise = 4;
    */
   noise: number;
 
   /**
-   * remote noise floor
+   * remote noise floor; 255 = unknown
    *
    * @generated from field: uint32 remnoise = 5;
    */

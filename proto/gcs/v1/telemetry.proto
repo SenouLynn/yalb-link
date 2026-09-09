@@ -116,8 +116,8 @@ message NavControllerOutput {
   int32 nav_bearing_deg = 3;    // current desired heading, -180..+180
   int32 target_bearing_deg = 4; // bearing to active waypoint, -180..+180
   uint32 wp_dist_m = 5;         // distance to active waypoint, metres
-  float alt_error_m = 6;        // altitude error, metres (positive = too high)
-  float aspd_error_m_s = 7;     // airspeed error, m/s
+  float alt_error_m = 6;        // altitude error, metres (positive = below target)
+  float aspd_error_m_s = 7;     // wire airspeed error; m/s by spec, cm/s on ArduPlane
   float xtrack_error_m = 8;     // crosstrack error, metres
   google.protobuf.Timestamp observed_at = 9;
 }
@@ -180,14 +180,13 @@ message BatteryStatus {
 
 // RadioStatus mirrors RADIO_STATUS (#109).
 // Link quality from SiK-compatible radios (3DR, RFD900, Holybro SiK).
-// txbuf_pct is the most actionable field: high fill (> 90%) means the GCS
-// is producing more data than the radio can transmit — reduce stream rates.
+// txbuf_pct reports free transmitter buffer space; low values indicate congestion.
 message RadioStatus {
-  uint32 rssi = 1;        // local signal strength, 0–254; 254 = unknown
+  uint32 rssi = 1;        // local signal strength, 0–254; 255 = unknown
   uint32 remrssi = 2;     // remote (vehicle) signal strength, same scale
-  uint32 txbuf_pct = 3;   // transmit buffer fill %; high = back-pressure
-  uint32 noise = 4;        // local noise floor
-  uint32 remnoise = 5;     // remote noise floor
+  uint32 txbuf_pct = 3;   // free transmit buffer %; low = back-pressure
+  uint32 noise = 4;        // local noise floor; 255 = unknown
+  uint32 remnoise = 5;     // remote noise floor; 255 = unknown
   uint32 rxerrors = 6;     // accumulated receive errors
   uint32 fixed = 7;        // packets recovered by error correction
   google.protobuf.Timestamp observed_at = 8;

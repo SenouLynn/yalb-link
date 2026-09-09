@@ -43,9 +43,20 @@ func (r RateRequest) IntervalUs() int32 {
 // health families change slowly enough that 1 Hz is generous. MISSION_CURRENT
 // is here because the mission panel's active-item highlight reads it through
 // the same freshness TTL as any instrument: an unrequested family is a stale
-// family, and a stale family never marks an item active. Nothing here is
+// family, and a stale family never marks an item active. NAV_CONTROLLER_OUTPUT
+// is here for the same reason: the guidance readouts age against that TTL, and
+// a Copter measured over 45 s sent none of it unasked. Nothing here is
 // negotiated with the vehicle — an autopilot that cannot honour a rate says so
 // in its COMMAND_ACK and streams what it can.
+//
+// HOME_POSITION is deliberately absent. It is an event, not a stream: the same
+// measurement saw exactly one in 45 s, because ArduPilot sends it when home is
+// set rather than on an interval. Asking for it at a rate would be noise on the
+// link for a value that does not change; the display ages it against its own
+// longer TTL instead. See homeReading in frontend/src/ui/readings.ts.
+//
+// RADIO_STATUS is absent because it originates in a SiK modem rather than the
+// autopilot. There is nothing to ask.
 var DefaultRates = []RateRequest{
 	{MsgID: 30, Hz: 10}, // ATTITUDE
 	{MsgID: 33, Hz: 5},  // GLOBAL_POSITION_INT
@@ -55,6 +66,7 @@ var DefaultRates = []RateRequest{
 	{MsgID: 147, Hz: 1}, // BATTERY_STATUS
 	{MsgID: 193, Hz: 1}, // EKF_STATUS_REPORT
 	{MsgID: 42, Hz: 1},  // MISSION_CURRENT
+	{MsgID: 62, Hz: 1},  // NAV_CONTROLLER_OUTPUT
 }
 
 // RateRequester asks a vehicle for the telemetry the display needs, as soon as

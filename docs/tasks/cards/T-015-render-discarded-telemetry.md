@@ -1,7 +1,7 @@
 ---
 id: T-015
 title: Show the decoded flight state the display discards
-status: ready
+status: done
 priority: 1
 owner: unassigned
 depends_on: none
@@ -49,15 +49,18 @@ without a stated reason.
 
 ## Acceptance criteria
 
-- [ ] Each of the three families is either projected and rendered, or declined
-      in `sample.ts` with a comment giving the reason.
-- [ ] `NAV_CONTROLLER_OUTPUT` is requested by the rate policy, with a test that
-      fails if it is dropped — following `TestDefaultRatesRequestsMissionCurrent`.
-- [ ] New readouts use the existing vocabulary: palette tokens, `Readout`,
+- [x] Each of the three families is either projected and rendered, or declined
+      in `sample.ts` with a comment giving the reason. All three are projected
+      and rendered; the fields left behind carry a stated reason in the case arm.
+- [x] `NAV_CONTROLLER_OUTPUT` is requested by the rate policy, with a test that
+      fails if it is dropped — `TestDefaultRatesRequestsNavControllerOutput`,
+      confirmed failing with the entry removed.
+- [x] New readouts use the existing vocabulary: palette tokens, `Readout`,
       `Provenance`, `--data` for numerics. No hardcoded colours.
-- [ ] Stale posture is preserved — a stale value renders as `- - -` and drives
-      no instrument.
-- [ ] `RADIO_STATUS` acceptance is fixture-based and the card records that it
+- [x] Stale posture is preserved — a stale value renders as `- - -` and drives
+      no instrument. Demonstrated on live SITL at 56 s
+      ([`live-stale.png`](../../runbooks/evidence/t015/live-stale.png)).
+- [x] `RADIO_STATUS` acceptance is fixture-based and the card records that it
       cannot be demonstrated on the current stack.
 
 ## Verification
@@ -71,12 +74,19 @@ docker compose --profile ui up --build   # NAV_CONTROLLER_OUTPUT against live SI
 
 ## Open questions
 
-- `HOME_POSITION` send behaviour. It is believed to be sent when home is set
-  and on request rather than streamed, which decides whether a rate request
-  applies at all. Confirm against ArduPilot before adding one — an unnecessary
-  `SET_MESSAGE_INTERVAL` for a non-streamed family is noise on the link.
-- Place guidance and the detailed inspection tier below primary readings in
-  the instruments pane established by T-017; its body scrolls independently.
+Both settled during execution; kept here with their answers.
+
+- **`HOME_POSITION` send behaviour — answered by measurement.** It is an event,
+  not a stream: a 45 s Copter capture contained exactly one, and a 40 s capture
+  after a backend restart contained none. No rate request was added, and
+  `DefaultRates` records the reason. Because `TELEMETRY_TTL_MS` is 5 s, home
+  would otherwise dash five seconds into every flight while the altitude tape
+  beside it still read "above home"; it is aged against `HOME_TTL_MS` instead.
+- **Placement — as proposed.** The tier renders below the primary readings in
+  the instruments pane, inside the independently scrolling `.pane__body`.
+  Reachability measured at both widths
+  ([1440](../../runbooks/evidence/t015/reachability-1440.json),
+  [768](../../runbooks/evidence/t015/reachability-768.json)).
 
 ## Notes
 
@@ -84,3 +94,53 @@ docker compose --profile ui up --build   # NAV_CONTROLLER_OUTPUT against live SI
 UDP with no radio in the path, so it is expected never to arrive on the current
 stack. It is worth projecting because the decode is already paid for, but do not
 treat its absence in SITL as a defect, and do not spend a live session chasing it.
+Measured: zero arrivals in every capture. Its acceptance is fixture-based.
+
+Full evidence chain: [T-015 evidence](../../runbooks/evidence/t015/README.md).
+
+### Field audit
+
+The card's scope included rendering already-projected fields that had no
+readout. Every field in `TelemetrySample` was swept; the decisions are:
+
+| Field | Decision |
+|---|---|
+| `airspeedMps` | **Rendered.** Projected from VFR_HUD and consumed by nothing — a primary Plane reading that was being dropped. Given its own `resolveAirspeed` rather than a field on `FlightPathResult`, whose `source` names where the *climb rate* came from and can be `GLOBAL_POSITION_INT`. |
+| `rollspeedRadS`, `pitchspeedRadS`, `yawspeedRadS` | Declined. Consumed by the trajectory prediction. Rates of change are read from the moving horizon, not from a number. |
+| `vxMs`, `vyMs`, `vzMs` | Declined. Consumed by `resolveFlightPath2d`; the derived track and climb are what an operator reads, not the NED components. |
+| `hdgCdeg`, `cogCdeg`, `velCmS` | Declined. Fallback inputs to the heading and flight-path resolvers, already surfaced through those readings with their own provenance. |
+| `batteryStatusCurrentCa`, `systemStatusCurrentCa` | Declined **for now.** Current draw is a real reading, but pack current belongs with a power tier that does not exist yet; adding one number for it would be the density decision T-013 owns. |
+| `batteryStatusCellVoltagesMv` | Declined. Per-cell voltages are a diagnostic array, not a readout, and dumping them is the shape T-014 exists to remove. |
+| `gpsFixType`, `satellitesVisible`, `ekfFlags` | Already rendered, in `StatusBar`. |
+| `missionCurrentSeq` | Already rendered, as the mission panel's active-item highlight. |
+| `vehicleType`, `customMode`, `systemStatus`, `armed` | Already rendered, in `StatusBar` and `ArmControl`. |
+
+GPS `eph`/`epv` and the EKF variances are named in the motivation above as
+sitting in `TelemetrySample`. They do not: they are decoded and reach the
+browser, but `sample.ts` never projected them, so they are the same defect as
+the three families, one level down. They are **not** absorbed here — dilution
+and variance are a GPS/EKF quality tier, and inventing one would take this card
+into T-013. Worth a card of its own.
+
+### Defect found during acceptance
+
+After a SITL restart the vehicle returns on a new UDP source port; the backend
+logs `SOURCE_CONFLICT`, never marks it lost, and so never re-issues the rate
+requests. All eight previously requested families go silent too, so this
+predates this card. Raised as
+[T-023](T-023-rate-requests-after-source-change.md) and not fixed here.
+
+### Regression found and fixed here
+
+The mock's health families were sent every tenth cycle — exactly
+`TELEMETRY_TTL_MS` before this card, and over it once guidance added a sixth
+frame per cycle. Battery, GPS, EKF and radio all dashed at `?source=mock` while
+being actively sent. The cadence is now every fifth cycle, and `mock.test.ts`
+fails if any family's worst gap reaches the TTL.
+
+### Gates not run locally
+
+`bazel test //...` (the checkout pins 8.7.0; Homebrew provides 8.3.1) and
+`golangci-lint` (not installed) were **not** run on this machine and are left to
+CI. `go test -race ./...`, `pnpm typecheck`, `pnpm lint`, `pnpm vitest run` and
+`pnpm build` all ran and passed.

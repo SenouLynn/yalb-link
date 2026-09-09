@@ -156,6 +156,7 @@ func TestRateRequestsOnDiscovery(t *testing.T) {
 		{TargetSystem: 1, TargetComponent: 1, MsgID: 147, IntervalUs: 1_000_000}, // BATTERY_STATUS 1 Hz
 		{TargetSystem: 1, TargetComponent: 1, MsgID: 193, IntervalUs: 1_000_000}, // EKF_STATUS_REPORT 1 Hz
 		{TargetSystem: 1, TargetComponent: 1, MsgID: 42, IntervalUs: 1_000_000},  // MISSION_CURRENT 1 Hz
+		{TargetSystem: 1, TargetComponent: 1, MsgID: 62, IntervalUs: 1_000_000},  // NAV_CONTROLLER_OUTPUT 1 Hz
 	}
 
 	got := intervalCommands(t, src.snapshot())
@@ -195,6 +196,51 @@ func TestDefaultRatesRequestsMissionCurrent(t *testing.T) {
 	t.Fatalf("DefaultRates does not request MISSION_CURRENT (%d); "+
 		"the mission panel's active-item highlight cannot become fresh without it",
 		missionCurrentMsgID)
+}
+
+// TestDefaultRatesRequestsNavControllerOutput pins the family the guidance
+// readouts depend on, by the feature rather than by its position in the list.
+//
+// A Copter observed over 45 s on the Compose stack sent no NAV_CONTROLLER_OUTPUT
+// at all until it was asked, so nothing else in the system supplies it. Dropping
+// it here does not make the guidance readouts wrong — it makes them permanently
+// unavailable, silently, with every frontend test still passing.
+func TestDefaultRatesRequestsNavControllerOutput(t *testing.T) {
+	const navControllerOutputMsgID = 62
+
+	for _, req := range DefaultRates {
+		if req.MsgID == navControllerOutputMsgID {
+			if req.Hz <= 0 {
+				t.Fatalf("NAV_CONTROLLER_OUTPUT requested at %v Hz, want a positive rate", req.Hz)
+			}
+
+			return
+		}
+	}
+
+	t.Fatalf("DefaultRates does not request NAV_CONTROLLER_OUTPUT (%d); "+
+		"the guidance readouts cannot become fresh without it",
+		navControllerOutputMsgID)
+}
+
+// TestDefaultRatesOmitsEventAndRadioFamilies records two deliberate absences so
+// that adding either one has to be an argued change rather than a reflex.
+//
+// HOME_POSITION is an event: ArduPilot sends it when home is set, and a 45 s
+// Copter capture contained exactly one. RADIO_STATUS originates in a SiK modem,
+// which is not the addressee of a SET_MESSAGE_INTERVAL sent to the autopilot.
+// Requesting either would put traffic on the link that answers no question.
+func TestDefaultRatesOmitsEventAndRadioFamilies(t *testing.T) {
+	unwanted := map[uint32]string{
+		242: "HOME_POSITION (an event, not a stream; the display ages it against its own TTL)",
+		109: "RADIO_STATUS (emitted by the radio, not the autopilot)",
+	}
+
+	for _, req := range DefaultRates {
+		if reason, found := unwanted[req.MsgID]; found {
+			t.Errorf("DefaultRates requests %d: %s", req.MsgID, reason)
+		}
+	}
 }
 
 // TestRateRequestsAddressTheObservedLink keeps the requests on the link the

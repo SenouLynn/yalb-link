@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { StreamEvent } from './events';
 import { MOCK_COMP_ID, MOCK_SYS_ID, mockFrames } from './fixtures';
+import { TELEMETRY_TTL_MS } from '@/fleet/state';
 import { MockEventSource, type Cancel } from './mock';
 
 const START_MS = 1_700_000_000_000;
@@ -146,5 +147,57 @@ describe('mock mission state', () => {
       .filter((event) => event.event.payload.case === 'missionCurrent');
 
     expect(cases.length).toBeGreaterThan(1);
+  });
+});
+
+describe('mock family cadence', () => {
+  /**
+   * Every family the mock sends must arrive inside the freshness TTL.
+   *
+   * The display withholds any value whose family has not been heard within
+   * TELEMETRY_TTL_MS. A fixture that sends a family more slowly than that does
+   * not demonstrate a slow sensor — it demonstrates a broken one, permanently,
+   * while every other test still passes. This was not hypothetical: the health
+   * families sat exactly on the TTL boundary until adding one frame per cycle
+   * pushed battery, GPS, EKF and radio into permanent dashes at ?source=mock.
+   */
+  it('sends every family it sends at all within the freshness TTL', () => {
+    const frames = mockFrames();
+    const lastSeen = new Map<string, number>();
+    const worstGap = new Map<string, number>();
+    let elapsedMs = 0;
+
+    for (const frame of frames) {
+      elapsedMs += frame.delayMs;
+      const event = frame.build(START_MS + elapsedMs);
+      if (event.kind !== 'telemetry') continue;
+
+      const family = event.event.payload.case ?? 'unknown';
+      const previous = lastSeen.get(family);
+      if (previous !== undefined) {
+        worstGap.set(family, Math.max(worstGap.get(family) ?? 0, elapsedMs - previous));
+      }
+      lastSeen.set(family, elapsedMs);
+    }
+
+    expect(worstGap.size).toBeGreaterThan(0);
+
+    for (const [family, gap] of worstGap) {
+      expect(gap, `${family} is sent every ${String(gap)} ms, outside the ${String(TELEMETRY_TTL_MS)} ms TTL`)
+        .toBeLessThan(TELEMETRY_TTL_MS);
+    }
+  });
+
+  it('sends the three families T-015 added', () => {
+    const families = new Set(
+      mockFrames()
+        .map((frame) => frame.build(START_MS))
+        .filter((event): event is Extract<StreamEvent, { kind: 'telemetry' }> => event.kind === 'telemetry')
+        .map((event) => event.event.payload.case),
+    );
+
+    expect(families).toContain('navControllerOutput');
+    expect(families).toContain('homePosition');
+    expect(families).toContain('radioStatus');
   });
 });
