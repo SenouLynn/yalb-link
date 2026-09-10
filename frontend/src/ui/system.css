@@ -1,0 +1,733 @@
+/*
+ * The design system: tokens, primitives, and the shell.
+ *
+ * Everything here is vocabulary. Instrument-specific styling — the attitude
+ * indicator, the heading tape, the map, the replay transport — lives in
+ * `display.css` and is built out of what this file defines.
+ *
+ * The philosophy is DearImGui's: the screen is a declaration of the data, not
+ * a composed page. Panels butt against each other on 1px rules with no gaps,
+ * no shadows, and no floating cards. The atom is a two-column row whose value
+ * is right-aligned against a shared edge, so a column of readings scans as a
+ * table rather than as six separate objects.
+ *
+ * Density and hit-target size are DELIBERATELY SEPARATE AXES. `--row-*` sizes
+ * data, which goes as tight as it reads; `--target-*` sizes anything a pointer
+ * has to hit, which stays generous regardless. A field theme raises the second
+ * without touching the first.
+ */
+
+:root {
+  /*
+   * The palette is taken from instrument hardware rather than from a generic
+   * dark theme: a graphite bezel, the blue-over-ochre split of a real attitude
+   * indicator, off-white engraved lettering, and amber as the only warning
+   * colour. There is deliberately no "good" green — normal flight is
+   * unremarkable, and a panel that lights up to say nothing is wrong trains an
+   * operator to ignore it.
+   */
+  --panel: #14171c;
+  --panel-deep: #0d1013;
+  --panel-raised: #1b1f26;
+  --bezel: #272c34;
+  --sky: #2d6d9e;
+  --ground: #7a5326;
+  --lume: #d8dde3;
+  --lume-dim: #8b939e;
+  --caution: #d9a441;
+  --dead: #4d5560;
+
+  /* The commanded route, distinct from both the flown track and the caution
+     amber. Mirrored in `ui/palette.ts` for MapLibre, which needs a resolved
+     value rather than a custom property. */
+  --mission-route: #c7f0ff;
+
+  /*
+   * Type: four fixed steps and no more. A fifth step is a decision someone has
+   * to make every time they add a value, which is how the last system drifted
+   * into six unrelated font sizes. Fixed rem, never fluid — an operator views
+   * this at one DPI, and a heading that shrinks inside a rail looks broken
+   * rather than responsive.
+   */
+  --fs-label: 0.625rem; /* 10px — section headers, row labels, provenance */
+  --fs-data: 0.6875rem; /* 11px — the value in a data row. The default. */
+  --fs-body: 0.75rem; /* 12px — control text, prose, hints */
+  --fs-lead: 1.0625rem; /* 17px — at most one emphasised value per group */
+
+  /*
+   * Tabular figures matter here: proportional digits make a readout jitter
+   * sideways as the numbers change, which reads as instability in the data.
+   */
+  --data: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  --label: ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif;
+
+  /* Density axis — data. Three values, and every panel spacing comes from them. */
+  --row-y: 0.125rem;
+  --row-x: 0.5rem;
+  --group-y: 0.625rem;
+
+  /*
+   * Target axis — levers. Independent of density on purpose: the operator is
+   * expected to be in the field on a laptop eventually, and a control sized
+   * off the data scale would be unhittable there.
+   */
+  --target-h: 1.75rem;
+  --target-x: 0.625rem;
+  --lever-gap: 0.25rem;
+
+  --rule: 1px solid var(--bezel);
+  --radius: 2px;
+
+  /*
+   * Focus is lume, never caution. Amber means something is wrong with the
+   * aircraft; spending it on a focus ring teaches the operator to ignore it.
+   */
+  --focus: var(--lume);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--panel-deep);
+  color: var(--lume);
+  font-family: var(--label);
+  -webkit-font-smoothing: antialiased;
+}
+
+/*
+ * The parts we did not draw still belong to the design. Browser defaults for
+ * selection, the caret, and scrollbars carry no design system of their own.
+ */
+::selection {
+  background: color-mix(in srgb, var(--lume) 26%, transparent);
+  color: var(--lume);
+}
+
+:root {
+  accent-color: var(--lume-dim);
+  caret-color: var(--lume);
+  scrollbar-color: var(--bezel) transparent;
+  scrollbar-width: thin;
+}
+
+/* --- group: a labelled section of rows ----------------------------------- */
+
+.group + .group {
+  margin-top: var(--group-y);
+}
+
+.group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--row-x);
+  padding: var(--row-y) var(--row-x);
+  border-bottom: var(--rule);
+}
+
+.group__label,
+.label {
+  font-family: var(--label);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lume-dim);
+}
+
+.group__note {
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  color: var(--lume-dim);
+  white-space: nowrap;
+}
+
+.group__body {
+  padding: var(--row-y) 0;
+}
+
+.group__absent {
+  padding: var(--row-y) var(--row-x);
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+  color: var(--dead);
+}
+
+/* --- row: the atom ------------------------------------------------------- */
+
+/*
+ * Label left, value right-aligned against a shared edge. The shared edge is
+ * the whole point: a column of rows reads as one table the eye can run down,
+ * instead of as N independently-placed numbers.
+ */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--row-x);
+  padding: var(--row-y) var(--row-x);
+}
+
+/* The ImGui table hover. Free, and it tells the pointer which row it is on. */
+.row:hover {
+  background: color-mix(in srgb, var(--lume) 4%, transparent);
+}
+
+.row__label {
+  font-family: var(--label);
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lume-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row__value,
+.value {
+  font-family: var(--data);
+  font-size: var(--fs-data);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  color: var(--lume);
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* The one emphasis available. Used for a group's headline value, not for six. */
+.row--lead .row__value {
+  font-size: var(--fs-lead);
+  line-height: 1.15;
+}
+
+.row__unit,
+.unit {
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  color: var(--lume-dim);
+  margin-left: 0.3em;
+}
+
+.row--caution .row__value {
+  color: var(--caution);
+}
+
+.row--dead .row__value,
+.row__value--unavailable,
+.value--unavailable,
+.unit--unavailable {
+  color: var(--dead);
+}
+
+/* A row whose value is too long to sit beside its label wraps under it. */
+.row--stacked {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.row--stacked .row__value {
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* --- provenance ---------------------------------------------------------- */
+
+/*
+ * The signature of this display. Every reading states the MAVLink message it
+ * came from and how old that message is, over a rule that drains as the value
+ * ages toward its TTL. The drain is what makes staleness pre-attentive: the
+ * operator sees the bar emptying without having to read the age.
+ */
+.provenance {
+  padding: 0 var(--row-x);
+}
+
+.provenance__track {
+  height: 1px;
+  background: var(--bezel);
+  overflow: hidden;
+}
+
+.provenance__fill {
+  height: 100%;
+  background: var(--lume-dim);
+  transition: width 120ms linear;
+}
+
+.provenance--stale .provenance__fill {
+  background: var(--caution);
+}
+
+/* Colour only. Painting a background here would fill the row with amber and
+   hide the source name and age written on it. */
+.provenance--stale .provenance__text {
+  color: var(--caution);
+}
+
+.provenance--unavailable .provenance__fill {
+  background: transparent;
+}
+
+.provenance--unavailable .provenance__text {
+  color: var(--dead);
+}
+
+.provenance__text {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--row-x);
+  min-width: 0;
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--lume-dim);
+}
+
+/* The source name is the long one; let it ellipsis rather than widen the row. */
+.provenance__text > :first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- reading: a row that carries its own provenance ---------------------- */
+
+.reading {
+  padding-bottom: var(--row-y);
+}
+
+.reading:hover {
+  background: color-mix(in srgb, var(--lume) 4%, transparent);
+}
+
+.reading .row:hover {
+  background: transparent;
+}
+
+/* --- lever: the one button shape ----------------------------------------- */
+
+/*
+ * One shape for every action in the app. A second button shape is how a system
+ * starts meaning nothing, so variants change colour and width — never form.
+ */
+.lever {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  min-height: var(--target-h);
+  padding: 0 var(--target-x);
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--lume);
+  font-family: var(--data);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lever:hover:not(:disabled) {
+  background: var(--panel-raised);
+  border-color: var(--lume-dim);
+}
+
+.lever:active:not(:disabled) {
+  background: var(--panel-deep);
+}
+
+.lever:disabled {
+  color: var(--dead);
+  border-color: var(--dead);
+  cursor: default;
+}
+
+.lever:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.lever[aria-pressed="true"],
+.lever[data-active="true"] {
+  color: var(--lume);
+  border-color: var(--lume-dim);
+  background: var(--panel-deep);
+}
+
+/* Amber-edged because the action itself is the hazard, not because it is primary. */
+.lever--caution {
+  border-color: var(--caution);
+  color: var(--caution);
+}
+
+.lever--caution:hover:not(:disabled) {
+  border-color: var(--caution);
+  background: color-mix(in srgb, var(--caution) 12%, var(--panel));
+  color: var(--lume);
+}
+
+.lever--wide {
+  width: 100%;
+}
+
+.lever-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lever-gap);
+  padding: var(--row-y) var(--row-x);
+}
+
+/* --- field: a labelled input --------------------------------------------- */
+
+.field {
+  display: grid;
+  gap: 0.125rem;
+  min-width: 0;
+  padding: var(--row-y) var(--row-x);
+}
+
+.field__input {
+  min-height: var(--target-h);
+  min-width: 0;
+  padding: 0 var(--target-x);
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel-deep);
+  color: var(--lume);
+  font-family: var(--data);
+  font-size: var(--fs-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.field__input::placeholder {
+  color: var(--lume-dim);
+}
+
+.field__input:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+  border-color: var(--lume-dim);
+}
+
+.field__input:disabled {
+  color: var(--dead);
+  border-color: var(--dead);
+}
+
+/* A checkbox and its assertion, sized on the target axis like any other lever. */
+.field--check {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--target-x);
+  min-height: var(--target-h);
+}
+
+.field--check input {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.field--check span {
+  font-family: var(--data);
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  color: var(--lume);
+}
+
+/* --- tabs: several panels sharing one slot ------------------------------- */
+
+.tabs {
+  display: flex;
+  flex: none;
+  align-items: stretch;
+  gap: 0;
+  border-bottom: var(--rule);
+}
+
+.tab {
+  min-height: var(--target-h);
+  padding: 0 var(--target-x);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--lume-dim);
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tab:hover {
+  color: var(--lume);
+  background: var(--panel-raised);
+}
+
+.tab[aria-selected="true"] {
+  color: var(--lume);
+  border-bottom-color: var(--lume);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.tabs__note {
+  margin-left: auto;
+  align-self: center;
+  padding: 0 var(--target-x);
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  color: var(--lume-dim);
+  white-space: nowrap;
+}
+
+/* --- shell --------------------------------------------------------------- */
+
+/*
+ * Exactly one viewport. Nothing may scroll the page: a body scrollbar narrows
+ * the viewport, which resizes every column, which resizes the map and makes it
+ * jump. Slots scroll internally instead.
+ */
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+.shell {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  height: 100dvh;
+}
+
+.shell__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.875rem;
+  min-height: var(--target-h);
+  padding: 0 var(--row-x);
+  border-bottom: var(--rule);
+  background: var(--panel);
+}
+
+/* Per-view chrome, lighter than the app bar above it because it is the
+   subordinate of the two. */
+.shell__bar--view {
+  gap: var(--lever-gap);
+  background: var(--panel-deep);
+}
+
+.shell__title {
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--lume);
+}
+
+.shell__spacer {
+  margin-left: auto;
+}
+
+.shell__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lume-dim);
+}
+
+/*
+ * Flex, not a grid template.
+ *
+ * The system this replaced enumerated every visible-panel combination by hand
+ * (`.has-instruments.has-map.has-mission` and six siblings), so a fourth panel
+ * would have meant writing eight more. Flex sizes whatever is mounted, which
+ * is what makes adding or removing information cost one registry entry and no
+ * layout CSS at all.
+ */
+.shell__body {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.slot {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: var(--rule);
+}
+
+.slot:last-child {
+  border-right: 0;
+}
+
+.slot--rail {
+  flex: 0 0 15rem;
+}
+
+.slot--center {
+  flex: 1 1 auto;
+}
+
+.slot--aux {
+  flex: 0 0 21rem;
+}
+
+/* The developer tier: resident, tabbed, and bounded so it cannot crowd out the
+   instruments above it. */
+.slot--dev {
+  flex: 0 0 13rem;
+  border-top: var(--rule);
+  border-right: 0;
+}
+
+.slot__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* A slot whose content owns its own full bleed — the map. */
+.slot__body--bleed {
+  overflow: hidden;
+  padding: 0;
+}
+
+.slot__stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.slot__empty {
+  margin: auto;
+  padding: 2rem var(--row-x);
+  text-align: center;
+  font-family: var(--data);
+  font-size: var(--fs-body);
+  line-height: 1.6;
+  color: var(--lume-dim);
+}
+
+/* --- views popover ------------------------------------------------------- */
+
+.views {
+  position: relative;
+}
+
+.views__popover {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 2px);
+  left: 0;
+  min-width: 11rem;
+  padding: var(--row-y) 0;
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: 0 4px 14px rgb(0 0 0 / 55%);
+}
+
+.views__option {
+  display: flex;
+  align-items: center;
+  gap: var(--target-x);
+  min-height: var(--target-h);
+  padding: 0 var(--target-x);
+  font-family: var(--data);
+  font-size: var(--fs-body);
+  color: var(--lume);
+  cursor: pointer;
+}
+
+.views__option:hover {
+  background: var(--panel-raised);
+}
+
+.views__option input {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.views__tier {
+  padding: var(--group-y) var(--target-x) var(--row-y);
+  font-family: var(--label);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lume-dim);
+}
+
+/* --- responsive ---------------------------------------------------------- */
+
+/*
+ * Structural, not fluid. Below the point where three columns can hold their
+ * content, the columns become a single scrolling stack with bounded regions.
+ * Type never scales; an operator's DPI does not change with their window.
+ */
+@media (max-width: 60rem) {
+  .shell__body {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .slot {
+    flex: none;
+    border-right: 0;
+    border-bottom: var(--rule);
+  }
+
+  .slot--rail {
+    max-height: 16rem;
+  }
+
+  .slot--center {
+    min-height: 26rem;
+  }
+
+  .slot--aux {
+    min-height: 28rem;
+  }
+
+  .slot--dev {
+    min-height: 13rem;
+    border-top: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .provenance__fill {
+    transition: none;
+  }
+}
