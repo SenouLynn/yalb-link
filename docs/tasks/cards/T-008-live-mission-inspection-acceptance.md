@@ -87,7 +87,7 @@ Carry into the session:
 
 T-017 session evidence (2026-09-09): both six-item downloads, selected route
 and active seq 0, interrupted request switching, explicit timeout and subsequent
-success are captured in `docs/temp/evidence/t017/`. Independent ordered
+success were captured under T-017, since pruned. Independent ordered
 value comparison and zero-item completion were subsequently accepted after
 claiming this card; see the T-008 follow-through in the evidence README.
 

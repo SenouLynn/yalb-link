@@ -69,7 +69,7 @@ object and `[mission]` effect. No claim of a measured frame-rate regression.
 
 Browser MutationObserver confirmed 108 marker additions and 108 removals
 over 2000 ms for an unchanged 4-point mock mission during telemetry.
-See `docs/temp/evidence/t017/marker-churn.json`. No frame-rate claim.
+Measured in `marker-churn.json`, since pruned. No frame-rate claim.
 
 
 Selected next during the fleet-view planning pass. This is one reviewable fix:
@@ -89,5 +89,5 @@ for both the four-point mock and four-point stationary Copter SITL mission.
 Live external refresh to two items changed the markers to two; clearing removed
 all markers. A 6.5 s simulator pause kept the downloaded mission while removing
 its active highlight and making 14 readings stale; resume restored freshness and
-highlight. Artifacts: `docs/temp/evidence/t020/{mock,live,invalidation}.json`.
+highlight. Artifacts were `{mock,live,invalidation}.json`, since pruned.
 No frame-rate or moving-flight prediction accuracy claim is made.

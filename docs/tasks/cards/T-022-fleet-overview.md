@@ -114,7 +114,7 @@ MapPanel fleet state or carry its follow behavior into the overview.
 ## Notes
 
 Completed execution evidence: [T-022 run](../../runbooks/validation/t022.md);
-raw captures in `docs/temp/evidence/t022/` are optional under T-025.
+raw captures were optional under T-025 and have been pruned.
 
 Two live SITL identities ran with distinct home locations, because the Compose
 defaults coincide: Copter `1:1` at 37.7749,-122.4194 and Plane `2:1` at

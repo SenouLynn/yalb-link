@@ -59,7 +59,7 @@ without a stated reason.
       `Provenance`, `--data` for numerics. No hardcoded colours.
 - [x] Stale posture is preserved — a stale value renders as `- - -` and drives
       no instrument. Demonstrated on live SITL at 56 s
-      ([`live-stale.png`](../../temp/evidence/t015/live-stale.png)).
+      (`live-stale.png`).
 - [x] `RADIO_STATUS` acceptance is fixture-based and the card records that it
       cannot be demonstrated on the current stack.
 
@@ -85,8 +85,8 @@ Both settled during execution; kept here with their answers.
 - **Placement — as proposed.** The tier renders below the primary readings in
   the instruments pane, inside the independently scrolling `.pane__body`.
   Reachability measured at both widths
-  ([1440](../../temp/evidence/t015/reachability-1440.json),
-  [768](../../temp/evidence/t015/reachability-768.json)).
+  (`1440`,
+  `768`).
 
 ## Notes
 
