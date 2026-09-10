@@ -1,6 +1,6 @@
 /** Transport controls for a recorded flight. */
 
-import { Group, Field, Note, Lever } from '@/ui/primitives';
+import { Chip, Confirm, Field, Group, Lever, LeverRow, Note } from '@/ui/primitives';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
@@ -41,50 +41,53 @@ function Transport({ source }: { source: ReplayEventSource }) {
   const offsetMs = status.positionMs - status.startedAtMs;
 
   if (status.error !== null) {
-    return (
-      <Group label="Replay unavailable" className="replay"><Note tone="caution">{status.error}</Note></Group>
-    );
+    /*
+     * The label names the panel, not its condition. Every other panel keeps its
+     * own name and says what is wrong inside it; a panel that renames itself is
+     * a section the operator cannot find twice.
+     */
+    return <Group label="Replay" className="replay" absent={status.error} />;
   }
 
   return (
-    <Group label="Replay" className="replay">
-      <Lever
-        onClick={() => {
-          if (status.playing) {
-            source.pause();
-          } else {
-            source.play();
-          }
-        }}
-        disabled={status.loading || status.totalEvents === 0}
-      >
-        {status.playing ? 'Pause' : 'Play'}
-      </Lever>
+    <Group label="Replay" className="replay" annotation={status.recording?.name ?? NO_VALUE}>
+      <LeverRow label="Transport">
+        <Lever
+          onClick={() => {
+            if (status.playing) {
+              source.pause();
+            } else {
+              source.play();
+            }
+          }}
+          disabled={status.loading || status.totalEvents === 0}
+        >
+          {status.playing ? 'Pause' : 'Play'}
+        </Lever>
 
-      <span className="replay__clock">
-        {formatOffset(offsetMs)} / {formatOffset(spanMs)}
-      </span>
+        <span className="replay__clock">
+          {formatOffset(offsetMs)} / {formatOffset(spanMs)}
+        </span>
 
-      <input
-        type="range"
-        className="replay__scrub"
-        min={0}
-        max={Math.max(spanMs, 1)}
-        step={100}
-        value={Math.round(offsetMs)}
-        aria-label="Playback position"
-        onChange={(change) => {
-          source.seekTo(status.startedAtMs + Number(change.target.value));
-        }}
-      />
+        <input
+          type="range"
+          className="replay__scrub"
+          min={0}
+          max={Math.max(spanMs, 1)}
+          step={100}
+          value={Math.round(offsetMs)}
+          aria-label="Playback position"
+          onChange={(change) => {
+            source.seekTo(status.startedAtMs + Number(change.target.value));
+          }}
+        />
 
-      <Field label="Speed" value={String(status.speed)}
-        onChange={(value) => { source.setSpeed(Number(value)); }}
-        options={SPEEDS.map((speed) => ({ value: String(speed), label: `${String(speed)}×` }))} />
+        <Field label="Speed" value={String(status.speed)}
+          onChange={(value) => { source.setSpeed(Number(value)); }}
+          options={SPEEDS.map((speed) => ({ value: String(speed), label: `${String(speed)}×` }))} />
+      </LeverRow>
 
-      <span className="replay__name">{status.recording?.name ?? NO_VALUE}</span>
-
-      {status.loading && <Note>loading…</Note>}
+      {status.loading && <Note>Loading…</Note>}
       {status.truncated && (
         <Note tone="caution">
           first {status.totalEvents} events only
@@ -99,6 +102,16 @@ function RecordingPicker() {
   const [recordings, setRecordings] = useState<RecordingWire[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<number | null>(null);
+  /*
+   * Deleting a recording is destructive to data, not to the aircraft, so it is
+   * not amber — amber says something is wrong with the vehicle, and spending it
+   * here is how that meaning erodes. The guard is an explicit attestation
+   * instead, which is also how the app stops needing the one native
+   * `confirm()` dialog it had: a browser modal carries no design system, cannot
+   * be styled, and states the name of the thing in a different voice.
+   */
+  const [pending, setPending] = useState<number | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,49 +150,67 @@ function RecordingPicker() {
   return (
     <Group label="Replay" className="replay">
       {error !== null && <Note tone="caution">{error}</Note>}
-      {error === null && recordings === null && <Note>loading…</Note>}
+      {error === null && recordings === null && <Note>Loading…</Note>}
       {error === null && recordings?.length === 0 && (
         <Note>No recordings yet.</Note>
       )}
-      {recordings?.map((recording) => (
-        <div key={recording.id} className="replay__pick-row">
-          <a className="lever" href={replayUrl(recording.id)}>
-            {recording.name === '' ? `#${String(recording.id)}` : recording.name}
-            <span className="replay__name">
-              {recording.event_count} events · {recording.status}
-            </span>
-          </a>
-          <Lever
-            caution
-            disabled={deleting === recording.id}
-            aria-label={`Delete ${recording.name === '' ? `recording ${String(recording.id)}` : recording.name}`}
-            onClick={() => {
-              const label = recording.name === '' ? `recording #${String(recording.id)}` : recording.name;
-              if (!globalThis.confirm(`Permanently delete ${label}?`)) {
-                return;
+      {recordings?.map((recording) => {
+        const label = recording.name === '' ? `recording #${String(recording.id)}` : recording.name;
+        const remove = () => {
+          setDeleting(recording.id);
+          setPending(null);
+          setConfirmed(false);
+          setError(null);
+          void deleteRecording(recording.id)
+            .then(() => {
+              setRecordings((current) => current?.filter((item) => item.id !== recording.id) ?? []);
+            })
+            .catch((cause: unknown) => {
+              if (cause instanceof RecordingHTTPError && cause.status === 409) {
+                setError('Stop the recording first.');
+              } else {
+                setError(cause instanceof Error ? cause.message : String(cause));
               }
-              setDeleting(recording.id);
-              setError(null);
-              void deleteRecording(recording.id)
-                .then(() => {
-                  setRecordings((current) => current?.filter((item) => item.id !== recording.id) ?? []);
-                })
-                .catch((cause: unknown) => {
-                  if (cause instanceof RecordingHTTPError && cause.status === 409) {
-                    setError('Stop the recording first.');
-                  } else {
-                    setError(cause instanceof Error ? cause.message : String(cause));
-                  }
-                })
-                .finally(() => {
-                  setDeleting(null);
-                });
-            }}
-          >
-            {deleting === recording.id ? 'Deleting…' : 'Delete'}
-          </Lever>
-        </div>
-      ))}
+            })
+            .finally(() => {
+              setDeleting(null);
+            });
+        };
+
+        return (
+          <div key={recording.id}>
+            <LeverRow label={label}>
+              <Lever href={replayUrl(recording.id)}>
+                {recording.name === '' ? `#${String(recording.id)}` : recording.name}
+              </Lever>
+              <Chip>{recording.event_count} events · {recording.status}</Chip>
+              <Lever
+                disabled={deleting === recording.id}
+                aria-label={`Delete ${label}`}
+                onClick={() => {
+                  setPending(recording.id);
+                  setConfirmed(false);
+                }}
+              >
+                {deleting === recording.id ? 'Deleting…' : 'Delete'}
+              </Lever>
+            </LeverRow>
+            {pending === recording.id && (
+              <>
+                <Confirm
+                  assertion={`Permanently delete ${label}`}
+                  checked={confirmed}
+                  onChange={setConfirmed}
+                />
+                <LeverRow label={`Confirm deleting ${label}`}>
+                  <Lever disabled={!confirmed} onClick={remove}>Delete permanently</Lever>
+                  <Lever onClick={() => { setPending(null); setConfirmed(false); }}>Cancel</Lever>
+                </LeverRow>
+              </>
+            )}
+          </div>
+        );
+      })}
     </Group>
   );
 }

@@ -41,7 +41,7 @@ export function FamiliesPanel({ view, nowMs }: { view: VehicleView; nowMs: numbe
   const fresh = families.filter(([, seenMs]) => nowMs - seenMs <= TELEMETRY_TTL_MS).length;
 
   return (
-    <Group label="Families" note={`${String(fresh)}/${String(families.length)} fresh`}>
+    <Group label="Families" annotation={`${String(fresh)}/${String(families.length)} fresh`}>
       {families.map(([family, seenMs]) => {
         const ageMs = Math.max(0, nowMs - seenMs);
 
@@ -75,7 +75,7 @@ export function SamplePanel({ view }: { view: VehicleView }) {
   }
 
   return (
-    <Group label="Raw sample" note={`${String(fields.length)} fields`}>
+    <Group label="Raw sample" annotation={`${String(fields.length)} fields`}>
       {fields.map(([field, value]) => (
         <Row key={field} label={field} value={formatWire(value)} stacked={isLong(value)} />
       ))}

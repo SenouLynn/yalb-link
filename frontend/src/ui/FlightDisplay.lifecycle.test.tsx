@@ -167,11 +167,11 @@ describe('workspace ownership', () => {
     act(() => { root.render(display({ ...fleet(view(1)), connected: true })); });
     const arm = () => container.querySelector<HTMLButtonElement>('.command-control button');
     act(() => { arm()?.click(); });
-    expect(arm()?.textContent).toBe('CONFIRM ARM');
+    expect(arm()?.textContent).toBe('Confirm arm');
     togglePanel(container, 'map');
-    expect(arm()?.textContent).toBe('CONFIRM ARM');
+    expect(arm()?.textContent).toBe('Confirm arm');
     act(() => { root.render(display({ ...fleet(view(2)), connected: true })); });
-    expect(arm()?.textContent).toBe('ARM');
+    expect(arm()?.textContent).toBe('Arm');
     act(() => { root.unmount(); });
   });
 });
@@ -205,7 +205,7 @@ it('keeps command busy and unresolved state through pane toggles', async () => {
   const arm = () => container.querySelector<HTMLButtonElement>('.command-control button');
   act(() => { arm()?.click(); });
   act(() => { arm()?.click(); });
-  expect(arm()?.textContent).toBe('WAITING…');
+  expect(arm()?.textContent).toBe('Waiting…');
   togglePanel(container, 'instruments');
   expect(arm()?.disabled).toBe(true);
   await act(async () => {
@@ -214,7 +214,7 @@ it('keeps command busy and unresolved state through pane toggles', async () => {
   });
   expect(container.textContent).toContain('What the vehicle did is unknown');
   togglePanel(container, 'instruments');
-  expect(container.textContent).toContain('OBSERVED DISARMED');
+  expect(container.textContent).toContain('Observed disarmed');
   act(() => { root.unmount(); });
 });
 
@@ -309,8 +309,8 @@ it('retains a pending mission through Fleet, clears arm confirmation, and remoun
   const root = createRoot(container);
   act(() => { root.render(display({ ...fleet(view(1)), connected: true })); });
   const click = (text: string) => { Array.from(container.querySelectorAll('button')).find(b => b.textContent === text)?.click(); };
-  act(() => { click('Download mission'); click('ARM'); });
-  expect(container.textContent).toContain('CONFIRM ARM');
+  act(() => { click('Download mission'); click('Arm'); });
+  expect(container.textContent).toContain('Confirm arm');
   act(() => { click('← Fleet'); });
   expect(signal?.aborted).toBe(false);
   expect(container.querySelector('.vehicle-workspace')?.hasAttribute('hidden')).toBe(true);
@@ -322,7 +322,7 @@ it('retains a pending mission through Fleet, clears arm confirmation, and remoun
   });
   act(() => { click('Open selected vehicle'); });
   expect(container.textContent).toContain('Complete');
-  expect(container.textContent).not.toContain('CONFIRM ARM');
+  expect(container.textContent).not.toContain('Confirm arm');
   expect(container.querySelector('[aria-label="Fleet position map"]')).toBeNull();
   expect(container.querySelector('[aria-label="Vehicle position map"]')).not.toBeNull();
   expect(fetch).toHaveBeenCalledTimes(1);

@@ -23,8 +23,14 @@ export interface GroupProps {
   'aria-label'?: string;
   /** Uppercase section label. Names a category, not a sentence. */
   label: string;
-  /** Right-aligned annotation on the header line — a count, an age, a source. */
-  note?: string | undefined;
+  /**
+   * Right-aligned annotation on the header line — a count, an age, a source.
+   *
+   * Named `annotation` rather than `note` because `Row.note` is a different
+   * thing in the opposite place: a dimmer second line *under* a label. One prop
+   * name meaning two opposite things is how a vocabulary stops being one.
+   */
+  annotation?: string | undefined;
   /** Controls belonging to the group, placed on the header line. */
   actions?: ReactNode;
   /**
@@ -44,13 +50,13 @@ export interface GroupProps {
 }
 
 /** A labelled section of rows, separated from its neighbours by a hairline. */
-export function Group({ label, note, actions, reading, absent, children, className, 'aria-label': ariaLabel }: GroupProps) {
+export function Group({ label, annotation, actions, reading, absent, children, className, 'aria-label': ariaLabel }: GroupProps) {
   return (
     <section className={`group${className ? ` ${className}` : ''}`} aria-label={ariaLabel}>
       <div className="group__head">
         <span className="group__label">{label}</span>
         {actions}
-        {note === undefined ? null : <span className="group__note">{note}</span>}
+        {annotation === undefined ? null : <span className="group__annotation">{annotation}</span>}
         {reading === undefined || absent !== undefined ? null : <Provenance reading={reading} />}
       </div>
       {absent === undefined ? (
@@ -136,9 +142,15 @@ export interface LeverProps extends AriaAttributes {
   ref?: Ref<HTMLButtonElement>;
   children: ReactNode;
   onClick?: (() => void) | undefined;
+  /**
+   * Navigates instead of acting. Renders an anchor, which is what a thing that
+   * changes the address has to be — it must open in a new tab, be copied, and
+   * be read as a link by assistive technology.
+   */
+  href?: string | undefined;
   /** Amber-edged. For an action whose effect on the aircraft is the hazard. */
   caution?: boolean | undefined;
-  /** Fills its container — a form's commit action, not a lever in a row. */
+  /** Fills its container — a group's committing action, not a lever in a row. */
   wide?: boolean | undefined;
   disabled?: boolean | undefined;
   /** Renders the toggled-on state for a control that holds a position. */
@@ -154,21 +166,43 @@ export interface LeverProps extends AriaAttributes {
  * Variants change colour and width, never form. A second button shape is how a
  * system stops meaning anything: if the commit action looks different in two
  * places, one of them is wrong.
+ *
+ * There are exactly two placements and no third. A lever either sits inline in
+ * a `LeverRow` at its content width, or it is `wide` and fills its group as
+ * that group's one committing action. Anything else — a lever floated beside
+ * its own status text, a lever stretched by a rule in a feature stylesheet — is
+ * a placement decision being made at a call site, which is the thing this
+ * vocabulary exists to prevent.
+ *
+ * The label is written in sentence case and uppercased by CSS, the same way
+ * `Group` and `Row` labels are. Screaming the string at the call site produces
+ * the identical pixels by a second mechanism, and then half the app is written
+ * one way and half the other.
  */
 export function Lever({
   children,
   onClick,
+  href,
   caution,
   wide,
   disabled,
   pressed,
   title,
+  ref,
   ...aria
 }: LeverProps) {
   const classes = ['lever'];
 
   if (caution === true) classes.push('lever--caution');
   if (wide === true) classes.push('lever--wide');
+
+  if (href !== undefined) {
+    return (
+      <a className={classes.join(' ')} href={href} title={title} {...aria}>
+        {children}
+      </a>
+    );
+  }
 
   return (
     <button
@@ -177,6 +211,7 @@ export function Lever({
       onClick={onClick}
       disabled={disabled}
       title={title}
+      ref={ref}
       {...(pressed === undefined ? {} : { 'aria-pressed': pressed })}
       {...aria}
     >

@@ -79,16 +79,41 @@
   --fs-lead: 1.0625rem; /* 17px — at most one emphasised value per group */
 
   /*
+   * Leading belongs to the step, not to the call site.
+   *
+   * Four steps had four sizes and six unrelated line-heights, because nothing
+   * named them and nothing counted them. A step is a size AND a leading; the
+   * gate asserts one `--lh-*` per `--fs-*` so a fifth leading cannot appear
+   * without a fifth step to hang it on.
+   */
+  --lh-label: 1.4;
+  --lh-data: 1.25;
+  --lh-body: 1.5;
+  --lh-lead: 1.15;
+
+  /*
    * Tabular figures matter here: proportional digits make a readout jitter
    * sideways as the numbers change, which reads as instability in the data.
    */
   --data: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
   --label: ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif;
 
-  /* Density axis — data. Three values, and every panel spacing comes from them. */
+  /*
+   * Density axis — data. Every panel spacing comes from these.
+   *
+   * `--row-h` is the unit the data columns are built on: a plain row is one,
+   * a row carrying a note is exactly two, a group header bar is one. Before it
+   * existed, row height was whatever the type happened to sum to — a plain row
+   * came out near 19px and a noted row near 42px, so nothing in the rail landed
+   * on a common rhythm and the column read as unconsidered.
+   *
+   * There is deliberately no group-separation token. Groups butt directly and
+   * the header bar is the separator; a blank gap doing the same job is spacing
+   * spent to say what a surface already says.
+   */
   --row-y: 0.0625rem;
   --row-x: 0.5rem;
-  --group-y: 0.625rem;
+  --row-h: 1.25rem;
 
   /*
    * Target axis — levers. Independent of density on purpose: the operator is
@@ -112,6 +137,14 @@
 
   --rule: 1px solid var(--bezel);
   --radius: 2px;
+
+  /*
+   * The one heavier weight, and the only exception to drawing structure in 1px:
+   * a selected tab thickens its own bottom edge. It is a token because it was
+   * previously a bare `2px` in the tab rule, which is indistinguishable from a
+   * radius or a focus offset to anyone reading the file later.
+   */
+  --rule-selected: 2px;
 
   /*
    * Focus is lume, never caution. Amber means something is wrong with the
@@ -152,16 +185,36 @@ body {
 
 /* --- group: a labelled section of rows ----------------------------------- */
 
-.group + .group {
-  margin-top: var(--group-y);
-}
-
+/*
+ * The header is a SURFACE; the row label is text. That difference is the whole
+ * reason this rule exists.
+ *
+ * Both were previously 10px uppercase `--lume-dim` separated only by weight and
+ * tracking, and the header stood exactly as tall as a row. An eight-group rail
+ * therefore rendered as one continuous wall of grey text in which no section
+ * boundary was visible. Contrast alone could not fix it: at 10px on graphite,
+ * two greys a few points apart are the same grey.
+ *
+ * So the header takes ImGui's CollapsingHeader treatment — a filled bar, bled
+ * to the slot edge, one row unit tall. It costs no vertical space (it replaces
+ * the group gap it also made unnecessary) and it cannot be mistaken for a row.
+ */
 .group__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--row-x);
-  padding: var(--row-y) var(--row-x);
+  min-height: var(--row-h);
+  padding: 0 var(--row-x);
+  /*
+   * A lume wash, not `--panel-deep`. Deep-under-panel is a seven-unit step that
+   * disappears at this size, and it is also the wrong direction: ImGui's header
+   * is a RAISED tint. The wash is additive, so the same bar reads correctly on
+   * `--panel` in a slot and on `--panel-deep` inside the popover, which a fixed
+   * fill cannot do. `--panel-raised` is spoken for by hover and would make a
+   * resting header look like one the pointer is on.
+   */
+  background: color-mix(in srgb, var(--lume) 7%, transparent);
   border-bottom: var(--rule);
 }
 
@@ -169,16 +222,18 @@ body {
   font-family: var(--label);
   font-size: var(--fs-label);
   font-weight: 600;
-  line-height: 1.4;
+  line-height: var(--lh-label);
   letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--lume-dim);
 }
 
-.group__note {
+.group__annotation {
   font-family: var(--data);
   font-size: var(--fs-label);
-  color: var(--lume-dim);
+  line-height: var(--lh-label);
+  letter-spacing: var(--track-data);
+  color: var(--absent);
   white-space: nowrap;
 }
 
@@ -192,7 +247,7 @@ body {
   padding: var(--row-y) var(--row-x);
   font-family: var(--data);
   font-size: var(--fs-label);
-  line-height: 1.5;
+  line-height: var(--lh-body);
   color: var(--lume-dim);
 }
 .note--absent { color: var(--absent); }
@@ -206,15 +261,22 @@ body {
  * so ten readings rendered as twenty alternating half-rows with `VFR_HUD` three
  * times running — the opposite of the shared value edge the row exists for.
  */
+/*
+ * The provenance sizes to its own text. It previously carried `min-width: 7rem`,
+ * which stretched the 1px drain track well past the source name underneath it —
+ * so a header read as a stray hairline floating above unrelated text rather than
+ * as a meter over its own label.
+ */
 .group__head .provenance {
+  display: flex;
   flex: 0 0 auto;
-  min-width: 7rem;
+  flex-direction: column-reverse;
   padding: 0;
 }
 
 .group__head .provenance__text {
-  gap: 0.4rem;
-  letter-spacing: 0.02em;
+  gap: var(--pad-chip);
+  letter-spacing: var(--track-data);
 }
 
 /* --- row: the atom ------------------------------------------------------- */
@@ -228,8 +290,15 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
+  align-content: center;
   gap: var(--row-x);
+  min-height: var(--row-h);
   padding: var(--row-y) var(--row-x);
+}
+
+/* A row carrying a note is exactly two units. Never one and a half, never three. */
+.row:has(.row__note) {
+  min-height: calc(var(--row-h) * 2);
 }
 
 /* The ImGui table hover. Free, and it tells the pointer which row it is on. */
@@ -240,7 +309,7 @@ body {
 .row__label {
   font-family: var(--label);
   font-size: var(--fs-label);
-  line-height: 1.25;
+  line-height: var(--lh-data);
   letter-spacing: var(--track-data);
   text-transform: uppercase;
   color: var(--lume-dim);
@@ -253,23 +322,27 @@ body {
   font-family: var(--data);
   font-size: var(--fs-data);
   font-variant-numeric: tabular-nums;
-  line-height: 1.25;
+  line-height: var(--lh-data);
   color: var(--lume);
   text-align: right;
   white-space: nowrap;
 }
 
 /* The one emphasis available. Used for a group's headline value, not for six. */
+.row--lead {
+  min-height: calc(var(--row-h) * 2);
+}
+
 .row--lead .row__value {
   font-size: var(--fs-lead);
-  line-height: 1.15;
+  line-height: var(--lh-lead);
 }
 
 .row__unit {
   font-family: var(--data);
   font-size: var(--fs-label);
   color: var(--lume-dim);
-  margin-left: 0.3em;
+  margin-left: var(--pad-chip);
 }
 
 .row--caution .row__value {
@@ -281,20 +354,26 @@ body {
 }
 
 /*
- * A label carrying a convention the operator cannot infer. Its own line, dimmer
- * than the label, never truncated — and never allowed to wrap mid-phrase, which
- * would orphan its last word beside the next row's number.
+ * A label carrying a convention the operator cannot infer — a sign convention
+ * like "+ below target" is the difference between reading a value correctly and
+ * reading it backwards.
+ *
+ * It was already `--absent` and it still read as a second label, because the
+ * only thing separating it from the label above was 0.79 points of contrast at
+ * 10px. Rank is not carried by colour alone: the note switches to the data
+ * font, indents past the label's left edge, and keeps its lowercase. Four
+ * signals, of which colour is the weakest and the last.
  */
-.row:has(.row__note) .row__label {
-  overflow: visible;
-  white-space: normal;
-}
-
 .row__note {
   display: block;
+  padding-left: var(--row-x);
+  font-family: var(--data);
+  line-height: var(--lh-data);
+  letter-spacing: var(--track-data);
   color: var(--absent);
-  letter-spacing: 0.02em;
   text-transform: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* A row whose value is too long to sit beside its label wraps under it. */
@@ -321,6 +400,7 @@ body {
 }
 
 .provenance__track {
+  /* design-geometry: the drain meter is a hairline by definition, not a scale step. */
   height: 1px;
   background: var(--bezel);
   overflow: hidden;
@@ -365,8 +445,8 @@ body {
   min-width: 0;
   font-family: var(--data);
   font-size: var(--fs-label);
-  line-height: 1.5;
-  letter-spacing: 0.04em;
+  line-height: var(--lh-label);
+  letter-spacing: var(--track-data);
   color: var(--lume-dim);
 }
 
@@ -401,7 +481,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.35em;
+  gap: var(--lever-gap);
   min-height: var(--target-h);
   padding: 0 var(--target-x);
   border: var(--rule);
@@ -411,10 +491,21 @@ body {
   font-family: var(--data);
   font-size: var(--fs-body);
   font-weight: 600;
-  line-height: 1;
-  letter-spacing: var(--track-data);
+  line-height: var(--lh-body);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
+}
+
+/*
+ * The navigating form. A lever that changes the address is an anchor, so it
+ * arrives carrying a browser underline and link colour that belong to no design
+ * system; both are the lever's, not the browser's.
+ */
+a.lever {
+  text-decoration: none;
+  color: var(--lume);
 }
 
 .lever:hover:not(:disabled) {
@@ -480,7 +571,7 @@ body {
 
 .field {
   display: grid;
-  gap: 0.125rem;
+  gap: var(--row-y);
   min-width: 0;
   padding: var(--row-y) var(--row-x);
 }
@@ -522,6 +613,7 @@ body {
 }
 
 .field--check input {
+  /* design-geometry: the drawn checkbox glyph; its 28px target is the label. */
   width: 0.875rem;
   height: 0.875rem;
 }
@@ -529,7 +621,7 @@ body {
 .field--check span {
   font-family: var(--data);
   font-size: var(--fs-body);
-  line-height: 1.4;
+  line-height: var(--lh-body);
   color: var(--lume);
 }
 
@@ -547,13 +639,13 @@ body {
   min-height: var(--target-h);
   padding: 0 var(--target-x);
   border: 0;
-  border-bottom: 2px solid transparent;
+  border-bottom: var(--rule-selected) solid transparent;
   background: transparent;
   color: var(--lume-dim);
   font-family: var(--data);
   font-size: var(--fs-label);
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
@@ -571,7 +663,7 @@ body {
 
 .tab:focus-visible {
   outline: var(--focus-ring);
-  outline-offset: -2px;
+  outline-offset: calc(var(--focus-offset) * -2);
 }
 
 .tabs__note {
@@ -607,7 +699,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.875rem;
+  gap: var(--target-x);
   min-height: var(--target-h);
   padding: 0 var(--row-x);
   border-bottom: var(--rule);
@@ -625,7 +717,7 @@ body {
   font-family: var(--data);
   font-size: var(--fs-label);
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--lume);
 }
@@ -637,10 +729,10 @@ body {
 .shell__meta {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--row-x);
   font-family: var(--data);
   font-size: var(--fs-label);
-  letter-spacing: 0.08em;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--lume-dim);
 }
@@ -737,11 +829,11 @@ body {
 
 .slot__empty {
   margin: auto;
-  padding: 2rem var(--row-x);
+  padding: calc(var(--row-h) * 1.5) var(--row-x);
   text-align: center;
   font-family: var(--data);
   font-size: var(--fs-body);
-  line-height: 1.6;
+  line-height: var(--lh-body);
   color: var(--lume-dim);
 }
 
@@ -754,8 +846,9 @@ body {
 .views__popover {
   position: absolute;
   z-index: 20;
-  top: calc(100% + 2px);
+  top: 100%;
   left: 0;
+  /* design-geometry: the popover's own width, sized to its longest option. */
   min-width: 11rem;
   padding: var(--row-y) 0;
   border: var(--rule);
@@ -781,16 +874,28 @@ body {
 }
 
 .views__option input {
+  /* design-geometry: the drawn checkbox glyph; its 28px target is the label. */
   width: 0.875rem;
   height: 0.875rem;
 }
 
+/*
+ * A tier heading is a section header, so it takes the same bar as one. It
+ * previously carried its own padding and a literal copy of `--track-label`,
+ * which is how one role ends up with two implementations.
+ */
 .views__tier {
-  padding: var(--group-y) var(--target-x) var(--row-y);
+  display: flex;
+  align-items: center;
+  min-height: var(--row-h);
+  padding: 0 var(--target-x);
+  background: color-mix(in srgb, var(--lume) 7%, transparent);
+  border-bottom: var(--rule);
   font-family: var(--label);
   font-size: var(--fs-label);
   font-weight: 600;
-  letter-spacing: 0.14em;
+  line-height: var(--lh-label);
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--lume-dim);
 }
@@ -829,6 +934,7 @@ body {
    * without changing the row itself.
    */
   .slot__body > * {
+    /* design-geometry: caps the label-to-value span when slots become one column. */
     max-width: 34rem;
   }
 
@@ -866,14 +972,17 @@ body {
   }
 
   .slot--center {
+    /* design-geometry: the stacked map needs a usable viewport of its own. */
     min-height: 26rem;
   }
 
   .slot--aux {
+    /* design-geometry: the stacked instrument column, sized to its contents. */
     min-height: 28rem;
   }
 
   .slot--dev {
+    /* design-geometry: the stacked developer tier, bounded so it cannot dominate. */
     min-height: 13rem;
     border-top: 0;
   }
@@ -900,7 +1009,7 @@ body {
 .chip {
   display: inline-flex;
   align-items: baseline;
-  gap: 0.3rem;
+  gap: var(--pad-chip);
   padding: 0 var(--pad-chip);
   border: var(--rule);
   border-radius: var(--radius);

@@ -22,7 +22,7 @@ describe('MissionPanel', () => {
   });
 
   it.each([
-    ['idle', 'Not downloaded'], ['loading', 'Loading current vehicle'],
+    ['idle', 'Not downloaded'], ['loading', 'Downloading…'],
     ['error', 'Download failed'],
   ] as const)('distinguishes %s posture', (status, label) => {
     const html = renderToStaticMarkup(<MissionPanel status={status} snapshot={null} error={status === 'error' ? 'link failed' : null} geometry={{ points: [], omitted: {} }} activeSeq={null} onDownload={() => undefined} />);

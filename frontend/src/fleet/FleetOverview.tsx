@@ -18,7 +18,7 @@ export function FleetOverview({ fleet, nowMs, onOpen, camera, source }: {
   const fit = () => { const frame = framePoints(positions); if (frame) setRequest({ frame }); };
   return <main className="shell__body">
     <aside className="slot slot--rail fleet-roster" aria-label="Fleet roster">
-      <Group label="Fleet" note={`${String(fleet.order.length)} vehicles`} actions={<Lever onClick={fit} disabled={positions.length === 0}>Fit fleet</Lever>}>
+      <Group label="Fleet" annotation={`${String(fleet.order.length)} vehicles`} actions={<Lever onClick={fit} disabled={positions.length === 0}>Fit fleet</Lever>}>
       <Row label="Source" value={sourceLabel(source, fleet.connected)}
         tone={source === 'live' && fleet.connected ? 'normal' : 'caution'} />
       {fleet.order.length === 0 && <Note tone="absent">Waiting for vehicles. Nothing has reported on the link yet.</Note>}

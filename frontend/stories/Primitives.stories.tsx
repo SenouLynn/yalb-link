@@ -16,7 +16,7 @@ function Vocabulary() {
 
   return (
     <div style={{ width: 240, maxWidth: '100%' }}>
-      <Group label="Rows" note="the atom">
+      <Group label="Rows" annotation="the atom">
         <Row label="Ground speed" value="17.5" unit="m/s" />
         <Row label="Altitude" value="501.3" unit="m" />
         <Row label="Armed" value="ARMED" tone="caution" />
@@ -25,7 +25,7 @@ function Vocabulary() {
         <Row label="Position" value="47.393227, 8.545423" stacked />
       </Group>
 
-      <Group label="Levers" note="target axis">
+      <Group label="Levers" annotation="target axis">
         <LeverRow label="Flight modes">
           <Lever>Arm</Lever>
           <Lever>Take off</Lever>

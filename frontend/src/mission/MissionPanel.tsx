@@ -21,17 +21,15 @@ export function MissionPanel({ status, snapshot, error, geometry, activeSeq, onD
     ttlMs: Infinity,
   };
   return <Group className="mission-panel" label="Mission" reading={reading} aria-label="Onboard mission">
-    <div className="mission-panel__header">
-      <span className="mission-panel__state">{statusLabel(status, snapshot)}</span>
-      <Lever disabled={status === 'loading'} onClick={onDownload}>
-        {status === 'loading' ? 'Downloading…' : snapshot === null ? 'Download mission' : 'Refresh mission'}
-      </Lever>
-    </div>
+    <Note role="status">{statusLabel(status, snapshot)}</Note>
     {error === null ? null : <Note role="alert" tone="caution">{error}</Note>}
+    <Lever wide disabled={status === 'loading'} onClick={onDownload}>
+      {status === 'loading' ? 'Downloading…' : snapshot === null ? 'Download mission' : 'Refresh mission'}
+    </Lever>
     {snapshot?.items.length === 0 ? <Note tone="absent">Vehicle reported an empty mission.</Note> : null}
     {snapshot === null || snapshot.items.length === 0 ? null : <ol className="mission-list">
       {snapshot.items.map((item) => <li key={item.seq} className={activeSeq === item.seq ? 'mission-list__active' : undefined}>
-        <div className="mission-list__head"><span>#{item.seq} {commandName(item.command)}</span>
+        <div className="group__head"><span className="group__label">#{item.seq} {commandName(item.command)}</span>
           {activeSeq === item.seq ? <Chip tone="active">Active</Chip> : null}</div>
         <Row label="Frame" value={frameName(item.frame)} />
         <Row label="Lat / X" value={String(item.x)} />
@@ -45,11 +43,16 @@ export function MissionPanel({ status, snapshot, error, geometry, activeSeq, onD
   </Group>;
 }
 
+/*
+ * What is currently held, not what is in flight. The lever above says
+ * "Downloading…" while a download runs; a status line saying it a second time
+ * beside it is the same sentence printed twice.
+ */
 function statusLabel(status: MissionStatus, snapshot: MissionSnapshot | null): string {
   if (status === 'idle') return 'Not downloaded';
-  if (status === 'loading') return 'Loading current vehicle…';
   if (status === 'error') return 'Download failed — no current snapshot';
-  return snapshot?.items.length === 0 ? 'Complete · empty' : `Complete · ${String(snapshot?.items.length ?? 0)} items`;
+  if (snapshot === null) return 'Not downloaded';
+  return snapshot.items.length === 0 ? 'Complete · empty' : `Complete · ${String(snapshot.items.length)} items`;
 }
 
 /**

@@ -73,7 +73,21 @@ export const DEFAULT_VISIBILITY: PanelVisibility = Object.fromEntries(
   PANELS.map((panel) => [panel.id, true]),
 );
 
+/**
+ * Slot order on screen, left to right.
+ *
+ * `aux` and `dev` share the right-hand column, so the shell reads the first two
+ * from here and stacks the rest. It is exported and consumed rather than
+ * repeated as a literal in the shell, because a registry that does not actually
+ * answer "what is on screen, in what order" is documentation, not a registry.
+ */
 export const SLOT_ORDER: readonly SlotId[] = ['rail', 'center', 'aux', 'dev'];
+
+/** The slots that mount as top-level columns. */
+export const COLUMN_SLOTS: readonly SlotId[] = SLOT_ORDER.slice(0, 2);
+
+/** The slots stacked inside the right-hand column, in order. */
+export const STACKED_SLOTS: readonly SlotId[] = SLOT_ORDER.slice(2);
 
 export function panelsInSlot(slot: SlotId): readonly PanelDef[] {
   return PANELS.filter((panel) => panel.slot === slot);

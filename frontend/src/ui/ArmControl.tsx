@@ -140,15 +140,15 @@ export function ArmControl({ view, connected, source, latest, staleLatest = fals
         </Note>
         <Note>{heartbeatEvidence(view, nowMs)}</Note>
         <Note>Report the armed state you observed:</Note>
+        {error !== null && <Note tone="caution" role="alert">{error}</Note>}
         <LeverRow>
           <Lever caution disabled={busy} onClick={() => void attest('ARMED')}>
-            OBSERVED ARMED
+            Observed armed
           </Lever>
           <Lever caution disabled={busy} onClick={() => void attest('DISARMED')}>
-            OBSERVED DISARMED
+            Observed disarmed
           </Lever>
         </LeverRow>
-        {error !== null && <span className="command-control__state" role="alert">{error}</span>}
       </Group>
     );
   }
@@ -160,24 +160,26 @@ export function ArmControl({ view, connected, source, latest, staleLatest = fals
     || view.lifecycle === FleetEventType.VEHICLE_LOST
     || busy
     || quarantined;
-  const label = arm ? 'ARM' : 'DISARM';
+  const label = arm ? 'Arm' : 'Disarm';
   const superseded = staleLatest && !answered && result !== undefined && error === null && !quarantined;
 
+  /*
+   * State above the lever, never beside it. A control and its own status read as
+   * one thing stacked and as two unrelated things side by side — and the side by
+   * side version had this panel and the mission panel mirroring each other, one
+   * with the lever on the left and one on the right.
+   */
   return (
     <Group className="command-control" label="Command">
-      <LeverRow>
-      <Lever caution disabled={disabled} onClick={() => void act()}>
-        {busy ? 'WAITING…' : confirming ? `CONFIRM ${label}` : label}
-      </Lever>
-      <span className="command-control__state" role="status">
+      <Note tone={error === null ? 'normal' : 'caution'} role="status">
         {quarantined
           ? `Commanding paused for ${String(remainingS)}s after the resolution`
           : (error ?? (result === undefined ? 'No command issued' : stateLabel(result)))}
-      </span>
-      </LeverRow>
-      {superseded && (
-        <span className="command-control__stale">Seen before a link gap; may be superseded</span>
-      )}
+      </Note>
+      {superseded && <Note tone="absent">Seen before a link gap; may be superseded</Note>}
+      <Lever wide caution disabled={disabled} onClick={() => void act()}>
+        {busy ? 'Waiting…' : confirming ? `Confirm ${label.toLowerCase()}` : label}
+      </Lever>
     </Group>
   );
 }

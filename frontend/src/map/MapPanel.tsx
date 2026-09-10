@@ -1,4 +1,4 @@
-import { Lever } from '@/ui/primitives';
+import { Chip, Lever, LeverRow } from '@/ui/primitives';
 /** Imperative MapLibre adapter for one vehicle and its breadcrumb track. */
 
 import maplibregl from 'maplibre-gl';
@@ -346,13 +346,17 @@ export function MapPanel({
   return (
     <div className="map-shell">
       <div className="map-overlays">
-      <div className="map-actions">
-        <Lever onClick={fitMission} disabled={mission.points.length === 0}>Fit mission</Lever>
-        <Lever onClick={() => { changeMode('follow'); }} disabled={position === null} pressed={mode === 'follow'}>Follow vehicle</Lever>
+        <LeverRow label="Map view">
+          <Lever onClick={fitMission} disabled={mission.points.length === 0}>Fit mission</Lever>
+          <Lever onClick={() => { changeMode('follow'); }} disabled={position === null} pressed={mode === 'follow'}>Follow vehicle</Lever>
+        </LeverRow>
       </div>
-      {trajectory.length > 1 ? <div className="trajectory-key">5 s prediction</div> : null}
-      {mission.points.length > 0 ? <div className="mission-key">Commanded mission</div> : null}
-      </div>
+      {trajectory.length > 1 || mission.points.length > 0 ? (
+        <div className="map-legend">
+          {trajectory.length > 1 ? <Chip>5 s prediction</Chip> : null}
+          {mission.points.length > 0 ? <Chip>Commanded mission</Chip> : null}
+        </div>
+      ) : null}
       <div ref={containerRef} className="map-panel" aria-label="Vehicle position map" />
     </div>
   );

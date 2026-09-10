@@ -1,0 +1,66 @@
+[
+  {
+    "name": "desktop",
+    "layout": {
+      "width": 1600,
+      "height": 1000,
+      "pageOverflow": false,
+      "aux": {
+        "x": 1264,
+        "y": 59,
+        "width": 336,
+        "height": 781
+      },
+      "dev": {
+        "x": 1264,
+        "y": 840,
+        "width": 336,
+        "height": 160
+      },
+      "position": {
+        "x": 0,
+        "y": 310,
+        "width": 239,
+        "height": 82
+      },
+      "rollPadding": "8px",
+      "markerFill": "rgb(216, 221, 227)",
+      "positionHeader": "POSITION\nGLOBAL_POSITION_INT\n0.0s"
+    },
+    "smoke": "passed",
+    "runtimeErrors": [],
+    "basemapErrors": []
+  },
+  {
+    "name": "mobile",
+    "layout": {
+      "width": 560,
+      "height": 900,
+      "pageOverflow": false,
+      "aux": {
+        "x": 0,
+        "y": 1881.25,
+        "width": 560,
+        "height": 633
+      },
+      "dev": {
+        "x": 0,
+        "y": 2514.25,
+        "width": 560,
+        "height": 252
+      },
+      "position": {
+        "x": 0,
+        "y": 310,
+        "width": 544,
+        "height": 82
+      },
+      "rollPadding": "8px",
+      "markerFill": "rgb(216, 221, 227)",
+      "positionHeader": "POSITION\nGLOBAL_POSITION_INT\n0.0s"
+    },
+    "smoke": "passed",
+    "runtimeErrors": [],
+    "basemapErrors": []
+  }
+]

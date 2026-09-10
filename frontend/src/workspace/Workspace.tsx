@@ -10,7 +10,9 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { Tabs, Lever } from '@/ui/primitives';
 import {
+  COLUMN_SLOTS,
   PANELS,
+  STACKED_SLOTS,
   panelsInSlot,
   slotOccupied,
   toggleable,
@@ -89,14 +91,15 @@ export function WorkspaceSlots({
         </p>
       )}
 
-      {(['rail', 'center'] as const).map((slot) => (
+      {COLUMN_SLOTS.map((slot) => (
         <Slot key={slot} slot={slot} visible={visible} content={content} />
       ))}
 
-      <div className="slot slot--aux" hidden={!slotOccupied('aux', visible) && !slotOccupied('dev', visible)}>
+      <div className="slot slot--aux" hidden={!STACKED_SLOTS.some((slot) => slotOccupied(slot, visible))}>
         <div className="slot__stack">
-          <Slot slot="aux" visible={visible} content={content} />
-          <Slot slot="dev" visible={visible} content={content} />
+          {STACKED_SLOTS.map((slot) => (
+            <Slot key={slot} slot={slot} visible={visible} content={content} />
+          ))}
         </div>
       </div>
     </main>

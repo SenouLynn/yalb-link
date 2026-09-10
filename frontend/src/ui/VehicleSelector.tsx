@@ -1,6 +1,6 @@
 /** Vehicle picker. Rendered only when there is a choice to make. */
 
-import { Group, LeverRow, Lever } from '@/ui/primitives';
+import { LeverRow, Lever } from '@/ui/primitives';
 
 import { FleetEventType } from '@/gen/gcs/v1/fleet_pb';
 import type { FleetState, VehicleKey } from '@/fleet/state';
@@ -22,10 +22,17 @@ export function VehicleSelector({ fleet, onSelect }: VehicleSelectorProps) {
     return null;
   }
 
+  /*
+   * A lever row, not a `Group`. This renders into the view bar, and a section
+   * header bar sitting inside a toolbar reads as a panel that lost its panel —
+   * it also stacks the bar three rows deep and puts "FLEET" on a different
+   * baseline from the two levers either side of it. The count is dropped rather
+   * than relocated: the levers themselves are the count, and one per vehicle is
+   * already visible.
+   */
   return (
-    <Group label="Fleet" note={`${String(fleet.order.length)} vehicles`}>
-      <LeverRow label="Select vehicle">
-        {fleet.order.map((key) => {
+    <LeverRow label="Select vehicle">
+      {fleet.order.map((key) => {
           const view = fleet.vehicles[key];
 
           if (view === undefined) {
@@ -46,8 +53,7 @@ export function VehicleSelector({ fleet, onSelect }: VehicleSelectorProps) {
               {lost ? ' · LOST' : ''}
             </Lever>
           );
-        })}
-      </LeverRow>
-    </Group>
+      })}
+    </LeverRow>
   );
 }

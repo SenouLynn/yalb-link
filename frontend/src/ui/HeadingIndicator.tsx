@@ -27,7 +27,7 @@ export function HeadingIndicator({ reading }: HeadingIndicatorProps) {
   const ticks = heading === null ? [] : headingTicks(heading.headingDeg);
 
   return (
-    <Group label="Heading" note={heading?.isFallback === true ? 'fallback source' : undefined} reading={reading} className="instrument instrument--heading">
+    <Group label="Heading" annotation={heading?.isFallback === true ? 'fallback source' : undefined} reading={reading} className="instrument instrument--heading">
 
       <svg
         viewBox={VIEW_BOX}

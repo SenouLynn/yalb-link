@@ -15,6 +15,12 @@ import { hasDisplayValue, type FlightReadings } from './readings';
  *
  * The consulted tier (guidance, home, radio link) is not here: it lives in the
  * rail, because it is read before and after a flight rather than during one.
+ *
+ * Each group leads with the one reading flown on — altitude, ground speed,
+ * airspeed, battery — and its remaining rows sit at the data step beneath it.
+ * The lead step previously had a single consumer in the whole application,
+ * which made a four-step scale really three steps and one special case, and
+ * left this column with no spine for the eye to run down.
  */
 export function InstrumentPanel({ readings }: { readings: FlightReadings }) {
   const { position, flightPath, airspeed, battery } = readings;
@@ -44,6 +50,7 @@ export function InstrumentPanel({ readings }: { readings: FlightReadings }) {
           value={path === null ? NO_VALUE : num(path.groundSpeedMps)}
           unit="m/s"
           tone={path === null ? 'dead' : 'normal'}
+          lead
         />
         <Row
           label="Climb"
@@ -59,6 +66,7 @@ export function InstrumentPanel({ readings }: { readings: FlightReadings }) {
           value={air === null ? NO_VALUE : num(air.airspeedMps)}
           unit="m/s"
           tone={air === null ? 'dead' : 'normal'}
+          lead
         />
       </Group>
 
@@ -68,6 +76,7 @@ export function InstrumentPanel({ readings }: { readings: FlightReadings }) {
           value={power === null ? NO_VALUE : num(power.voltageV, 2)}
           unit="V"
           tone={power === null ? 'dead' : 'normal'}
+          lead
         />
         <Row
           label="Remaining"

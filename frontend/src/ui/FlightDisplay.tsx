@@ -127,9 +127,7 @@ export function FlightDisplay({
         {view === undefined ? (
           <main className="shell__body">
             <p className="slot__empty">
-              No vehicle selected.
-              <br />
-              {emptyHint(source, fleet.connected)}
+              No vehicle selected. {emptyHint(source, fleet.connected)}
             </p>
           </main>
         ) : (

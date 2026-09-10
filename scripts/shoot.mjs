@@ -59,7 +59,8 @@ async function capture(name, width, height) {
     const check = async (fn, message) => { if (!await evaluate(fn)) throw new Error(message); };
     const click = async text => {
       await evaluate(text => {
-        const button = [...document.querySelectorAll('button')].find(button => button.innerText === text && button.getClientRects().length);
+        // Lever labels are uppercased by CSS, so innerText is not the source string.
+        const button = [...document.querySelectorAll('button')].find(button => button.innerText.toUpperCase() === text.toUpperCase() && button.getClientRects().length);
         if (!button) throw new Error(`Button missing: ${text}`);
         button.click();
       }, text);
@@ -109,7 +110,7 @@ async function capture(name, width, height) {
     // fixture state, not merely a nominal wall-clock budget.
     const warmed = () => {
       const roll = [...document.querySelectorAll('#panel-instruments .row')].find(row => row.querySelector('.row__label')?.textContent === 'Roll');
-      return document.querySelector('#panel-families .group__note')?.textContent === '10/10 fresh'
+      return document.querySelector('#panel-families .group__annotation')?.textContent === '10/10 fresh'
         && Math.abs(Number.parseFloat(roll?.querySelector('.row__value')?.textContent ?? '0')) > 0;
     };
     for (let attempt = 0; attempt < 120; attempt++) {

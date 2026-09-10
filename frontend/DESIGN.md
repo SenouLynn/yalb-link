@@ -48,7 +48,7 @@ rounded:
 spacing:
   row-y: "0.0625rem"
   row-x: "0.5rem"
-  group-y: "0.625rem"
+  row-h: "1.25rem"
   target-h: "1.75rem"
   target-x: "0.625rem"
   lever-gap: "0.25rem"
@@ -103,10 +103,11 @@ components:
     textColor: "{colors.caution}"
     typography: "{typography.data}"
   group-head:
-    backgroundColor: "transparent"
+    backgroundColor: "lume 7% wash"
     textColor: "{colors.lume-dim}"
     typography: "{typography.label}"
-    padding: "0.0625rem 0.5rem"
+    padding: "0 0.5rem"
+    height: "1.25rem"
   tab:
     backgroundColor: "transparent"
     textColor: "{colors.lume-dim}"
@@ -150,15 +151,17 @@ The screen is a declaration of the telemetry stream, not a composed page. Flat g
 
 The palette is taken from instrument hardware rather than from a generic dark theme: a graphite bezel, the blue-over-ochre split of a real attitude indicator, off-white engraved lettering, and amber as the only warning colour. There is deliberately no "good" green under any name. Normal flight is unremarkable, and a panel that lights up to say nothing is wrong trains an operator to ignore it — the test gate asserts no `--ok`, `--good`, `--success`, `--healthy`, or `--nominal` token can ever be reintroduced.
 
-Two axes govern size, and they are independent on purpose. The density axis (`--row-*`, `--group-y`) sizes data and goes as tight as it reads. The target axis (`--target-*`) sizes anything a pointer has to hit and stays generous regardless, because field operation on a laptop is expected and a control sized off the data scale would be unhittable there. Tight data, generous levers.
+Two axes govern size, and they are independent on purpose. The density axis (`--row-*`) sizes data and goes as tight as it reads, on one unit — `--row-h` — so a column has a rhythm rather than whatever height its type happened to sum to. The target axis (`--target-*`) sizes anything a pointer has to hit and stays generous regardless, because field operation on a laptop is expected and a control sized off the data scale would be unhittable there. Tight data, generous levers.
 
 **Key Characteristics:**
 - Panels butted edge to edge on 1px rules; no gaps, no floating cards, no drop shadows on content
+- Every section announces itself with a filled header bar one row unit tall
 - Every reading states its source and age over a rule that drains toward its TTL
-- Four fixed type steps and no fifth
+- Four fixed type steps, four leadings, and no fifth of either
+- Data columns are built on one row unit: a row is one, a noted row is two
 - Monospace tabular values right-aligned against a shared edge
 - Amber for caution only; no green for "good"
-- One button shape in the entire application
+- One button shape and two placements in the entire application
 
 ## Colors
 
@@ -209,6 +212,8 @@ An instrument-hardware palette: graphite greys, off-white engraved lettering, an
 ### Named Rules
 **The Four Steps Rule.** Four type steps exist — 10px, 11px, 12px, 17px — and `src/ui/system.test.ts` asserts the count. A fifth step is a decision someone has to make at every call site, which is how the predecessor drifted into six unrelated font sizes.
 
+**The Leading Rule.** A step is a size *and* a leading. Four `--lh-*` tokens pair to the four sizes and the gate asserts one per step, so a fifth leading cannot appear without a fifth step to hang it on. Four sizes carrying six unrelated line-heights is the Four Steps drift wearing a property name nobody was counting — and because a unitless `line-height` and a `font: …/1.6` shorthand carry no unit, the literal check had to be widened to see them at all. Tracking is two tokens for the same reason. See ADR 0005.
+
 **The Fixed-DPI Rule.** Sizes are fixed rem, never fluid, never `clamp()`. An operator views this at one DPI, and a heading that shrinks inside a rail looks broken rather than responsive.
 
 ## Layout
@@ -217,7 +222,7 @@ Exactly one viewport; nothing scrolls the page. `html` and `body` are `overflow:
 
 The body is a **flex row of slots, not a named grid**. Four slot roles: `rail` (fixed 15rem context column of stacked labelled groups), `center` (flex `1 1 auto`, the thing being looked at, full bleed), `aux` (fixed 21rem instrument stack), and `dev` (a bounded 10rem tabbed developer tier inside the aux column). Slots are divided by a 1px right-hand rule, and the last one drops it. The predecessor hand-enumerated every visible-panel combination as a class (`.has-instruments.has-map.has-mission` and siblings); flex sizes whatever is mounted, which is what makes adding information cost one entry in `src/workspace/registry.ts` and zero layout CSS.
 
-Spacing comes from seven tokens and nowhere else. The density axis is `--row-y` (1px), `--row-x` (8px), and `--group-y` (10px) — a row's whole padding is one of each, and consecutive groups are separated by `--group-y`. The target axis is `--target-h` (28px minimum height for anything clickable), `--target-x` (10px horizontal padding on the same), and `--lever-gap` (4px between levers). `--pad-chip` (≈5px) is the chip's inline padding. Tracking (`0.14em` labels, `0.06em` data) is part of the scale too, because instrument styling reaches for it and a second copy of `0.14em` in another file is how a scale stops being one.
+Spacing comes from seven tokens and nowhere else, and `src/ui/system.test.ts` now enforces that in `system.css` as well as in `display.css` — while only the latter was checked, the file defining the scale was the one file exempt from it, and it had collected eight raw spacing values and six raw tracking values. The density axis is `--row-y` (1px), `--row-x` (8px), and `--row-h` (20px). `--row-h` is the unit the data columns are built on: a plain row is one, a row carrying a note is exactly two, a group header bar is one. There is deliberately no group-separation token — groups butt directly and the header bar separates them, which is why the old `--group-y` is gone. The target axis is `--target-h` (28px minimum height for anything clickable), `--target-x` (10px horizontal padding on the same), and `--lever-gap` (4px between levers). `--pad-chip` (≈5px) is the chip's inline padding. Tracking (`0.14em` labels, `0.06em` data) is part of the scale too, because instrument styling reaches for it and a second copy of `0.14em` in another file is how a scale stops being one.
 
 Responsive behaviour is **structural, not fluid**: at `max-width: 60rem` the flex row becomes a single scrolling column of bounded regions, slot rules move from right to bottom, and slot content caps at 34rem so a label and its right-hand value edge do not end up 700px apart (the map is exempt). Type never scales. Order is reassigned so flight state outranks the map on a phone: rail, then aux, then center — in DOM order the first viewport was the rail plus a slice of map, with no altitude, speed, attitude or battery above the fold.
 
@@ -259,7 +264,9 @@ The lever. There is exactly one button shape in the application, rendered by `Le
 - **Pressed / toggled** (`aria-pressed="true"`): Panel Deep fill with a Lume Dim border — a control holding a position, not a second style.
 - **Disabled:** Dead Grey border, Absent Grey label. The border carries "disabled"; the label stays readable.
 - **Caution:** amber border and amber label, hovering to a 12% amber wash with a Lume label. Amber-edged because the action itself is the hazard — arming a vehicle — not because it is primary.
-- **Wide:** full width, for a form's commit action. Width is the only other axis.
+- **Wide:** full width, for a group's one committing action. Width is the only other axis.
+
+**The Lever Law** (ADR 0005). Two placements and no third: inline in a `LeverRow` at content width, or `wide` filling the group. A lever is never floated beside its own status text — status prose sits *above* it as a `Note`, because a control and its status read as one thing stacked and as two unrelated things side by side. Labels are written in sentence case and uppercased by CSS, the same way `Group` and `Row` labels are; screaming the string at the call site produces identical pixels by a second mechanism. `caution` means the aircraft is the hazard; a destructive *data* action is guarded by `Confirm` instead, which is also why no `globalThis.confirm()` dialog remains in the application. A lever that changes the address takes `href` and renders an anchor rather than borrowing the lever class.
 
 ### Chips
 - **Style:** inline-flex, 1px Bezel border, 2px radius, 10px mono at 0.06em tracking, Lume Dim, `--pad-chip` inline padding and no vertical padding, so it sits on the text baseline beside a label.
@@ -267,6 +274,9 @@ The lever. There is exactly one button shape in the application, rendered by `Le
 
 ### Notes
 `Note` is panel prose with `normal`, `caution`, and `absent` tones. Missing information remains readable in Absent Grey. Group empty states use Note internally.
+
+### Group Headers
+A filled bar — a 7% lume wash bled to the slot edge, one row unit tall, carrying the uppercase label left and the group's provenance right over a 1px bottom rule. It is ImGui's `CollapsingHeader`, and it exists because a header and a row label previously differed only by weight and tracking while standing the same height, so an eight-group rail read as one undifferentiated wall of text. The wash is additive rather than a fixed fill, so the same rule reads correctly on `--panel` in a slot and on `--panel-deep` inside the popover; `--panel-raised` is spoken for by hover and would make a resting header look like one the pointer is on.
 
 ### Cards / Containers
 There are none. `Group` is a labelled section with `min-width: 0` and no border, background, or radius around its body. Every feature owns its Group and header provenance; the registry only mounts nodes. The container is the slot, and its only chrome is a 1px rule against its neighbour.
@@ -282,12 +292,14 @@ There are none. `Group` is a labelled section with `min-width: 0` and no border,
 Two stacked bars, each 28px minimum: the app bar in Panel Graphite carrying the 10px `0.16em` uppercase title left and the source badge right; the view subbar in Panel Deep beneath it, lighter because it is the subordinate of the two, carrying the back action and the Views control. Slot-level navigation is the tab strip: 10px `0.1em` uppercase Lume Dim tabs on a hairline, hovering to Lume on Panel Raised, selected by a 2px Lume bottom edge, with an optional right-aligned note (a count, a rate) pushed to the end of the strip. The Views popover is the one floating menu: Panel Graphite, 1px border, 2px radius, tier headings in the label step, options 28px tall on the target axis.
 
 ### The Data Row
-The atom, and the reason most of this system exists. A CSS **grid** of `minmax(0, 1fr) auto` — not a flex row — with a 10px uppercase Lume Dim label left and an 11px mono tabular value right-aligned against a shared edge, unit dimmer and inline. The shared edge is the whole point: a column of rows must scan as one table the eye can run down, and values that each stop wherever their string ends read as separate objects that happen to be nearby. A 4% lume hover wash tells the pointer which row it is on. Three modifiers, and no more: `lead` (the 17px step, once per group), `stacked` (value wraps beneath the label, left-aligned — for coordinates), and a `note` (a second, dimmer line under the label carrying a convention the operator cannot infer, like "+ below target", on its own line so it cannot orphan a word beside the next row's number).
+The atom, and the reason most of this system exists. A CSS **grid** of `minmax(0, 1fr) auto` — not a flex row — with a 10px uppercase Lume Dim label left and an 11px mono tabular value right-aligned against a shared edge, unit dimmer and inline. The shared edge is the whole point: a column of rows must scan as one table the eye can run down, and values that each stop wherever their string ends read as separate objects that happen to be nearby. A 4% lume hover wash tells the pointer which row it is on. Every row is exactly one `--row-h`; a row carrying a note is exactly two, never one and a half and never three. Three modifiers, and no more: `lead` (the 17px step, once per group — it leads each instrument group, and a step with no consumer should be deleted rather than kept), `stacked` (value wraps beneath the label, left-aligned — for coordinates), and a `note` (a second line under the label carrying a convention the operator cannot infer, like "+ below target", on its own line so it cannot orphan a word beside the next row's number).
+
+The note is subordinated **structurally, not by colour**: the data font against the label's sans, indented one `--row-x` past the label's left edge, lowercase, with Absent Grey as the last of four signals rather than the only one. It was already Absent Grey and still read as a second label, because 0.79 contrast points is not a rank at 10px on graphite. This is the general rule — see The Rank Ladder in ADR 0005: rank is never carried by colour alone, and a change of rank moves at least two of surface, typeface, indent, and case.
 
 ### Provenance
 The signature of this display. A 1px Bezel track holding a Lume Dim fill that drains by `scaleX` transform as a value ages toward its TTL, over a 10px mono line naming the MAVLink source left and the age right. The drain is what makes staleness pre-attentive: the operator sees the bar emptying without reading the age. Stale turns fill and text amber but never paints a background, which would bury the source name written on it. Unavailable empties the fill and drops the text to Absent Grey. It is scaled rather than resized because every reading on screen holds one and they all redraw four times a second; animating `width` would put that many layout passes on the main thread each tick.
 
-**The Once-Per-Group Rule.** Provenance is stated once on a group header, not once per row. Per-row provenance inserted a second right-aligned value at a different edge, so ten readings rendered as twenty alternating half-rows with `VFR_HUD` three times running — the exact opposite of the shared value edge the row exists to form.
+**The Once-Per-Group Rule.** Provenance is stated once on a group header, not once per row. On a header the drain track sits *beneath* its own text, against the bar's bottom edge; above it, the track read as a hairline floating over unrelated words rather than as a meter. Per-row provenance inserted a second right-aligned value at a different edge, so ten readings rendered as twenty alternating half-rows with `VFR_HUD` three times running — the exact opposite of the shared value edge the row exists to form.
 
 ## Do's and Don'ts
 
@@ -303,10 +315,14 @@ The signature of this display. A 1px Bezel track holding a Lume Dim fill that dr
 
 ### Don't:
 - **Don't** introduce a colour, a font size, or a spacing value in `display.css` or any panel stylesheet. `src/ui/system.test.ts` fails the build for it. If a panel needs one, the token is missing and belongs in `system.css`.
-- **Don't** add a fifth type step.
+- **Don't** add a fifth type step, a fifth leading, or a third tracking value.
+- **Don't** carry a change of rank on colour alone; move at least two of surface, typeface, indent, and case.
+- **Don't** float a lever beside its own status text, or uppercase a lever label at the call site.
+- **Don't** re-derive a primitive's geometry in `display.css`. Recolouring one of its elements is fine; restating its layout is a second implementation.
 - **Don't** spend amber on chrome, on a focus ring, or on a background behind text; and don't introduce a green, or any token named `ok`, `good`, `success`, `healthy`, or `nominal`.
 - **Don't** use Dead Grey for anything the operator has to read.
-- **Don't** add a second button shape. A variant may change colour or width; never form.
+- **Don't** add a second button shape, or a third placement. A variant may change colour or width; never form.
+- **Don't** spend `caution` on an action that is destructive to data rather than to the aircraft; guard that with `Confirm`.
 - **Don't** give a resident surface a drop shadow, a card border, a background, or a radius above 2px. Only a popover or a map overlay floats.
 - **Don't** put more than one `lead` value in a group.
 - **Don't** make the page scroll, and don't nest a scroll region inside a region that already scrolls.

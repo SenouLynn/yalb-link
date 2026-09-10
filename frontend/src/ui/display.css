@@ -10,20 +10,6 @@
  * panel needs one, the token is missing and belongs in `system.css`.
  */
 
-/* --- command ------------------------------------------------------------- */
-
-.command-control__state {
-  color: var(--lume-dim);
-  font: var(--fs-label) var(--data);
-}
-
-/* Its own line: a qualifier on the state above, not a third control beside it. */
-.command-control__stale {
-  flex-basis: 100%;
-  color: var(--caution);
-  font: var(--fs-label) var(--data);
-}
-
 /* --- instruments --------------------------------------------------------- */
 
 /*
@@ -84,18 +70,27 @@
 }
 
 /*
- * The map keys follow the action row in normal flow, without measured offsets.
+ * The legend is its own cluster in the opposite corner, not a third and fourth
+ * item stacked under the action row — which read as a ragged column of four
+ * unrelated boxes rather than as two controls and a key.
+ *
+ * The wash belongs to this container, so the chips inside it stay ordinary
+ * chips. A feature stylesheet restyling `.chip` would be a second chip.
  */
-.trajectory-key,
-.mission-key {
-  padding: 0 var(--pad-chip);
+.map-legend {
+  position: absolute;
+  z-index: 2;
+  bottom: var(--row-x);
+  left: var(--row-x);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lever-gap);
+  max-width: calc(100% - 2 * var(--row-x));
+  padding: var(--row-y) var(--pad-chip);
   pointer-events: none;
   background: color-mix(in srgb, var(--panel-deep) 88%, transparent);
-  border: var(--rule);
   border-radius: var(--radius);
-  font: 600 var(--fs-label)/1.6 var(--data);
-  letter-spacing: var(--track-data);
-  text-transform: uppercase;
 }
 
 .trajectory-key {
@@ -119,6 +114,7 @@
   width: 20px;
   height: 20px;
   color: var(--mission-route);
+  /* design-geometry: a glyph centred in a fixed marker box. */
   font: 600 var(--fs-label)/1 var(--data);
   pointer-events: none;
 }
@@ -158,22 +154,12 @@
   border-top: 0;
 }
 
-.mission-list__head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--row-x);
-  padding: var(--row-y) var(--row-x);
-  font: 600 var(--fs-data) var(--data);
-  color: var(--lume);
-}
-
 /* The commanded route's colour, on the one item the vehicle is flying to. */
 .mission-list__active {
   background: color-mix(in srgb, var(--mission-route) 8%, transparent);
 }
 
-.mission-list__active .mission-list__head {
+.mission-list__active .group__label {
   color: var(--mission-route);
 }
 
@@ -211,16 +197,6 @@
   accent-color: var(--lume-dim);
 }
 
-.replay__name {
-  font: var(--fs-label) var(--data);
-  color: var(--lume-dim);
-}
-
-.replay__pick-row {
-  display: flex;
-  align-items: center;
-  gap: var(--lever-gap);
-}
 
 /* --- fleet --------------------------------------------------------------- */
 
@@ -251,7 +227,7 @@
   border: var(--rule);
   border-radius: var(--radius);
   color: var(--lume-dim);
-  font: var(--fs-label)/1.6 var(--data);
+  font: var(--fs-label)/var(--lh-body) var(--data);
   pointer-events: none;
 }
 
@@ -284,7 +260,7 @@
   padding: 0 var(--row-x);
   overflow-wrap: anywhere;
   color: var(--lume-dim);
-  font: var(--fs-label)/1.5 var(--data);
+  font: var(--fs-label)/var(--lh-body) var(--data);
 }
 
 .fleet-card dl {
@@ -332,25 +308,8 @@
   border-radius: var(--radius);
   background: var(--panel);
   color: var(--lume);
+  /* design-geometry: a glyph centred in a fixed marker box. */
   font: 600 var(--fs-label)/1 var(--data);
 }
 
-.mission-panel__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--lever-gap) var(--row-x);
-  padding: var(--row-y) var(--row-x);
-}
 
-.mission-panel__header button {
-  flex: 1 0 auto;
-}
-
-.mission-panel__state {
-  color: var(--lume-dim);
-  font: var(--fs-label) var(--data);
-}
-
-.map-actions { display: flex; flex-wrap: wrap; gap: var(--lever-gap); }
-.replay > .group__body { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lever-gap); }
