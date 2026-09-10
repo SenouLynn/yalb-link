@@ -4,7 +4,7 @@ import type { ReadingState } from '@/ui/readings';
 import { instrumentReadings, stateControl } from './fixtures';
 
 const meta = {
-  title: 'Panels/Inspection', args: { state: 'live', width: 600 },
+  title: 'Panels/Inspection', args: { state: 'live', width: 240 },
   argTypes: { state: stateControl },
   render: ({ state, width }) => <div style={{ width, maxWidth: '100%' }}><InspectionPanel readings={instrumentReadings(state)} /></div>,
 } satisfies Meta<{ state: ReadingState; width: number }>;
@@ -13,4 +13,4 @@ type Story = StoryObj<typeof meta>;
 export const Normal: Story = {};
 export const Stale: Story = { args: { state: 'stale' } };
 export const Unavailable: Story = { args: { state: 'unavailable' } };
-export const Narrow: Story = { args: { width: 320 }, globals: { viewport: { value: 'narrow' } } };
+export const Wide: Story = { args: { width: 480 } };

@@ -35,7 +35,24 @@
   --lume: #d8dde3;
   --lume-dim: #8b939e;
   --caution: #d9a441;
+
+  /*
+   * Two greys for two different absences.
+   *
+   * `--dead` is for disabled controls, which WCAG exempts from contrast.
+   * `--absent` is for a value that is genuinely missing — a dash an operator
+   * has to read and act on. That is content, so it clears 4.5:1 on `--panel`
+   * (5.0:1) where `--dead` measures 2.38:1 and fails.
+   */
   --dead: #4d5560;
+  --absent: #7d8794;
+
+  /*
+   * The projected path. Not amber: amber means something is wrong with the
+   * aircraft, and a five-second prediction is not a hazard. Mirrored in
+   * `ui/palette.ts` for MapLibre, which needs a resolved value.
+   */
+  --prediction: #9fb4c9;
 
   /* The commanded route, distinct from both the flown track and the caution
      amber. Mirrored in `ui/palette.ts` for MapLibre, which needs a resolved
@@ -62,7 +79,7 @@
   --label: ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif;
 
   /* Density axis — data. Three values, and every panel spacing comes from them. */
-  --row-y: 0.125rem;
+  --row-y: 0.0625rem;
   --row-x: 0.5rem;
   --group-y: 0.625rem;
 
@@ -74,6 +91,17 @@
   --target-h: 1.75rem;
   --target-x: 0.625rem;
   --lever-gap: 0.25rem;
+
+  /*
+   * Tracking and chip padding are part of the scale, not free values.
+   *
+   * They live here because instrument styling reaches for them too — the map
+   * legends and the fleet roster are chips and labels like any other — and a
+   * second copy of `0.14em` in another file is how a scale stops being one.
+   */
+  --track-label: 0.14em;
+  --track-data: 0.06em;
+  --pad-chip: 0.3rem;
 
   --rule: 1px solid var(--bezel);
   --radius: 2px;
@@ -136,7 +164,7 @@ body {
   font-size: var(--fs-label);
   font-weight: 600;
   line-height: 1.4;
-  letter-spacing: 0.14em;
+  letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--lume-dim);
 }
@@ -157,7 +185,26 @@ body {
   font-family: var(--data);
   font-size: var(--fs-label);
   line-height: 1.5;
-  color: var(--dead);
+  color: var(--absent);
+}
+
+/*
+ * Provenance on a group header.
+ *
+ * The source is stated once for the whole table rather than once per reading.
+ * Per-row provenance inserted a second right-aligned value at a different edge,
+ * so ten readings rendered as twenty alternating half-rows with `VFR_HUD` three
+ * times running — the opposite of the shared value edge the row exists for.
+ */
+.group__head .provenance {
+  flex: 0 0 auto;
+  min-width: 7rem;
+  padding: 0;
+}
+
+.group__head .provenance__text {
+  gap: 0.4rem;
+  letter-spacing: 0.02em;
 }
 
 /* --- row: the atom ------------------------------------------------------- */
@@ -183,8 +230,8 @@ body {
 .row__label {
   font-family: var(--label);
   font-size: var(--fs-label);
-  line-height: 1.4;
-  letter-spacing: 0.06em;
+  line-height: 1.25;
+  letter-spacing: var(--track-data);
   text-transform: uppercase;
   color: var(--lume-dim);
   overflow: hidden;
@@ -197,7 +244,7 @@ body {
   font-family: var(--data);
   font-size: var(--fs-data);
   font-variant-numeric: tabular-nums;
-  line-height: 1.4;
+  line-height: 1.25;
   color: var(--lume);
   text-align: right;
   white-space: nowrap;
@@ -225,7 +272,24 @@ body {
 .row__value--unavailable,
 .value--unavailable,
 .unit--unavailable {
-  color: var(--dead);
+  color: var(--absent);
+}
+
+/*
+ * A label carrying a convention the operator cannot infer. Its own line, dimmer
+ * than the label, never truncated — and never allowed to wrap mid-phrase, which
+ * would orphan its last word beside the next row's number.
+ */
+.row:has(.row__note) .row__label {
+  overflow: visible;
+  white-space: normal;
+}
+
+.row__note {
+  display: block;
+  color: var(--absent);
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 /* A row whose value is too long to sit beside its label wraps under it. */
@@ -260,7 +324,15 @@ body {
 .provenance__fill {
   height: 100%;
   background: var(--lume-dim);
-  transition: width 120ms linear;
+  /*
+   * Scaled, not resized. Every reading on screen holds one of these and they
+   * all redraw four times a second; animating `width` would put that many
+   * layout passes on the main thread each tick, while a transform stays on the
+   * compositor. Visually identical inside the clipped track.
+   */
+  transform-origin: left center;
+  transform: scaleX(1);
+  transition: transform 120ms linear;
 }
 
 .provenance--stale .provenance__fill {
@@ -278,7 +350,7 @@ body {
 }
 
 .provenance--unavailable .provenance__text {
-  color: var(--dead);
+  color: var(--absent);
 }
 
 .provenance__text {
@@ -335,7 +407,7 @@ body {
   font-size: var(--fs-body);
   font-weight: 600;
   line-height: 1;
-  letter-spacing: 0.06em;
+  letter-spacing: var(--track-data);
   white-space: nowrap;
   cursor: pointer;
 }
@@ -349,8 +421,16 @@ body {
   background: var(--panel-deep);
 }
 
+/*
+ * A disabled lever stays legible.
+ *
+ * WCAG exempts disabled controls from the contrast floor, but on this surface
+ * the command lever is often the only one on screen, and rendering the most
+ * important control as the dimmest object on the page is bad regardless of what
+ * the exemption allows. The border carries "disabled"; the label stays readable.
+ */
 .lever:disabled {
-  color: var(--dead);
+  color: var(--absent);
   border-color: var(--dead);
   cursor: default;
 }
@@ -600,10 +680,19 @@ body {
   flex: 0 0 21rem;
 }
 
+/*
+ * Within the aux column the slots stack, so their flex sizing is about height,
+ * not width. Without this the instrument slot takes `slot--aux`'s 21rem as a
+ * height and the developer tier claims everything below it.
+ */
+.slot__stack > .slot--aux {
+  flex: 1 1 auto;
+}
+
 /* The developer tier: resident, tabbed, and bounded so it cannot crowd out the
    instruments above it. */
 .slot--dev {
-  flex: 0 0 13rem;
+  flex: 0 0 10rem;
   border-top: var(--rule);
   border-right: 0;
 }
@@ -618,6 +707,18 @@ body {
 .slot__body--bleed {
   overflow: hidden;
   padding: 0;
+}
+
+/*
+ * The mount has to carry the height through.
+ *
+ * MapLibre sizes itself from its container, and the container's `height: 100%`
+ * resolves against this element. Leaving it auto collapses the map to zero
+ * while the canvas keeps its own default 300px — a map that is present in the
+ * DOM, reports no errors, and draws nothing.
+ */
+.slot__body--bleed > .panel-mount {
+  height: 100%;
 }
 
 .slot__stack {
@@ -708,8 +809,55 @@ body {
     border-bottom: var(--rule);
   }
 
+  /*
+   * The rail flows to its full height here rather than becoming a second
+   * scroll region inside a page that already scrolls. A clipped group reads as
+   * a truncation bug, and nested scrolling is worse than a longer page.
+   */
   .slot--rail {
-    max-height: 16rem;
+    max-height: none;
+  }
+
+  /*
+   * Rows are a label against a right-hand value edge, which stops working when
+   * the two are 700px apart. Capping the content keeps the pairing readable
+   * without changing the row itself.
+   */
+  .slot__body > * {
+    max-width: 34rem;
+  }
+
+  /* The map is not a row and gains nothing from the reading measure. */
+  .slot__body--bleed > * {
+    max-width: none;
+  }
+
+  /*
+   * Flight state outranks the map on a phone.
+   *
+   * Left in DOM order the first viewport was the rail plus a slice of map, with
+   * no altitude, speed, attitude or battery above the fold — on a display whose
+   * whole purpose is those numbers.
+   */
+  /*
+   * Scoped to the outer row on purpose.
+   *
+   * `.slot--aux` names two elements: the outer column wrapper and the
+   * instrument slot nested inside `.slot__stack`. An unscoped `order` hits
+   * both, so the nested instruments took order 1 while the developer tier kept
+   * its default 0 — putting raw decoder state above the flight instruments on a
+   * phone, which inverts the tier subordination outright.
+   */
+  .shell__body > .slot--rail {
+    order: 0;
+  }
+
+  .shell__body > .slot--aux {
+    order: 1;
+  }
+
+  .shell__body > .slot--center {
+    order: 2;
   }
 
   .slot--center {
@@ -730,4 +878,155 @@ body {
   .provenance__fill {
     transition: none;
   }
+}
+
+/* --- one button shape ---------------------------------------------------- */
+
+/*
+ * Every button in the app resolves to the lever, from this one definition.
+ *
+ * These are the class names that already existed on buttons around the app.
+ * Listing them here rather than restyling each in its own file is the point:
+ * there is exactly one place that decides what a button is, so "the commit
+ * button looks different over here" cannot happen. A variant may override
+ * colour below — never form.
+ */
+.command-control button,
+.command-control__attest button,
+.mission-panel button,
+.replay__button,
+.replay__pick,
+.replay__delete,
+.selector__button,
+.map-actions button,
+.fleet-roster button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35em;
+  min-height: var(--target-h);
+  padding: 0 var(--target-x);
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--lume);
+  font-family: var(--data);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: var(--track-data);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.command-control button:hover:not(:disabled),
+.mission-panel button:hover:not(:disabled),
+.replay__button:hover:not(:disabled),
+.replay__pick:hover:not(:disabled),
+.replay__delete:hover:not(:disabled),
+.selector__button:hover:not(:disabled),
+.map-actions button:hover:not(:disabled),
+.fleet-roster button:hover:not(:disabled) {
+  background: var(--panel-raised);
+  border-color: var(--lume-dim);
+}
+
+.command-control button:disabled,
+.mission-panel button:disabled,
+.replay__button:disabled,
+.replay__pick:disabled,
+.replay__delete:disabled,
+.selector__button:disabled,
+.map-actions button:disabled,
+.fleet-roster button:disabled {
+  color: var(--absent);
+  border-color: var(--dead);
+  cursor: default;
+}
+
+.command-control button:focus-visible,
+.mission-panel button:focus-visible,
+.replay__button:focus-visible,
+.replay__pick:focus-visible,
+.replay__delete:focus-visible,
+.selector__button:focus-visible,
+.map-actions button:focus-visible,
+.fleet-roster button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.selector__button[aria-pressed="true"] {
+  border-color: var(--lume-dim);
+  background: var(--panel-deep);
+}
+
+/* --- containers ---------------------------------------------------------- */
+
+/*
+ * `.panel` is a plain block, not a card.
+ *
+ * It used to draw a border, a background, and a radius, which is what turned a
+ * column of six readings into six floating objects. Panel chrome now belongs
+ * to the slot; a panel inside a slot is just a run of rows.
+ */
+.panel {
+  min-width: 0;
+}
+
+#root {
+  height: 100%;
+}
+
+/* --- chip ---------------------------------------------------------------- */
+
+/*
+ * A state badge sitting inline with text — an "Active" marker on a mission
+ * item, not a readout. Rows carry values; a chip carries a label's own state.
+ */
+.chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0 var(--pad-chip);
+  border: var(--rule);
+  border-radius: var(--radius);
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  letter-spacing: var(--track-data);
+  color: var(--lume-dim);
+}
+
+.chip--active {
+  color: var(--lume);
+  border-color: var(--lume-dim);
+}
+
+.chip--caution {
+  color: var(--caution);
+  border-color: var(--caution);
+}
+
+.chip--dead {
+  color: var(--dead);
+}
+
+/* Fleet and vehicle share the shell; only the active view owns a map context. */
+.vehicle-workspace {
+  display: contents;
+}
+
+.vehicle-workspace[hidden] {
+  display: none;
+}
+
+/*
+ * Hiding is `hidden`, never an unmount — see WorkspaceSlots. `display: none`
+ * on a flex item leaves the layout identical to a slot that was never there.
+ */
+.slot[hidden],
+.slot--aux[hidden],
+.panel-mount[hidden],
+.slot__body > [hidden] {
+  display: none;
 }

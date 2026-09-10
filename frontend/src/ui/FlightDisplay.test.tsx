@@ -93,6 +93,18 @@ function build(...events: StreamEvent[]): FleetState {
   );
 }
 
+/**
+ * The markup an operator is shown.
+ *
+ * The developer tier is deliberately ungated: its panels print raw wire values
+ * whether or not the display is willing to show them, and they stay mounted
+ * when another tab is selected. An assertion about what is *withheld* from the
+ * operator therefore has to stop at the dev slot, which is last in DOM order.
+ */
+function operatorMarkup(fleet: FleetState, nowMs = T0, source: StreamSource = 'live'): string {
+  return render(fleet, nowMs, source).split('slot slot--dev')[0] ?? '';
+}
+
 function render(fleet: FleetState, nowMs = T0, source: StreamSource = 'live'): string {
   return renderToStaticMarkup(
     <FlightDisplay
@@ -261,13 +273,13 @@ describe('FlightDisplay with missing readings', () => {
   it('marks GPS and EKF as unknown when they have not reported', () => {
     const html = render(build(discovered()));
 
-    expect(html).toContain('chip--dead');
+    expect(html).toContain('row--dead');
   });
 });
 
 describe('FlightDisplay staleness', () => {
   it('withholds stale numbers while retaining stale provenance', () => {
-    const html = render(build(...fullFlight()), T0 + TELEMETRY_TTL_MS + 1);
+    const html = operatorMarkup(build(...fullFlight()), T0 + TELEMETRY_TTL_MS + 1);
 
     expect(html).toContain('provenance--stale');
     expect(html).not.toContain('25.3');

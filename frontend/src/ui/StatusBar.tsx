@@ -6,8 +6,9 @@ import { isFamilyFresh, type VehicleView } from '@/fleet/state';
 import type { StreamSource } from '@/stream/select';
 
 import { NO_VALUE } from './format';
+import { Row, type Tone } from './primitives';
 
-export interface StatusBarProps {
+export interface StatusRowsProps {
   view: VehicleView;
   nowMs: number;
   /** Whether the browser currently holds the backend stream. */
@@ -17,61 +18,67 @@ export interface StatusBarProps {
 }
 
 /**
- * The top row.
+ * The link's own health, as rail rows.
  *
- * Link state and vehicle state are shown as separate chips because they fail
- * independently: a healthy aircraft behind a dropped browser connection must
- * not be reported as lost, and a lost aircraft on a healthy connection must
- * not look fine.
+ * Separate from vehicle state because the two fail independently: a healthy
+ * aircraft behind a dropped browser connection must not be reported as lost,
+ * and a lost aircraft on a healthy connection must not look fine. This is the
+ * one rail group the operator cannot hide — losing it is how you stop knowing
+ * that the display is lying to you.
  */
-export function StatusBar({ view, nowMs, connected, source }: StatusBarProps) {
-  const heartbeat = view.heartbeat;
+export function LinkRows({ view, connected, source }: StatusRowsProps) {
   const lost = view.lifecycle === FleetEventType.VEHICLE_LOST;
 
   return (
-    <div className="panel status">
-      <Chip label="Vehicle" value={view.key} tone="active" />
+    <>
+      <Row
+        label="Source"
+        value={sourceLabel(source, connected)}
+        tone={sourceTone(source, connected)}
+      />
+      <Row
+        label="Vehicle link"
+        value={lost ? 'LOST' : 'HEARD'}
+        tone={lost ? 'caution' : 'normal'}
+      />
+      <Row label="Target" value={view.key} />
+    </>
+  );
+}
 
-      <Chip
-        label="State"
+/** Armed state, mode, and the two estimators an operator checks before flying. */
+export function StateRows({ view, nowMs }: StatusRowsProps) {
+  const heartbeat = view.heartbeat;
+
+  return (
+    <>
+      <Row
+        label="Armed"
         value={armedLabel(heartbeat?.armed)}
-        tone={heartbeat === undefined ? 'dead' : heartbeat.armed ? 'caution' : 'active'}
+        tone={heartbeat === undefined ? 'dead' : heartbeat.armed ? 'caution' : 'normal'}
       />
 
       {/* Numeric: flight modes are firmware-specific and this display does not
           claim to decode them. Showing "4" is honest; showing "GUIDED" for the
           wrong airframe is not. */}
-      <Chip
+      <Row
         label="Mode"
         value={heartbeat === undefined ? NO_VALUE : String(heartbeat.customMode)}
-        tone={heartbeat === undefined ? 'dead' : 'active'}
+        tone={heartbeat === undefined ? 'dead' : 'normal'}
       />
 
-      <Chip label="GPS" value={gpsLabel(view, nowMs)} tone={gpsTone(view, nowMs)} />
-
-      <Chip label="EKF" value={ekfLabel(view, nowMs)} tone={ekfTone(view, nowMs)} />
-
-      <span className="status__spacer" />
-
-      <Chip
-        label="Vehicle link"
-        value={lost ? 'LOST' : 'HEARD'}
-        tone={lost ? 'caution' : 'active'}
-      />
-
-      <Chip label="Source" value={sourceLabel(source, connected)} tone={sourceTone(source, connected)} />
-    </div>
+      <Row label="GPS" value={gpsLabel(view, nowMs)} tone={gpsTone(view, nowMs)} />
+      <Row label="EKF" value={ekfLabel(view, nowMs)} tone={ekfTone(view, nowMs)} />
+    </>
   );
 }
-
-type Tone = 'active' | 'caution' | 'dead';
 
 /**
  * What the display is showing, named plainly.
  *
- * Fixtures and recordings are both marked amber rather than green. Neither is
- * a flying aircraft, and an operator glancing at the chip has to be able to
- * tell that without reading the URL.
+ * Fixtures and recordings are both marked amber rather than left neutral.
+ * Neither is a flying aircraft, and an operator glancing at the row has to be
+ * able to tell that without reading the URL.
  */
 function sourceLabel(source: StreamSource, connected: boolean): string {
   switch (source) {
@@ -89,16 +96,7 @@ function sourceTone(source: StreamSource, connected: boolean): Tone {
     return 'caution';
   }
 
-  return connected ? 'active' : 'caution';
-}
-
-function Chip({ label, value, tone }: { label: string; value: string; tone: Tone }) {
-  return (
-    <span className={`chip chip--${tone}`}>
-      <span className="label">{label}</span>
-      <span>{value}</span>
-    </span>
-  );
+  return connected ? 'normal' : 'caution';
 }
 
 function armedLabel(armed: boolean | undefined): string {
@@ -161,7 +159,7 @@ function gpsTone(view: VehicleView, nowMs: number): Tone {
     return 'dead';
   }
 
-  return fix >= GpsFixType.GPS_FIX_TYPE_3D_FIX ? 'active' : 'caution';
+  return fix >= GpsFixType.GPS_FIX_TYPE_3D_FIX ? 'normal' : 'caution';
 }
 
 /** EKF_STATUS_FLAGS bits that decide whether the estimate is usable. */
@@ -191,5 +189,5 @@ function ekfTone(view: VehicleView, nowMs: number): Tone {
 
   const healthy = (flags & EKF_UNINITIALIZED) === 0 && (flags & EKF_ATTITUDE) !== 0;
 
-  return healthy ? 'active' : 'caution';
+  return healthy ? 'normal' : 'caution';
 }

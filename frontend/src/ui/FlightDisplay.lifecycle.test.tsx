@@ -40,6 +40,28 @@ function fleet(...views: VehicleView[]): FleetState {
   };
 }
 
+/**
+ * Toggles a panel the way an operator does: open Views, click its checkbox.
+ *
+ * Returns the checkbox, because focus management is part of what these tests
+ * assert — hiding a panel that owns focus has to move focus to the control
+ * that hid it, or the next Tab restarts at the top of the page.
+ */
+function togglePanel(container: HTMLElement, id: string) {
+  const views = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find(
+    (button) => button.textContent?.startsWith('Views') === true,
+  );
+
+  if (views?.getAttribute('aria-expanded') !== 'true') {
+    act(() => { views?.click(); });
+  }
+
+  const box = container.querySelector<HTMLInputElement>(`[aria-controls="panel-${id}"]`);
+  act(() => { box?.click(); });
+
+  return box;
+}
+
 function display(state: FleetState) {
   return <FlightDisplay initialSection="vehicle" fleet={state} nowMs={0} source="live" onSelect={() => undefined} />;
 }
@@ -58,7 +80,7 @@ describe('FlightDisplay lifecycle', () => {
     act(() => {
       root.render(display(fleet(view(1))));
     });
-    expect(container.textContent).toContain('Onboard mission');
+    expect(container.textContent).toContain('Not downloaded');
 
     act(() => {
       root.render(display(initialFleetState));
@@ -119,15 +141,14 @@ describe('workspace ownership', () => {
     const download = Array.from(container.querySelectorAll('button')).find(b => b.textContent === 'Download mission');
     act(() => { download?.click(); });
     for (const id of ['instruments', 'map', 'mission']) {
-      const toggle = container.querySelector<HTMLButtonElement>(`[aria-controls="pane-${id}"]`);
-      act(() => { toggle?.click(); });
-      expect(container.querySelector<HTMLElement>(`#pane-${id}`)?.hidden).toBe(true);
+      togglePanel(container, id);
+      expect(container.querySelector<HTMLElement>(`#panel-${id}`)?.hidden).toBe(true);
       expect(signal?.aborted).toBe(false);
       expect(maps.mounts).toBe(mounts);
       expect(container.querySelector('[aria-label="Vehicle position map"]')).toBe(map);
     }
-    expect(container.textContent).toContain('All panels hidden');
-    act(() => { container.querySelector<HTMLButtonElement>('[aria-controls="pane-mission"]')?.click(); });
+    expect(container.querySelector<HTMLElement>('#panel-map')?.hidden).toBe(true);
+    togglePanel(container, 'mission');
     expect(container.querySelector('.mission-panel')?.textContent).toContain('Downloading');
     act(() => { root.render(display(fleet(view(2)))); });
     expect(signal?.aborted).toBe(true);
@@ -136,7 +157,7 @@ describe('workspace ownership', () => {
     act(() => { download?.click(); });
     act(() => { root.render(display(initialFleetState)); });
     expect(signal?.aborted).toBe(true);
-    expect(container.querySelector('.workspace__topbar')).not.toBeNull();
+    expect(container.querySelector('.shell__bar')).not.toBeNull();
     act(() => { root.unmount(); });
   });
 
@@ -147,7 +168,7 @@ describe('workspace ownership', () => {
     const arm = () => container.querySelector<HTMLButtonElement>('.command-control button');
     act(() => { arm()?.click(); });
     expect(arm()?.textContent).toBe('CONFIRM ARM');
-    act(() => { container.querySelector<HTMLButtonElement>('[aria-controls="pane-map"]')?.click(); });
+    togglePanel(container, 'map');
     expect(arm()?.textContent).toBe('CONFIRM ARM');
     act(() => { root.render(display({ ...fleet(view(2)), connected: true })); });
     expect(arm()?.textContent).toBe('ARM');
@@ -166,8 +187,7 @@ it('retains a completed mission when hidden and shown, and restores focus outsid
   await act(async () => { download?.click(); await Promise.resolve(); });
   expect(container.textContent).toContain('Complete');
   download?.focus();
-  const toggle = container.querySelector<HTMLButtonElement>('[aria-controls="pane-mission"]');
-  act(() => { toggle?.click(); });
+  const toggle = togglePanel(container, 'mission');
   expect(document.activeElement).toBe(toggle);
   act(() => { toggle?.click(); });
   expect(container.textContent).toContain('Complete');
@@ -186,14 +206,14 @@ it('keeps command busy and unresolved state through pane toggles', async () => {
   act(() => { arm()?.click(); });
   act(() => { arm()?.click(); });
   expect(arm()?.textContent).toBe('WAITING…');
-  act(() => { container.querySelector<HTMLButtonElement>('[aria-controls="pane-instruments"]')?.click(); });
+  togglePanel(container, 'instruments');
   expect(arm()?.disabled).toBe(true);
   await act(async () => {
     resolve?.(new Response(JSON.stringify({ code: 'command_unresolved', transaction: { id: 1, state: 'COMMAND_STATE_TIMED_OUT' } }), { status: 409 }));
     await Promise.resolve();
   });
   expect(container.textContent).toContain('What the vehicle did is unknown');
-  act(() => { container.querySelector<HTMLButtonElement>('[aria-controls="pane-instruments"]')?.click(); });
+  togglePanel(container, 'instruments');
   expect(container.textContent).toContain('OBSERVED DISARMED');
   act(() => { root.unmount(); });
 });
@@ -291,7 +311,7 @@ it('retains a pending mission through Fleet, clears arm confirmation, and remoun
   const click = (text: string) => { Array.from(container.querySelectorAll('button')).find(b => b.textContent === text)?.click(); };
   act(() => { click('Download mission'); click('ARM'); });
   expect(container.textContent).toContain('CONFIRM ARM');
-  act(() => { click('Back to fleet'); });
+  act(() => { click('← Fleet'); });
   expect(signal?.aborted).toBe(false);
   expect(container.querySelector('.vehicle-workspace')?.hasAttribute('hidden')).toBe(true);
   expect(container.querySelector('[aria-label="Vehicle position map"]')).toBeNull();

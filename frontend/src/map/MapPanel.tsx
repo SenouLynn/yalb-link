@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GeoPoint } from '@/logic/geoTrack';
 import type { PositionResult } from '@/logic/position';
 import type { GeoCoordinate } from '@/logic/trajectory';
-import { MISSION_ROUTE_COLOR } from '@/ui/palette';
+import { MISSION_ROUTE_COLOR, PREDICTION_COLOR } from '@/ui/palette';
 import type { MissionGeometry } from '@/mission/model';
 
 import { framePoints, nextFollowMode, shouldFollow, type FollowMode } from './camera';
@@ -93,7 +93,7 @@ export function flightLayers(missionColor = MISSION_ROUTE_COLOR): maplibregl.Lay
       source: TRAJECTORY_SOURCE,
       layout: { 'line-cap': 'round', 'line-join': 'round' },
       paint: {
-        'line-color': '#d9a441',
+        'line-color': PREDICTION_COLOR,
         'line-width': 3,
         'line-opacity': 0.95,
         'line-dasharray': [2, 2],

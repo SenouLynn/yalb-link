@@ -1,76 +1,92 @@
 import { AttitudeIndicator } from './AttitudeIndicator';
 import { HeadingIndicator } from './HeadingIndicator';
-import { InspectionPanel } from './InspectionPanel';
 import { NO_VALUE, num, signed } from './format';
-import { hasDisplayValue, readFlight } from './readings';
-import { Readout } from './Readout';
+import { Group, Row } from './primitives';
+import { hasDisplayValue, type FlightReadings } from './readings';
 
-/** Primary readings, then the T-015 inspection tier in this pane's scroll body. */
-export function InstrumentPanel({ readings }: { readings: ReturnType<typeof readFlight> }) {
+/**
+ * The primary readings, grouped by the MAVLink family they resolve from.
+ *
+ * Grouping by source is what lets provenance be stated once per table instead
+ * of once per reading. Three readings all sourced from VFR_HUD used to print
+ * `VFR_HUD` and an age three times, each on its own right-aligned line at a
+ * different edge from the values — which destroyed the shared value edge that
+ * makes a column of readings scan as one table.
+ *
+ * The consulted tier (guidance, home, radio link) is not here: it lives in the
+ * rail, because it is read before and after a flight rather than during one.
+ */
+export function InstrumentPanel({ readings }: { readings: FlightReadings }) {
   const { position, flightPath, airspeed, battery } = readings;
   const altitude = hasDisplayValue(position) ? position.value : null;
   const path = hasDisplayValue(flightPath) ? flightPath.value : null;
   const power = hasDisplayValue(battery) ? battery.value : null;
   const air = hasDisplayValue(airspeed) ? airspeed.value : null;
-  return <>
-      <div className="instruments">
-        <AttitudeIndicator reading={readings.attitude} />
 
-        <div className="readouts">
-          <Readout
-            label="Altitude"
-            note={altitude === null ? 'datum unknown' : datumNote(altitude.altRef)}
-            value={altitude === null ? NO_VALUE : num(altitude.altM)}
-            unit="m"
-            reading={position}
-            wide
-          />
+  return (
+    <>
+      <AttitudeIndicator reading={readings.attitude} />
 
-          <Readout
-            label="Ground speed"
-            value={path === null ? NO_VALUE : num(path.groundSpeedMps)}
-            unit="m/s"
-            reading={flightPath}
-          />
+      <Group label="Altitude" reading={position}>
+        <Row
+          label="Altitude"
+          note={datumNote(altitude)}
+          value={altitude === null ? NO_VALUE : num(altitude.altM)}
+          unit="m"
+          tone={altitude === null ? 'dead' : 'normal'}
+          lead
+        />
+      </Group>
 
-          <Readout
-            label="Airspeed"
-            value={air === null ? NO_VALUE : num(air.airspeedMps)}
-            unit="m/s"
-            reading={airspeed}
-          />
+      <Group label="Flight path" reading={flightPath}>
+        <Row
+          label="Ground speed"
+          value={path === null ? NO_VALUE : num(path.groundSpeedMps)}
+          unit="m/s"
+          tone={path === null ? 'dead' : 'normal'}
+        />
+        <Row
+          label="Climb"
+          value={path === null ? NO_VALUE : signed(path.climbMps)}
+          unit="m/s"
+          tone={path === null ? 'dead' : 'normal'}
+        />
+      </Group>
 
-          <Readout
-            label="Climb"
-            value={path === null ? NO_VALUE : signed(path.climbMps)}
-            unit="m/s"
-            reading={flightPath}
-          />
+      <Group label="Airspeed" reading={airspeed}>
+        <Row
+          label="Airspeed"
+          value={air === null ? NO_VALUE : num(air.airspeedMps)}
+          unit="m/s"
+          tone={air === null ? 'dead' : 'normal'}
+        />
+      </Group>
 
-          <Readout
-            label="Battery"
-            value={power === null ? NO_VALUE : num(power.voltageV, 2)}
-            unit="V"
-            reading={battery}
-          />
-
-          <Readout
-            label="Remaining"
-            value={power === null ? NO_VALUE : num(power.remainingPct, 0)}
-            unit="%"
-            reading={battery}
-          />
-        </div>
-      </div>
+      <Group label="Power" reading={battery}>
+        <Row
+          label="Battery"
+          value={power === null ? NO_VALUE : num(power.voltageV, 2)}
+          unit="V"
+          tone={power === null ? 'dead' : 'normal'}
+        />
+        <Row
+          label="Remaining"
+          value={power === null ? NO_VALUE : num(power.remainingPct, 0)}
+          unit="%"
+          tone={power === null ? 'dead' : 'normal'}
+        />
+      </Group>
 
       <HeadingIndicator reading={readings.heading} />
-
-      <InspectionPanel readings={readings} />
-
-  </>;
+    </>
+  );
 }
 
 /** Names the altitude datum explicitly; the two differ by field elevation. */
-function datumNote(ref: 'RELATIVE' | 'MSL'): string {
-  return ref === 'RELATIVE' ? 'above home' : 'above sea level';
+function datumNote(altitude: { altRef: 'RELATIVE' | 'MSL' } | null): string {
+  if (altitude === null) {
+    return 'datum unknown';
+  }
+
+  return altitude.altRef === 'RELATIVE' ? 'above home' : 'above sea level';
 }

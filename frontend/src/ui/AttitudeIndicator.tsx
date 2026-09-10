@@ -5,6 +5,7 @@ import type { AttitudeResult } from '@/logic/attitude';
 import { NO_VALUE, num } from './format';
 import { horizonTransform, PITCH_RANGE_DEG } from './instruments';
 import { Provenance } from './Provenance';
+import { Row } from './primitives';
 import { hasDisplayValue, type Reading } from './readings';
 
 const WIDTH = 240;
@@ -66,22 +67,18 @@ export function AttitudeIndicator({ reading }: AttitudeIndicatorProps) {
         />
       </svg>
 
-      <div className="status">
-        <div>
-          <div className="label">Roll</div>
-          <div className={valueClass(reading)}>
-            {attitude === null ? NO_VALUE : num(attitude.rollDeg)}
-            <span className="unit">°</span>
-          </div>
-        </div>
-        <div>
-          <div className="label">Pitch</div>
-          <div className={valueClass(reading)}>
-            {attitude === null ? NO_VALUE : num(attitude.pitchDeg)}
-            <span className="unit">°</span>
-          </div>
-        </div>
-      </div>
+      <Row
+        label="Roll"
+        value={attitude === null ? NO_VALUE : num(attitude.rollDeg)}
+        unit="°"
+        tone={hasDisplayValue(reading) ? 'normal' : 'dead'}
+      />
+      <Row
+        label="Pitch"
+        value={attitude === null ? NO_VALUE : num(attitude.pitchDeg)}
+        unit="°"
+        tone={hasDisplayValue(reading) ? 'normal' : 'dead'}
+      />
 
       <Provenance reading={reading} />
     </div>
@@ -117,13 +114,6 @@ function Horizon({ rollDeg, pitchDeg }: { rollDeg: number; pitchDeg: number }) {
   );
 }
 
-function valueClass(reading: Reading<AttitudeResult>): string {
-  if (!hasDisplayValue(reading)) {
-    return 'value value--unavailable';
-  }
-
-  return 'value';
-}
 
 function describe(attitude: AttitudeResult | null): string {
   if (attitude === null) {

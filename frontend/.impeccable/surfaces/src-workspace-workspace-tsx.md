@@ -43,13 +43,27 @@ raw decoder tier — resident at once, without scrolling or clicking. Levers sit
 beside the data they act on, so commanding never means going to look for a
 control.
 
-**FIRST VIEWPORT:** App bar (`GROUND CONTROL`, operator identity right) over a
-view subbar (`← Fleet`, scope picker, `Views (n)`). Below, three columns butted
-on 1px rules: a fixed ~240px left rail of stacked labeled groups, each a
-two-column key→value table; a center column with a horizontal command lever row
-above the map and a guided-command form below it; a right column of instruments
-over a permanent `Parameters | Raw stream` tab strip. Primary action is the
-lever row directly above the map. Nothing floats; nothing is centered in void.
+**FIRST VIEWPORT:** App bar (`GROUND CONTROL`, source badge right) over a view
+subbar (`← Fleet`, `Views (n)`). Below, three columns butted on 1px rules: a
+fixed 240px left rail of stacked labeled groups, each a two-column key→value
+table, carrying the command lever beside the state it acts on; a center column
+of map at full bleed; a right column of instruments over a permanent tabbed
+developer tier (`Families | Raw sample`). Nothing floats except map overlays;
+nothing is centered in void.
+
+*Amended 2026-09-10 after the finish review.* The original block promised a
+horizontal command lever row above the map and a guided-command form below it,
+and neither shipped. Both are removed from the contract rather than built, for
+two reasons. The guided-reposition form has no backend behind it in this
+repository — that capability lives in the ancestor `flight-path-hud`, and
+building the form here would put a control on screen that cannot command
+anything, which this display's whole posture forbids. The command lever moved
+to the rail on STORY's authority, "levers sit beside the data they act on":
+arming is read against `TARGET STATE` directly above it, so the rail is where
+it belongs. The primary action is therefore the rail's `COMMAND` group. The
+block also promised operator identity and a scope picker; this repository has
+no operator identity concept and one scope per page, so the right slot carries
+the source badge and scope appears as a read-only `TARGET` row.
 
 **FORM:** Pinned by the brief, not selected from a candidate list — DearImGui as
 philosophy, `~/Desktop/flight-path-hud/apps/gcs` as the working implementation

@@ -14,8 +14,9 @@ describe('MissionPanel', () => {
     })] });
     const html = renderToStaticMarkup(<MissionPanel status="complete" snapshot={snapshot} error={null} geometry={missionGeometry(snapshot)} activeSeq={4} onDownload={() => undefined} />);
     expect(html).toContain('#4 DO_SET_SERVO');
-    expect(html).toContain('params [1, 2, 3, 4]');
-    expect(html).toContain('autocontinue yes');
+    expect(html).toContain('Param 1');
+    expect(html).toContain('Autocontinue');
+    expect(html).toContain('yes');
     expect(html).toContain('Not mapped:');
     expect(html).toContain('Active');
   });

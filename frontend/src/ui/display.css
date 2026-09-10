@@ -1,185 +1,78 @@
 /*
- * Panel styling for the flight display.
+ * Instrument-specific styling.
  *
- * The palette is taken from instrument hardware rather than from a generic
- * dark theme: a graphite bezel, the blue-over-ochre split of a real attitude
- * indicator, off-white engraved lettering, and amber as the only warning
- * colour. There is deliberately no "good" green — normal flight is
- * unremarkable, and a panel that lights up to say nothing is wrong trains an
- * operator to ignore it.
+ * Everything here is built out of the vocabulary in `system.css` — tokens, the
+ * row, the group, the lever — and covers only what those primitives cannot
+ * express: the attitude indicator, the heading tape, the map and its overlays,
+ * the mission list, the replay transport, and the fleet roster.
+ *
+ * Nothing here may introduce a colour, a font size, or a spacing value. If a
+ * panel needs one, the token is missing and belongs in `system.css`.
  */
 
-:root {
-  --panel: #14171c;
-  --panel-deep: #0d1013;
-  --bezel: #272c34;
-  --sky: #2d6d9e;
-  --ground: #7a5326;
-  --lume: #d8dde3;
-  --lume-dim: #8b939e;
-  --caution: #d9a441;
-  --dead: #4d5560;
-
-  /* The commanded route, distinct from both the flown track and the caution
-     amber. Mirrored in `ui/palette.ts` for MapLibre, which needs a resolved
-     value rather than a custom property. */
-  --mission-route: #c7f0ff;
-
-  --gap: 0.75rem;
-  --radius: 3px;
-
-  /* Tabular figures matter here: proportional digits make a readout jitter
-     sideways as the numbers change, which reads as instability in the data. */
-  --data: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, Consolas, monospace;
-  --label: ui-sans-serif, system-ui, "Helvetica Neue", Arial, sans-serif;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--panel-deep);
-  color: var(--lume);
-  font-family: var(--label);
-  -webkit-font-smoothing: antialiased;
-}
-
-/* --- shared panel chrome ------------------------------------------------- */
-
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--bezel);
-  border-radius: var(--radius);
-  padding: var(--gap);
-}
-
-.label {
-  font-size: 0.625rem;
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--lume-dim);
-}
-
-.value {
-  font-family: var(--data);
-  font-variant-numeric: tabular-nums;
-  font-size: 1.5rem;
-  line-height: 1.1;
-  color: var(--lume);
-}
-
-.value--unavailable,
-.unit--unavailable {
-  color: var(--dead);
-}
-
-.unit {
-  font-family: var(--data);
-  font-size: 0.75rem;
-  color: var(--lume-dim);
-  margin-left: 0.25rem;
-}
-
-/* --- provenance ---------------------------------------------------------- */
-
-/*
- * The signature of this display. Every reading states the MAVLink message it
- * came from and how old that message is, over a rule that drains as the value
- * ages toward its TTL. The drain is what makes staleness pre-attentive: the
- * operator sees the bar emptying without having to read the age.
- */
-.provenance {
-  margin-top: 0.4rem;
-}
-
-.provenance__track {
-  height: 2px;
-  background: var(--bezel);
-  border-radius: 1px;
-  overflow: hidden;
-}
-
-.provenance__fill {
-  height: 100%;
-  background: var(--lume-dim);
-  transition: width 120ms linear;
-}
-
-.provenance--stale .provenance__fill {
-  background: var(--caution);
-}
-
-/* Colour only. Painting a background here would fill the row with amber and
-   hide the source name and age written on it. */
-.provenance--stale .provenance__text {
-  color: var(--caution);
-}
-
-.provenance--unavailable .provenance__fill {
-  background: transparent;
-}
-
-.provenance--unavailable .provenance__text {
-  color: var(--dead);
-}
-
-.provenance__text {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  min-width: 0;
-  margin-top: 0.25rem;
-  font-family: var(--data);
-  font-size: 0.625rem;
-  letter-spacing: 0.06em;
-  color: var(--lume-dim);
-}
-
-/* The source name is the long one; let it ellipsis rather than widen the row. */
-.provenance__text > :first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* --- layout -------------------------------------------------------------- */
-
-.status {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--gap);
-}
-
-.status__spacer {
-  flex: 1;
-}
+/* --- command ------------------------------------------------------------- */
 
 .command-control {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--gap);
+  gap: var(--lever-gap);
+  padding: var(--row-y) var(--row-x);
 }
 
+/* Amber-edged because the action itself is the hazard. Arming a vehicle is the
+   one control on this display that can move an aircraft. */
 .command-control button {
-  background: var(--panel-deep);
-  border: 1px solid var(--caution);
-  color: var(--lume);
-  font: 600 0.75rem var(--data);
-  padding: 0.6rem 1rem;
+  border-color: var(--caution);
+  color: var(--caution);
 }
 
-.command-control button:disabled { border-color: var(--dead); color: var(--dead); }
-.command-control__state { color: var(--lume-dim); font: 0.75rem var(--data); }
+.command-control button:hover:not(:disabled) {
+  border-color: var(--caution);
+  background: color-mix(in srgb, var(--caution) 12%, var(--panel));
+  color: var(--lume);
+}
+
+.command-control__state {
+  color: var(--lume-dim);
+  font: var(--fs-label) var(--data);
+}
+
 /* Its own line: a qualifier on the state above, not a third control beside it. */
-.command-control__stale { flex-basis: 100%; color: var(--caution); font: 0.7rem var(--data); }
+.command-control__stale {
+  flex-basis: 100%;
+  color: var(--caution);
+  font: var(--fs-label) var(--data);
+}
+
+.command-control__ambiguous,
+.command-control__evidence,
+.command-control__prompt {
+  flex-basis: 100%;
+  margin: 0;
+  font: var(--fs-body)/1.5 var(--data);
+}
+
+.command-control__ambiguous {
+  color: var(--caution);
+}
+
+.command-control__evidence,
+.command-control__prompt {
+  color: var(--lume-dim);
+}
+
+.command-control__attest {
+  display: flex;
+  flex-basis: 100%;
+  gap: var(--lever-gap);
+}
+
+/* --- instruments --------------------------------------------------------- */
 
 .instruments {
   display: grid;
-  gap: var(--gap);
+  gap: var(--row-y);
   grid-template-columns: 1fr;
 }
 
@@ -188,89 +81,106 @@ body {
    of shrinking. On a panel this dense that shows up as everything clipped at
    the right edge. */
 .instruments > *,
-.readouts > *,
-.status > * {
+.readouts > * {
   min-width: 0;
 }
 
-@media (min-width: 40rem) {
-  .instruments {
-    grid-template-columns: 3fr 2fr;
-  }
-}
-
+/*
+ * A single column of readings, never a grid of cards.
+ *
+ * Two columns would break the shared value edge that makes a column of
+ * readings scan as one table, which is the entire reason a readout is a row.
+ */
 .readouts {
   display: grid;
-  gap: var(--gap);
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
-}
-
-/* Two readouts per row only once there is width for both without the numbers
-   colliding with their units. */
-@media (min-width: 26rem) {
-  .readouts {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.readout--wide {
-  grid-column: 1 / -1;
 }
 
 .instrument {
   display: grid;
-  gap: var(--gap);
+  gap: var(--row-y);
+  padding: var(--row-y) var(--row-x);
 }
 
 .instrument svg {
   display: block;
   width: 100%;
   height: auto;
+  /* Bounded on both axes so a wide slot does not leave it floating in a void. */
+  max-width: 20rem;
+  max-height: 11rem;
+  margin-right: auto;
+}
+
+.instrument--heading svg {
+  max-height: 4rem;
 }
 
 /* --- map ---------------------------------------------------------------- */
 
 .map-shell {
   position: relative;
+  height: 100%;
 }
 
+/* The map owns its slot edge to edge. A border here would be a second rule
+   beside the slot's own. */
 .map-panel {
   width: 100%;
   height: 100%;
   min-height: 0;
   overflow: hidden;
   background: var(--panel-deep);
-  border: 1px solid var(--bezel);
+}
+
+/*
+ * Map overlays sit in one stack in the top-left corner, in a fixed order, so a
+ * second cluster cannot land on top of the first — which is exactly what
+ * "Fit mission" and "Follow vehicle" did when each positioned itself.
+ */
+.map-actions {
+  position: absolute;
+  z-index: 2;
+  top: var(--row-x);
+  left: var(--row-x);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lever-gap);
+  max-width: calc(100% - 2 * var(--row-x));
+}
+
+/*
+ * The two map keys stack under the action row, each positioning itself —
+ * MapPanel renders them as siblings of the map with no wrapper to lay them out.
+ */
+.trajectory-key,
+.mission-key {
+  position: absolute;
+  z-index: 1;
+  left: var(--row-x);
+  padding: 0 var(--pad-chip);
+  pointer-events: none;
+  background: color-mix(in srgb, var(--panel-deep) 88%, transparent);
+  border: var(--rule);
   border-radius: var(--radius);
+  font: 600 var(--fs-label)/1.6 var(--data);
+  letter-spacing: var(--track-data);
+  text-transform: uppercase;
 }
 
 .trajectory-key {
-  position: absolute;
-  z-index: 1;
-  top: 0.75rem;
-  left: 0.75rem;
-  padding: 0.3rem 0.5rem;
-  color: var(--caution);
-  background: rgb(13 16 19 / 88%);
-  border: 1px solid var(--bezel);
-  border-radius: 0.25rem;
-  font: 600 0.72rem/1 var(--data);
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  pointer-events: none;
+  top: calc(var(--row-x) + var(--target-h) + var(--lever-gap));
+  color: var(--prediction);
+  border-color: var(--prediction);
 }
 
-.mission-key { position: absolute; z-index: 1; top: 2.8rem; left: 0.75rem; padding: 0.3rem 0.5rem; color: var(--mission-route); background: rgb(13 16 19 / 88%); border: 1px solid var(--mission-route); font: 600 0.72rem/1 var(--data); text-transform: uppercase; }
-.mission-panel__header { display: flex; justify-content: space-between; gap: var(--gap); align-items: center; }
-.mission-panel button { background: var(--panel-deep); border: 1px solid var(--mission-route); color: var(--lume); padding: 0.55rem 0.8rem; font: 600 0.72rem var(--data); }
-.mission-panel button:disabled { border-color: var(--dead); color: var(--dead); }
-.mission-panel__state, .mission-panel__empty, .mission-panel__error { color: var(--lume-dim); font: 0.75rem var(--data); }
-.mission-panel__error, .mission-list__note { color: var(--caution); }
-.mission-list { display: grid; gap: 0.5rem; margin: 0.75rem 0 0; padding-left: 2rem; font: 0.7rem/1.5 var(--data); }
-.mission-list li { padding: 0.5rem; border-left: 2px solid var(--bezel); }
-.mission-list li > div:first-child { display: flex; justify-content: space-between; gap: 0.5rem; }
-.mission-list li.mission-list__active { border-left-color: var(--mission-route); background: color-mix(in srgb, var(--mission-route) 6%, transparent); }
+/* Second row, under the trajectory key. */
+.mission-key {
+  top: calc(var(--row-x) + var(--target-h) + var(--lever-gap) + 1.4rem);
+  color: var(--mission-route);
+  border-color: var(--mission-route);
+}
 
 /* Sequence badge for a mission point. Sized to sit inside the 10px-radius
    circle drawn by the mission-points layer, which shares its coordinate. */
@@ -281,7 +191,7 @@ body {
   width: 20px;
   height: 20px;
   color: var(--mission-route);
-  font: 600 0.62rem/1 var(--data);
+  font: 600 var(--fs-label)/1 var(--data);
   pointer-events: none;
 }
 
@@ -294,99 +204,90 @@ body {
   display: block;
 }
 
-/* --- chips --------------------------------------------------------------- */
+/* --- mission ------------------------------------------------------------- */
 
-.chip {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.35rem;
-  padding: 0.2rem 0.45rem;
-  border: 1px solid var(--bezel);
-  border-radius: var(--radius);
-  font-family: var(--data);
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
-  color: var(--lume-dim);
+.mission-panel button {
+  border-color: var(--mission-route);
 }
 
-.chip--active {
-  color: var(--lume);
-  border-color: var(--lume-dim);
-}
-
-.chip--caution {
+.mission-panel__error,
+.mission-list__note {
   color: var(--caution);
-  border-color: var(--caution);
 }
 
-.chip--dead {
+.mission-panel__error,
+.mission-panel__empty {
+  margin: 0;
+  padding: var(--row-y) var(--row-x);
+  font: var(--fs-label)/1.5 var(--data);
+}
+
+.mission-panel__empty {
   color: var(--dead);
 }
 
-/* --- vehicle selector ---------------------------------------------------- */
+/*
+ * The mission as a list of waypoints.
+ *
+ * Each item is a run of rows, so a waypoint reads with the same vocabulary as
+ * every other value on the display. It deliberately does not dump wire
+ * fields: `params [15, 0, 0, 0] · autocontinue yes` is the shape to avoid —
+ * that belongs to the developer tier, which has its own panel.
+ */
+.mission-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
-.selector {
+.mission-list li {
+  border-top: var(--rule);
+}
+
+.mission-list li:first-child {
+  border-top: 0;
+}
+
+.mission-list__head {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.selector__button {
-  font-family: var(--data);
-  font-size: 0.6875rem;
-  letter-spacing: 0.08em;
-  padding: 0.3rem 0.55rem;
-  color: var(--lume-dim);
-  background: var(--panel-deep);
-  border: 1px solid var(--bezel);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.selector__button[aria-pressed='true'] {
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--row-x);
+  padding: var(--row-y) var(--row-x);
+  font: 600 var(--fs-data) var(--data);
   color: var(--lume);
-  border-color: var(--lume-dim);
-  background: var(--panel);
 }
 
-.selector__button:focus-visible {
-  outline: 2px solid var(--lume);
-  outline-offset: 2px;
+/* The commanded route's colour, on the one item the vehicle is flying to. */
+.mission-list__active {
+  background: color-mix(in srgb, var(--mission-route) 8%, transparent);
 }
 
-.empty {
-  padding: 3rem var(--gap);
-  text-align: center;
-  color: var(--lume-dim);
+.mission-list__active .mission-list__head {
+  color: var(--mission-route);
 }
 
-.empty__hint {
-  margin-top: 0.5rem;
-  font-family: var(--data);
-  font-size: 0.75rem;
-  color: var(--dead);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .provenance__fill,
-  .horizon__moving {
-    transition: none;
-  }
+.mission-list__note {
+  padding: 0 var(--row-x) var(--row-y);
+  font: var(--fs-label)/1.5 var(--data);
 }
 
 /* --- replay transport ---------------------------------------------------- */
+
 /*
  * Amber-edged on purpose. This bar is only ever on screen when the display is
  * showing a recording, and its border is the peripheral cue that what is on
  * the instruments already happened.
  */
-
 .replay {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--gap);
-  border-color: var(--caution);
+  gap: var(--lever-gap);
+  padding: var(--row-y) var(--row-x);
+  border: 1px solid var(--caution);
+  border-radius: var(--radius);
 }
 
 .replay--error {
@@ -394,57 +295,52 @@ body {
 }
 
 .replay__button {
-  min-width: 5rem;
-  padding: 0.35rem 0.75rem;
-  font-family: var(--label);
-  font-size: 0.85rem;
-  color: var(--lume);
-  background: var(--panel-deep);
-  border: 1px solid var(--bezel);
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.replay__button:disabled {
-  color: var(--dead);
-  cursor: default;
+  min-width: 4.5rem;
 }
 
 .replay__clock {
-  font-family: var(--data);
+  font: var(--fs-data) var(--data);
   font-variant-numeric: tabular-nums;
   color: var(--lume);
 }
 
 .replay__scrub {
   flex: 1;
-  min-width: 8rem;
-  accent-color: var(--caution);
+  min-width: 6rem;
+  accent-color: var(--lume-dim);
 }
 
 .replay__speed {
   display: flex;
-  align-items: baseline;
-  gap: 0.35rem;
+  align-items: center;
+  gap: var(--lever-gap);
+  font: var(--fs-label) var(--data);
+  color: var(--lume-dim);
 }
 
 .replay__speed select {
-  font-family: var(--data);
-  color: var(--lume);
-  background: var(--panel-deep);
-  border: 1px solid var(--bezel);
+  min-height: var(--target-h);
+  padding: 0 var(--target-x);
+  border: var(--rule);
   border-radius: var(--radius);
-  padding: 0.2rem 0.3rem;
+  background: var(--panel-deep);
+  color: var(--lume);
+  font: var(--fs-body) var(--data);
+}
+
+.replay__speed select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
 }
 
 .replay__name {
-  font-family: var(--data);
+  font: var(--fs-label) var(--data);
   color: var(--lume-dim);
 }
 
 .replay__note {
-  font-family: var(--label);
-  font-size: 0.8rem;
+  flex-basis: 100%;
+  font: var(--fs-label)/1.5 var(--data);
   color: var(--lume-dim);
 }
 
@@ -452,159 +348,167 @@ body {
   color: var(--caution);
 }
 
-.replay__pick {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.35rem 0.6rem;
-  color: var(--lume);
-  text-decoration: none;
-  background: var(--panel-deep);
-  border: 1px solid var(--bezel);
-  border-radius: var(--radius);
-}
-
 .replay__pick-row {
   display: flex;
-  align-items: stretch;
-  gap: 0.45rem;
-}
-
-.replay__pick-row .replay__pick {
-  flex: 1;
+  align-items: center;
+  gap: var(--lever-gap);
 }
 
 .replay__delete {
-  border: 1px solid color-mix(in srgb, var(--caution) 55%, transparent);
-  border-radius: 0.3rem;
-  background: transparent;
-  color: var(--caution);
-  cursor: pointer;
-  padding: 0.35rem 0.55rem;
-}
-
-.replay__delete:disabled {
-  cursor: wait;
-  opacity: 0.55;
-}
-
-.replay__pick:hover {
   border-color: var(--caution);
+  color: var(--caution);
 }
-
-/* Workspace composition: stable DOM order, CSS placement for all pane subsets. */
-html, body, #root { height: 100%; overflow: hidden; }
-.workspace { height: 100dvh; display: grid; grid-template: "topbar topbar" auto "sidebar main" minmax(0, 1fr) / minmax(16rem, 18rem) minmax(0, 1fr); }
-.workspace *, .pane { min-width: 0; min-height: 0; }
-.workspace__topbar { grid-area: topbar; display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap); padding: 0.65rem 1rem; border-bottom: 1px solid var(--bezel); }
-.workspace__topbar h1 { margin: 0; font: 600 0.9rem var(--data); letter-spacing: 0.08em; }
-.workspace__topbar h1 span { margin-left: 0.5rem; }
-.workspace__visibility { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; margin-left: auto; }
-.workspace__topbar .replay { width: 100%; }
-.workspace__sidebar { grid-area: sidebar; overflow-y: auto; border-right: 1px solid var(--bezel); padding: var(--gap); }
-.workspace__sidebar .panel { padding: 0.75rem 0; border: 0; border-bottom: 1px solid var(--bezel); border-radius: 0; background: transparent; }
-.workspace__sidebar .status { align-items: stretch; flex-direction: column; gap: 0.5rem; }
-.workspace__sidebar .chip { justify-content: space-between; border: 0; padding: 0.2rem 0; }
-.workspace__sidebar .command-control { flex-wrap: wrap; }
-.workspace__position { margin-top: 1rem; font: 0.7rem var(--data); color: var(--lume-dim); overflow-wrap: anywhere; }
-.workspace__main { grid-area: main; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); overflow: hidden; }
-.workspace__main.has-instruments { grid-template-areas: "instruments"; }
-.workspace__main.has-map { grid-template-areas: "map"; }
-.workspace__main.has-mission { grid-template-areas: "mission"; }
-.workspace__main.has-instruments.has-map { grid-template-areas: "instruments map"; grid-template-columns: minmax(20rem, 0.9fr) minmax(0, 1.4fr); }
-.workspace__main.has-instruments.has-mission { grid-template-areas: "instruments mission"; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.workspace__main.has-map.has-mission { grid-template-areas: "map mission"; grid-template-columns: minmax(0, 1.4fr) minmax(18rem, 1fr); }
-.workspace__main.has-instruments.has-map.has-mission { grid-template-areas: "instruments map" "mission map"; grid-template-columns: minmax(20rem, 0.9fr) minmax(0, 1.4fr); grid-template-rows: minmax(0, 1.6fr) minmax(0, 1fr); }
-.pane { display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid var(--bezel); border-bottom: 1px solid var(--bezel); }
-.pane[hidden] { display: none; }
-.pane--instruments { grid-area: instruments; }
-.pane--map { grid-area: map; }
-.pane--mission { grid-area: mission; }
-.pane__title { flex: none; margin: 0; padding: 0.65rem var(--gap); font: 600 0.625rem var(--label); letter-spacing: 0.14em; text-transform: uppercase; color: var(--lume-dim); border-bottom: 1px solid var(--bezel); }
-.pane__body { flex: 1; overflow-y: auto; padding: var(--gap); }
-.pane__body .panel { border: 0; border-bottom: 1px solid var(--bezel); border-radius: 0; padding: 0.5rem; }
-.pane--map .pane__body { padding: 0; overflow: hidden; }
-.pane--map .map-shell { height: 100%; }
-.pane--map .map-panel { border: 0; border-radius: 0; }
-.pane--instruments .instruments { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0.4rem; }
-.pane--instruments .readouts { gap: 0.4rem; }
-.pane--instruments .value { font-size: 1.2rem; }
-.workspace__prompt { margin: auto; padding: 2rem; color: var(--lume-dim); }
-@media (max-width: 900px) {
-  .workspace { grid-template: "topbar" auto "sidebar" minmax(0, auto) "main" minmax(0, 1fr) / minmax(0, 1fr); }
-  .workspace__sidebar { max-height: 10rem; border-right: 0; border-bottom: 1px solid var(--bezel); }
-  .workspace__sidebar .status { flex-direction: row; flex-wrap: wrap; }
-  .workspace__sidebar .status .chip { gap: 0.5rem; }
-  .workspace__sidebar .status__spacer { display: none; }
-  .workspace__main[class] { display: flex; flex-direction: column; overflow-y: auto; }
-  .pane { grid-area: auto; flex: 0 0 auto; border-right: 0; }
-  .pane--instruments { min-height: 26rem; }
-  .pane--map { height: 28rem; }
-  .pane--mission { max-height: 30rem; }
-  .pane__body { flex-basis: auto; }
-  .workspace__visibility { margin-left: 0; }
-}
-
-.pane--instruments .instrument { gap: 0.4rem; }
-.pane--instruments .instrument svg { max-height: 10rem; }
-.pane--instruments .instrument--heading svg { max-height: 4rem; }
 
 /* --- inspection tier ----------------------------------------------------- */
 
-/* Guidance, home and link, below the primary readings in the instruments
-   pane's scroll body. Consulted rather than flown by, so it is separated from
+/* Guidance, home and link, below the primary readings in the instrument
+   slot's scroll body. Consulted rather than flown by, so it is separated from
    the instruments by rule and spacing rather than by colour: nothing here
    earns a hue the attitude indicator does not already own. */
-.inspection {
-  display: grid;
-  gap: var(--gap);
-  margin-top: var(--gap);
+/* --- fleet --------------------------------------------------------------- */
+
+/* The roster is the rail's own scroll body: it is the slot, not inside one. */
+.fleet-roster {
+  display: block;
+  overflow-y: auto;
 }
 
-.inspection__group {
-  display: grid;
-  gap: 0.4rem;
-  padding-top: var(--gap);
-  border-top: 1px solid var(--bezel);
+.fleet-main {
+  position: relative;
+  display: block;
+  height: 100%;
 }
 
-.inspection__title {
-  margin: 0;
+.fleet-map {
+  height: 100%;
+  width: 100%;
+  min-height: 0;
 }
 
-/* A family that has never arrived. Dimmed to the same colour as an absent
-   value, because that is what it is — not a warning, which stays amber. */
-.inspection__absent {
-  margin: 0;
+.fleet-map__empty {
+  position: absolute;
+  top: var(--row-x);
+  left: var(--row-x);
+  padding: 0 var(--pad-chip);
+  background: color-mix(in srgb, var(--panel-deep) 88%, transparent);
+  border: var(--rule);
+  border-radius: var(--radius);
   color: var(--lume-dim);
-  font-size: 0.75rem;
-  line-height: 1.4;
+  font: var(--fs-label)/1.6 var(--data);
+  pointer-events: none;
 }
 
-.map-actions { position: absolute; top: 0.6rem; left: 0.6rem; z-index: 2; display: flex; gap: 0.4rem; }
-.map-actions button { background: var(--panel); color: var(--lume); border: 1px solid var(--bezel); padding: 0.4rem 0.6rem; font: 0.7rem var(--data); cursor: pointer; }
-.map-actions button:disabled { opacity: 0.5; cursor: default; }
+/*
+ * The roster is a table of nodes, not a stack of cards.
+ *
+ * One node is a headline row (identity and state) over its readings, separated
+ * from the next by a single rule. The card treatment it replaced spent about
+ * three times the height per node for the same four values.
+ */
+.fleet-card {
+  border-bottom: var(--rule);
+}
 
-/* Fleet and vehicle share a shell; only the active view owns a map context. */
-.vehicle-workspace { display: contents; }
-.vehicle-workspace[hidden] { display: none; }
-.fleet-main { position: relative; }
-.fleet-map { height: 100%; width: 100%; }
-.fleet-map__empty { position: absolute; top: 1rem; left: 1rem; padding: 0.6rem; background: var(--panel); color: var(--lume-dim); pointer-events: none; }
-.fleet-roster__heading, .fleet-card__title, .fleet-card__actions { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.fleet-roster h2 { margin: 0; font: 600 0.9rem var(--data); }
-.fleet-card { padding: 1rem 0; border-bottom: 1px solid var(--bezel); font: 0.75rem var(--data); }
-.fleet-card[data-selected="true"] { border-left: 2px solid var(--lume); padding-left: 0.6rem; }
-.fleet-card__position { overflow-wrap: anywhere; color: var(--lume-dim); }
-.fleet-card dl { display: grid; gap: 0.5rem; }
-.fleet-card dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem; }
-.fleet-card dt { color: var(--lume-dim); }
-.fleet-card dd { margin: 0; }
-.fleet-card__actions { justify-content: flex-start; }
-.fleet-marker, .fleet-roster button, .workspace__topbar > button { border: 1px solid var(--bezel); background: var(--panel); color: var(--lume); padding: 0.45rem 0.7rem; font: 0.75rem var(--data); cursor: pointer; }
-.fleet-marker { border: 2px solid var(--lume); border-radius: 1rem; box-shadow: 0 2px 8px var(--panel-deep); }
-.fleet-roster button:disabled, .workspace__topbar > button:disabled { opacity: 0.45; cursor: default; }
-@media (max-width: 900px) {
-  .workspace__sidebar.fleet-roster { max-height: 19rem; }
-  .workspace__main.fleet-main { display: block; overflow: hidden; }
+.fleet-card[data-selected="true"] {
+  background: color-mix(in srgb, var(--lume) 8%, transparent);
+  box-shadow: inset 1px 0 0 var(--lume);
+}
+
+.fleet-card__title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--row-x);
+  padding: var(--row-y) var(--row-x);
+  font: 600 var(--fs-data) var(--data);
+  color: var(--lume);
+}
+
+.fleet-card__position {
+  padding: 0 var(--row-x);
+  overflow-wrap: anywhere;
+  color: var(--lume-dim);
+  font: var(--fs-label)/1.5 var(--data);
+}
+
+.fleet-card dl {
+  display: grid;
+  margin: 0;
+}
+
+.fleet-card dl > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--row-x);
+  padding: var(--row-y) var(--row-x);
+}
+
+.fleet-card dt {
+  color: var(--lume-dim);
+  font-family: var(--label);
+  font-size: var(--fs-label);
+  letter-spacing: var(--track-data);
+  text-transform: uppercase;
+}
+
+.fleet-card dd {
+  margin: 0;
+  font: var(--fs-data) var(--data);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.fleet-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--lever-gap);
+  padding: var(--row-y) var(--row-x);
+}
+
+.fleet-roster__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--row-x);
+  padding: var(--row-y) var(--row-x);
+  border-bottom: var(--rule);
+}
+
+.fleet-roster h2 {
+  margin: 0;
+  font-family: var(--label);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--lume-dim);
+}
+
+.fleet-marker {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--lume);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--lume);
+  font: 600 var(--fs-label)/1 var(--data);
+}
+
+.mission-panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--lever-gap) var(--row-x);
+  padding: var(--row-y) var(--row-x);
+}
+
+.mission-panel__header button {
+  flex: 1 0 auto;
+}
+
+.mission-panel__state {
+  color: var(--lume-dim);
+  font: var(--fs-label) var(--data);
 }

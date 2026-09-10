@@ -13,18 +13,34 @@ import { MapPanel } from '@/map/MapPanel';
 import { missionLoaderFor } from '@/mission/source';
 import { MissionPanel } from '@/mission/MissionPanel';
 import { activeMissionSequence, missionGeometry } from '@/mission/model';
-import { emptyMissionState, missionPanelState, visibleMissionState, type MissionViewState } from '@/mission/state';
+import {
+  emptyMissionState,
+  missionPanelState,
+  visibleMissionState,
+  type MissionViewState,
+} from '@/mission/state';
 import type { ReplayEventSource } from '@/stream/replay';
 import type { StreamSource } from '@/stream/select';
 
 import { ArmControl } from './ArmControl';
+import { FamiliesPanel, SamplePanel } from './DevPanels';
+import { GuidancePanel, HomePanel, RadioLinkPanel } from './InspectionPanel';
+import { NO_VALUE } from './format';
+import { Row } from './primitives';
 import { hasDisplayValue, readFlight } from './readings';
 import { ReplayControls } from './ReplayControls';
-import { StatusBar } from './StatusBar';
+import { LinkRows, StateRows } from './StatusBar';
 import { VehicleSelector } from './VehicleSelector';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { InstrumentPanel } from './InstrumentPanel';
-import { WorkspaceShell, WorkspacePanes, PaneControls, DEFAULT_VISIBILITY, type PaneVisibility } from '@/workspace/Workspace';
+import {
+  DEFAULT_VISIBILITY,
+  ViewsMenu,
+  WorkspaceShell,
+  WorkspaceSlots,
+  type PanelContent,
+  type PanelVisibility,
+} from '@/workspace/Workspace';
 
 export interface FlightDisplayProps {
   fleet: FleetState;
@@ -46,41 +62,91 @@ export function FlightDisplay({
   onSelect,
   initialSection,
 }: FlightDisplayProps) {
-  const [section, setSection] = useState<'fleet' | 'vehicle'>(initialSection ?? (source === 'replay' ? 'vehicle' : 'fleet'));
+  const [section, setSection] = useState<'fleet' | 'vehicle'>(
+    initialSection ?? (source === 'replay' ? 'vehicle' : 'fleet'),
+  );
   const fleetCamera = useRef<SavedCamera | null>(null);
   const navigation = useRef<HTMLButtonElement>(null);
-  const openVehicle = (key: VehicleKey) => { onSelect(key); setSection('vehicle'); };
-  useEffect(() => { navigation.current?.focus(); }, [section]);
+  const openVehicle = (key: VehicleKey) => {
+    onSelect(key);
+    setSection('vehicle');
+  };
+  useEffect(() => {
+    navigation.current?.focus();
+  }, [section]);
   const view = fleet.selected === null ? undefined : fleet.vehicles[fleet.selected];
   const controls = source === 'replay' ? <ReplayControls source={replay} /> : null;
 
-  const [visible, setVisible] = useState(DEFAULT_VISIBILITY);
-  const toggle = (id: keyof PaneVisibility) => {
-    const pane = document.getElementById(`pane-${id}`);
-    if (visible[id] && pane?.contains(document.activeElement)) {
-      document.querySelector<HTMLButtonElement>(`[aria-controls="pane-${id}"]`)?.focus();
+  const [visible, setVisible] = useState<PanelVisibility>(DEFAULT_VISIBILITY);
+  const toggle = (id: string) => {
+    // Moving focus out before the panel unmounts; otherwise focus lands on the
+    // body and the next Tab starts over at the top of the page.
+    const panel = document.getElementById(`panel-${id}`);
+    if (visible[id] === true && panel?.contains(document.activeElement) === true) {
+      document.querySelector<HTMLInputElement>(`[aria-controls="panel-${id}"]`)?.focus();
     }
-    setVisible((previous) => ({ ...previous, [id]: !previous[id] }));
+    setVisible((previous) => ({ ...previous, [id]: previous[id] !== true }));
   };
-  const sourceLabel = source === 'live' ? (fleet.connected ? 'LIVE' : 'DISCONNECTED') : source.toUpperCase();
-  return <WorkspaceShell topbar={<>
-    <span className={`chip chip--${sourceLabel === 'LIVE' ? 'active' : 'caution'}`}>{sourceLabel}</span>
-    <button ref={navigation} type="button" onClick={() => { if (section === 'fleet' && view) openVehicle(view.key); else setSection('fleet'); }} disabled={section === 'fleet' && !view}>
-      {section === 'fleet' ? 'Open selected vehicle' : 'Back to fleet'}
-    </button>
-    {section === 'vehicle' && <><VehicleSelector fleet={fleet} onSelect={onSelect} />
-    <PaneControls visible={visible} onToggle={toggle} /></>}
-    {controls}
-  </>}>
-    {section === 'fleet' && <FleetOverview fleet={fleet} nowMs={nowMs} source={source} onOpen={openVehicle} camera={fleetCamera} />}
-    <div className="vehicle-workspace" hidden={section !== 'vehicle'}>
-    {view === undefined ? <>
-      <aside className="workspace__sidebar" aria-label="Vehicle context"><div className="label">No vehicle selected</div></aside>
-      <main className="workspace__main"><div className="panel empty"><div className="label">No vehicle</div>
-        <p className="empty__hint">{emptyHint(source, fleet.connected)}</p></div></main>
-    </> : <SelectedFlightDisplay fleet={fleet} view={view} nowMs={nowMs} source={source} visible={visible} active={section === 'vehicle'} />}
-    </div>
-  </WorkspaceShell>;
+
+  return (
+    <WorkspaceShell
+      title="Ground control"
+      meta={<span>{sourceLabel(source, fleet.connected)}</span>}
+      viewBar={
+        <>
+          <button
+            ref={navigation}
+            type="button"
+            className="lever"
+            onClick={() => {
+              if (section === 'fleet' && view) openVehicle(view.key);
+              else setSection('fleet');
+            }}
+            disabled={section === 'fleet' && !view}
+          >
+            {section === 'fleet' ? 'Open selected vehicle' : '← Fleet'}
+          </button>
+          {section === 'vehicle' && (
+            <>
+              <VehicleSelector fleet={fleet} onSelect={onSelect} />
+              <ViewsMenu visible={visible} onToggle={toggle} />
+            </>
+          )}
+          {controls}
+        </>
+      }
+    >
+      {section === 'fleet' && (
+        <FleetOverview
+          fleet={fleet}
+          nowMs={nowMs}
+          source={source}
+          onOpen={openVehicle}
+          camera={fleetCamera}
+        />
+      )}
+      <div className="vehicle-workspace" hidden={section !== 'vehicle'}>
+        {view === undefined ? (
+          <main className="shell__body">
+            <p className="slot__empty">
+              No vehicle selected.
+              <br />
+              {emptyHint(source, fleet.connected)}
+            </p>
+          </main>
+        ) : (
+          <SelectedFlightDisplay
+            fleet={fleet}
+            view={view}
+            nowMs={nowMs}
+            source={source}
+            visible={visible}
+            active={section === 'vehicle'}
+          />
+        )}
+      </div>
+    </WorkspaceShell>
+  );
 }
 
 /** Owns state that exists only while a vehicle is selected. */
@@ -96,44 +162,80 @@ function SelectedFlightDisplay({
   view: VehicleView;
   nowMs: number;
   source: StreamSource;
-  visible: PaneVisibility;
+  visible: PanelVisibility;
   active: boolean;
 }) {
   const readings = readFlight(view, nowMs);
   const mission = useMission(view.key, view.sysId, view.compId, source);
   const geometry = useMemo(() => missionGeometry(mission.snapshot), [mission.snapshot]);
   const activeSeq = activeMissionSequence(view, nowMs);
-  return <>
-    <aside className="workspace__sidebar" aria-label="Vehicle context">
-      <StatusBar view={view} nowMs={nowMs} connected={fleet.connected} source={source} />
-      <ArmControl active={active} key={view.key} view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} staleLatest={fleet.commandsStale[view.key] === true} nowMs={nowMs} />
-      <div className="workspace__position"><span className="label">Position · track</span>
-        <p>{hasDisplayValue(readings.position)
-          ? `${readings.position.value.latDeg.toFixed(6)}, ${readings.position.value.lonDeg.toFixed(6)}`
-          : 'Position unavailable'}</p><p>{view.track.length} / 500 track points</p>
-      </div>
-    </aside>
-    <WorkspacePanes visible={visible} panes={{
-      instruments: <InstrumentPanel readings={readings} />,
-      map:
-      active ? <MapPanel
-        position={hasDisplayValue(readings.position) ? readings.position.value : null}
-        track={view.track}
-        trajectory={displayTrajectory(readings, view.sample)}
-        mission={geometry}
-        missionRevision={mission.snapshot}
-        vehicleKey={view.key}
-      /> : null,
-      mission: <MissionPanel
+  const position = hasDisplayValue(readings.position) ? readings.position.value : null;
+  const status = { view, nowMs, connected: fleet.connected, source };
+
+  /*
+   * One node per registered panel id. Composition is the only thing that knows
+   * both the registry and the feature modules, which is what keeps a feature
+   * from being able to put itself on screen.
+   */
+  const content: PanelContent = {
+    link: <LinkRows {...status} />,
+    state: <StateRows {...status} />,
+    command: (
+      <ArmControl
+        active={active}
+        key={view.key}
+        view={view}
+        connected={fleet.connected}
+        source={source}
+        latest={fleet.commands[view.key]}
+        staleLatest={fleet.commandsStale[view.key] === true}
+        nowMs={nowMs}
+      />
+    ),
+    position: (
+      <>
+        <Row
+          label="Latitude"
+          value={position === null ? NO_VALUE : position.latDeg.toFixed(6)}
+          tone={position === null ? 'dead' : 'normal'}
+        />
+        <Row
+          label="Longitude"
+          value={position === null ? NO_VALUE : position.lonDeg.toFixed(6)}
+          tone={position === null ? 'dead' : 'normal'}
+        />
+        <Row label="Track" value={`${String(view.track.length)} / 500`} unit="pts" />
+      </>
+    ),
+    mission: (
+      <MissionPanel
         status={mission.status}
         snapshot={mission.snapshot}
         error={mission.error}
         geometry={geometry}
         activeSeq={activeSeq}
         onDownload={mission.onDownload}
-      />,
-    }} />
-  </>;
+      />
+    ),
+    map: active ? (
+      <MapPanel
+        position={position}
+        track={view.track}
+        trajectory={displayTrajectory(readings, view.sample)}
+        mission={geometry}
+        missionRevision={mission.snapshot}
+        vehicleKey={view.key}
+      />
+    ) : null,
+    guidance: <GuidancePanel readings={readings} />,
+    home: <HomePanel readings={readings} />,
+    radiolink: <RadioLinkPanel readings={readings} />,
+    instruments: <InstrumentPanel readings={readings} />,
+    families: <FamiliesPanel view={view} nowMs={nowMs} />,
+    sample: <SamplePanel view={view} />,
+  };
+
+  return <WorkspaceSlots visible={visible} content={content} />;
 }
 
 function useMission(key: VehicleKey, sysId: number, compId: number, source: StreamSource) {
@@ -153,12 +255,20 @@ function useMission(key: VehicleKey, sysId: number, compId: number, source: Stre
     const controller = new AbortController();
     request.current = controller;
     setState({ key, status: 'loading', snapshot: null, error: null });
-    void load(sysId, compId, controller.signal).then((snapshot) => {
-      if (request.current === controller) setState({ key, status: 'complete', snapshot, error: null });
-    }).catch((error: unknown) => {
-      if (request.current !== controller || controller.signal.aborted) return;
-      setState({ key, status: 'error', snapshot: null, error: error instanceof Error ? error.message : 'Mission download failed' });
-    });
+    void load(sysId, compId, controller.signal)
+      .then((snapshot) => {
+        if (request.current === controller)
+          setState({ key, status: 'complete', snapshot, error: null });
+      })
+      .catch((error: unknown) => {
+        if (request.current !== controller || controller.signal.aborted) return;
+        setState({
+          key,
+          status: 'error',
+          snapshot: null,
+          error: error instanceof Error ? error.message : 'Mission download failed',
+        });
+      });
   };
   return { ...missionPanelState(visible), onDownload };
 }
@@ -205,6 +315,18 @@ function displayTrajectory(
   }
 
   return projectTrajectoryToGeo(readings.position.value, offsets);
+}
+
+/** What the display is showing, for the app bar. Never inferred from the data. */
+function sourceLabel(source: StreamSource, connected: boolean): string {
+  switch (source) {
+    case 'mock':
+      return 'MOCK';
+    case 'replay':
+      return 'REPLAY';
+    default:
+      return connected ? 'LIVE' : 'DISCONNECTED';
+  }
 }
 
 function emptyHint(source: StreamSource, connected: boolean): string {

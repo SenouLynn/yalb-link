@@ -18,7 +18,7 @@ function expandSubdomains(template: string, subdomains: string[]): string[] {
   return subdomains.map((subdomain) => template.replace('{s}', subdomain));
 }
 
-export const DEFAULT_BASEMAP: TileSource = {
+const STREETS: TileSource = {
   id: 'streets',
   label: 'Streets (OSM)',
   tiles: expandSubdomains('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', ['a', 'b', 'c']),
@@ -27,8 +27,38 @@ export const DEFAULT_BASEMAP: TileSource = {
   tileSize: 256,
 };
 
+/*
+ * Dark by default.
+ *
+ * The map is the majority of the screen, so whichever basemap is default
+ * decides what the display looks like. Full-saturation OSM Streets puts
+ * hundreds of multicolour POI glyphs on an instrument panel whose whole palette
+ * is graphite and two signal hues — the tile vendor's design language becomes
+ * the application's. A desaturated dark ground keeps the flown track, the
+ * prediction and the commanded route as the only saturated things on the map,
+ * which is what makes them readable. Streets remains in the catalogue.
+ *
+ * Esri's Dark Gray Canvas rather than CARTO's `dark_all`: CARTO's basemap CDN
+ * now requires an API key and serves "API KEY REQUIRED" watermark tiles without
+ * one, so the two CARTO entries this catalogue used to carry were dead. Esri's
+ * canvas services are keyless and are designed as a ground for data overlay,
+ * which is exactly this use.
+ */
+export const DEFAULT_BASEMAP: TileSource = {
+  id: 'dark',
+  label: 'Dark canvas',
+  tiles: [
+    'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  ],
+  attribution: ESRI_ATTRIBUTION,
+  maxZoom: 16,
+  tileSize: 256,
+  dark: true,
+};
+
 export const BASEMAPS: TileSource[] = [
   DEFAULT_BASEMAP,
+  STREETS,
   {
     id: 'satellite',
     label: 'Satellite',
@@ -59,30 +89,13 @@ export const BASEMAPS: TileSource[] = [
     tileSize: 256,
   },
   {
-    id: 'dark',
-    label: 'Dark',
-    tiles: expandSubdomains('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', [
-      'a',
-      'b',
-      'c',
-      'd',
-    ]),
-    attribution: `${OSM_ATTRIBUTION}, &copy; CARTO`,
-    maxZoom: 20,
-    tileSize: 256,
-    dark: true,
-  },
-  {
     id: 'light',
-    label: 'Light',
-    tiles: expandSubdomains('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', [
-      'a',
-      'b',
-      'c',
-      'd',
-    ]),
-    attribution: `${OSM_ATTRIBUTION}, &copy; CARTO`,
-    maxZoom: 20,
+    label: 'Light canvas',
+    tiles: [
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    ],
+    attribution: ESRI_ATTRIBUTION,
+    maxZoom: 16,
     tileSize: 256,
   },
 ];

@@ -6,6 +6,7 @@ import { FleetMap, type SavedCamera } from '@/map/FleetMap';
 import { framePoints, type Frame } from '@/map/camera';
 import { readFlight, hasDisplayValue } from '@/ui/readings';
 import { num, age, NO_VALUE } from '@/ui/format';
+import { Row } from '@/ui/primitives';
 import type { StreamSource } from '@/stream/select';
 
 export function FleetOverview({ fleet, nowMs, onOpen, camera, source }: {
@@ -15,12 +16,13 @@ export function FleetOverview({ fleet, nowMs, onOpen, camera, source }: {
   const positions = fleetPositions(fleet, nowMs);
   const [request, setRequest] = useState<{ frame: Frame } | null>(null);
   const fit = () => { const frame = framePoints(positions); if (frame) setRequest({ frame }); };
-  return <>
-    <aside className="workspace__sidebar fleet-roster" aria-label="Fleet roster">
+  return <main className="shell__body">
+    <aside className="slot slot--rail fleet-roster" aria-label="Fleet roster">
       <div className="fleet-roster__heading"><h2>Fleet <span className="label">{fleet.order.length} vehicles</span></h2>
         <button type="button" onClick={fit} disabled={positions.length === 0}>Fit fleet</button></div>
-      <p className="label">{source === 'live' ? (fleet.connected ? 'Backend connected' : 'Backend disconnected') : source === 'replay' ? 'Recorded fleet' : 'Fixture fleet'}</p>
-      {fleet.order.length === 0 && <p className="empty__hint">Waiting for vehicles</p>}
+      <Row label="Source" value={source === 'live' ? (fleet.connected ? 'CONNECTED' : 'DISCONNECTED') : source === 'replay' ? 'REPLAY' : 'MOCK'}
+        tone={source === 'live' && fleet.connected ? 'normal' : 'caution'} />
+      {fleet.order.length === 0 && <p className="group__absent">Waiting for vehicles. Nothing has reported on the link yet.</p>}
       {fleet.order.map(key => {
         const view = fleet.vehicles[key];
         if (!view) return null;
@@ -42,6 +44,6 @@ export function FleetOverview({ fleet, nowMs, onOpen, camera, source }: {
         </article>;
       })}
     </aside>
-    <main className="workspace__main fleet-main" aria-label="Fleet map"><FleetMap positions={positions} onOpen={onOpen} camera={camera} request={request} /></main>
-  </>;
+    <section className="slot slot--center fleet-main" aria-label="Fleet map"><FleetMap positions={positions} onOpen={onOpen} camera={camera} request={request} /></section>
+  </main>;
 }

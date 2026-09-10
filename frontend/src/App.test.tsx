@@ -37,7 +37,7 @@ it('keeps one active stream and selection across pane toggles and rerenders in S
     act(() => { button.click(); });
   }
   act(() => { vi.advanceTimersByTime(1000); root.render(<StrictMode><App /></StrictMode>); });
-  act(() => { Array.from(container.querySelectorAll('button')).find(b => b.textContent === 'Back to fleet')?.click(); });
+  act(() => { Array.from(container.querySelectorAll('button')).find(b => b.textContent === '← Fleet')?.click(); });
   expect(container.querySelector('[aria-label="Fleet roster"]')).not.toBeNull();
   act(() => { container.querySelector<HTMLButtonElement>('[aria-label="Open vehicle 2:1"]')?.click(); });
   expect(harness.start).toHaveBeenCalledTimes(starts);

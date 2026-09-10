@@ -30,7 +30,7 @@ export function Provenance({ reading }: ProvenanceProps) {
       <div className="provenance__track">
         <div
           className="provenance__fill"
-          style={{ width: `${(remaining * 100).toFixed(1)}%` }}
+          style={{ transform: `scaleX(${remaining.toFixed(3)})` }}
         />
       </div>
       <div className="provenance__text">

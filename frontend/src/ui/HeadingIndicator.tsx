@@ -5,6 +5,7 @@ import type { HeadingResult } from '@/logic/heading';
 import { bearing, cardinal, NO_VALUE } from './format';
 import { headingTicks, HEADING_SPAN_DEG } from './instruments';
 import { Provenance } from './Provenance';
+import { Row } from './primitives';
 import { hasDisplayValue, type Reading } from './readings';
 
 const WIDTH = 240;
@@ -97,23 +98,15 @@ export function HeadingIndicator({ reading }: HeadingIndicatorProps) {
         />
       </svg>
 
-      <div>
-        <div className="label">Bearing · {String(HEADING_SPAN_DEG)}° shown</div>
-        <div className={valueClass(reading)}>
-          {heading === null ? NO_VALUE : bearing(heading.headingDeg)}
-          <span className="unit">°</span>
-        </div>
-      </div>
+      <Row
+        label={`Bearing · ${String(HEADING_SPAN_DEG)}° shown`}
+        value={heading === null ? NO_VALUE : bearing(heading.headingDeg)}
+        unit="°"
+        tone={hasDisplayValue(reading) ? 'normal' : 'dead'}
+      />
 
       <Provenance reading={reading} />
     </div>
   );
 }
 
-function valueClass(reading: Reading<HeadingResult>): string {
-  if (!hasDisplayValue(reading)) {
-    return 'value value--unavailable';
-  }
-
-  return 'value';
-}
