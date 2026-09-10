@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./tsconfig.storybook.tsbuildinfo"
+  },
+  "include": [
+    "stories",
+    ".storybook/**/*.ts",
+    ".storybook/**/*.tsx",
+    "src/vite-env.d.ts"
+  ]
+}

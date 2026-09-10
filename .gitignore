@@ -19,3 +19,6 @@
 # Local compose port/service overrides — machine-specific by definition.
 /docker-compose.override.yml
 /.venv/
+
+/frontend/storybook-static/
+/frontend/debug-storybook.log

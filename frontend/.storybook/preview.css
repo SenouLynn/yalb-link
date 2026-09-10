@@ -1,0 +1,5 @@
+/* The app locks page scrolling for its workspace. Isolated, long panels need
+   document scrolling in Storybook; workspace panes retain their own overflow. */
+html, body {
+  overflow: auto;
+}

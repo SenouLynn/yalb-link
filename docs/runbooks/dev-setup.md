@@ -222,6 +222,74 @@ messages the live path carries. Live SSE is the default and mock is opt-in:
 a ground station that quietly fell back to synthetic data would show an
 aircraft that does not exist.
 
+## Tune components in Storybook
+
+From the repository root:
+
+```sh
+cd frontend
+corepack pnpm install --frozen-lockfile
+corepack pnpm storybook
+```
+
+Open the URL printed by Storybook (normally <http://localhost:6006>). It may
+choose another port if 6006 is occupied. No backend, Docker, or SITL is needed.
+Use Corepack to select the pnpm version pinned in `package.json`.
+
+The catalog is ordered from individual components up to the actual frontend:
+
+- **Components**: provenance, readout, attitude, heading, vehicle selector,
+  pane controls, and the arm control's disabled mock posture.
+- **Panels**: instruments, inspection, vehicle status, mission, and the real map.
+- **Composition / Layout shell**: the production workspace shell with interactive
+  panes and a labelled map placeholder for focusing on layout alone.
+- **Frontend / Current app**: the actual `FlightDisplay` composition used by
+  `App`, including fleet/vehicle navigation, sidebar, instruments, map, mission
+  download, and pane controls. Select Vehicle, Fleet, Narrow, Animated, Stale,
+  Empty Fleet, or No Vehicle.
+
+Select a story and use **Controls** to change its values, reading state, mission
+length, or available width. Use the viewport toolbar for 390px and 1440px layouts.
+Narrow/wide stories select those viewports automatically. Changes to production
+components and `src/ui/display.css` hot reload here and in the app.
+
+Frozen readings use a fixed clock and existing mock telemetry fixtures. Stale
+and unavailable stories preserve the app's withheld-value behavior. The Animated
+frontend story runs the same `MockEventSource` and fleet reducer as `?source=mock`;
+its stream and timer stop when the story unmounts. The frontend stories reuse
+production visual composition; only stream and clock wiring are supplied by the
+story harness. Public basemap imagery requires internet, just as in the app.
+
+Mission download buttons in isolated panel stories log to Actions. The layout
+shell story has local clear/download controls. The real frontend uses the
+production mock mission loader. Arm commands remain disabled in mock mode.
+Connected command/replay scenarios and figure-eight/snake profiles are outside
+this catalog.
+
+Add stories under `frontend/stories/*.stories.tsx`; keep reusable helpers in
+`stories/fixtures.ts`. Only export story definitions from story files, since
+Storybook treats named exports as stories. Configuration is in `.storybook/`;
+production CSS is imported by its preview. The preview restores document
+scrolling for isolated panels. Map stories retain the production `pane--map`
+ancestor, which gives their inner map shell its height. Stories live outside `src` so the
+application and Bazel source targets remain separate from this workshop.
+
+```sh
+corepack pnpm typecheck       # includes stories and Storybook configuration
+corepack pnpm lint
+corepack pnpm build-storybook # standalone output in storybook-static/
+```
+
+For a browser smoke check, open each catalog story and check for render errors.
+On Components → Attitude → Stale, confirm a blank horizon and withheld roll/pitch. On
+Composition → Layout shell → Wide, toggle each pane, hide all panes, and restore them. Clear the
+mission and download it again. On Narrow, verify the stacked layout and scrolling.
+In Frontend → Current app, open the selected vehicle from Fleet, download its
+mission, toggle panels, and return to Fleet. Confirm the real map canvas appears
+and Animated updates readings. In Panels → Map, check that the canvas fills
+the selected height and actually displays tiles and mission markers. These are component checks, not acceptance
+evidence for live flight telemetry.
+
 ## The browser event stream
 
 `GET /api/events` is a `text/event-stream` with three event names:
