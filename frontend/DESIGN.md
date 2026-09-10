@@ -194,6 +194,8 @@ An instrument-hardware palette: graphite greys, off-white engraved lettering, an
 
 **The No-Good-Green Rule.** There is no green under any name. Normal is the absence of amber, never the presence of a reassuring colour.
 
+**The Rank Ladder Rule.** Three content voices — Lume for a value, Lume Dim for the label that names it, Absent Grey for the subordinate line beneath — and all three owe 4.5:1 on every surface they sit on, because all three are read and acted on. `src/ui/system.test.ts` checks each against Panel Graphite, Panel Deep, and Panel Raised. **Rank is never carried by colour alone.** Colour is the weakest signal here: at 10px on graphite, two greys a few points apart are the same grey, and the row note proved it by being Absent Grey and still reading as a second label. A change of rank moves at least two of surface, typeface, indent, and case. See ADR 0005.
+
 **The Two Absences Rule.** Disabled chrome is Dead Grey and is exempt from the contrast floor. A missing value is Absent Grey and is not — it is content and owes 4.5:1. Never use Dead Grey for something the operator has to read. A disabled lever is the exception that proves it: its border goes Dead, its label stays Absent, because the command lever is often the only control on screen and rendering it as the dimmest object on the page is bad regardless of what the exemption allows.
 
 ## Typography

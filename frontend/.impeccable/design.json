@@ -1,39 +1,263 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-10T00:00:00Z",
+  "generatedAt": "2026-09-10T18:57:34Z",
   "title": "Design System: YALB-GCS",
   "extensions": {
     "colorMeta": {
-      "panel": { "role": "neutral", "displayName": "Panel Graphite", "canonical": "#14171c", "tonalRamp": ["#040506", "#0a0c0f", "#14171c", "#1f232a", "#2b3038", "#3d434d", "#5c6470", "#8f97a3"] },
-      "panel-deep": { "role": "neutral", "displayName": "Panel Deep", "canonical": "#0d1013", "tonalRamp": ["#030405", "#070809", "#0d1013", "#171b20", "#242a31", "#363d47", "#535c69", "#88909d"] },
-      "panel-raised": { "role": "neutral", "displayName": "Panel Raised", "canonical": "#1b1f26", "tonalRamp": ["#050708", "#0c0e12", "#1b1f26", "#262b34", "#333944", "#464e5b", "#67707f", "#98a1af"] },
-      "bezel": { "role": "neutral", "displayName": "Bezel", "canonical": "#272c34", "tonalRamp": ["#080a0c", "#121519", "#1c2027", "#272c34", "#353b45", "#4a515d", "#6b7381", "#9aa2b0"] },
-      "lume": { "role": "primary", "displayName": "Lume", "canonical": "#d8dde3", "tonalRamp": ["#1c2126", "#2f363d", "#474f58", "#636c77", "#848d99", "#a7afba", "#c4cbd3", "#d8dde3"] },
-      "lume-dim": { "role": "primary", "displayName": "Lume Dim", "canonical": "#8b939e", "tonalRamp": ["#15181c", "#242a30", "#373e46", "#4d555f", "#666f7a", "#8b939e", "#adb4bd", "#d0d5db"] },
-      "caution": { "role": "secondary", "displayName": "Caution Amber", "canonical": "#d9a441", "tonalRamp": ["#2a1e07", "#452f0b", "#634311", "#845a18", "#a67221", "#c78c30", "#d9a441", "#ecc47f"] },
-      "absent": { "role": "neutral", "displayName": "Absent Grey", "canonical": "#7d8794", "tonalRamp": ["#12151a", "#20252b", "#31383f", "#454d56", "#5c656f", "#7d8794", "#a3abb6", "#c9ced5"] },
-      "dead": { "role": "neutral", "displayName": "Dead Grey", "canonical": "#4d5560", "tonalRamp": ["#0b0d10", "#161a1f", "#232830", "#333a44", "#4d5560", "#6a7380", "#8f97a3", "#bcc2ca"] },
-      "sky": { "role": "tertiary", "displayName": "Instrument Sky", "canonical": "#2d6d9e", "tonalRamp": ["#061019", "#0c1f2f", "#133249", "#1c4667", "#255a83", "#2d6d9e", "#4b91c4", "#8dbee0"] },
-      "ground": { "role": "tertiary", "displayName": "Instrument Ground", "canonical": "#7a5326", "tonalRamp": ["#1a1108", "#2b1d0d", "#3f2b13", "#54391a", "#6a4820", "#7a5326", "#a5723a", "#cfa571"] },
-      "prediction": { "role": "tertiary", "displayName": "Prediction Blue-Grey", "canonical": "#9fb4c9", "tonalRamp": ["#141c24", "#22303c", "#334656", "#465d71", "#5c778d", "#7996ad", "#9fb4c9", "#c9d6e2"] },
-      "track": { "role": "tertiary", "displayName": "Track Lavender", "canonical": "#b6a6d9", "tonalRamp": ["#b6a6d9"] },
-      "mission-route": { "role": "tertiary", "displayName": "Mission Cyan", "canonical": "#c7f0ff", "tonalRamp": ["#0c1e26", "#14323f", "#1e4c5f", "#296880", "#3785a3", "#63aecb", "#9bd4ec", "#c7f0ff"] }
+      "panel": {
+        "role": "neutral",
+        "displayName": "Panel Graphite",
+        "canonical": "#14171c",
+        "tonalRamp": [
+          "#040506",
+          "#0a0c0f",
+          "#14171c",
+          "#1f232a",
+          "#2b3038",
+          "#3d434d",
+          "#5c6470",
+          "#8f97a3"
+        ]
+      },
+      "panel-deep": {
+        "role": "neutral",
+        "displayName": "Panel Deep",
+        "canonical": "#0d1013",
+        "tonalRamp": [
+          "#030405",
+          "#070809",
+          "#0d1013",
+          "#171b20",
+          "#242a31",
+          "#363d47",
+          "#535c69",
+          "#88909d"
+        ]
+      },
+      "panel-raised": {
+        "role": "neutral",
+        "displayName": "Panel Raised",
+        "canonical": "#1b1f26",
+        "tonalRamp": [
+          "#050708",
+          "#0c0e12",
+          "#1b1f26",
+          "#262b34",
+          "#333944",
+          "#464e5b",
+          "#67707f",
+          "#98a1af"
+        ]
+      },
+      "bezel": {
+        "role": "neutral",
+        "displayName": "Bezel",
+        "canonical": "#272c34",
+        "tonalRamp": [
+          "#080a0c",
+          "#121519",
+          "#1c2027",
+          "#272c34",
+          "#353b45",
+          "#4a515d",
+          "#6b7381",
+          "#9aa2b0"
+        ]
+      },
+      "lume": {
+        "role": "primary",
+        "displayName": "Lume",
+        "canonical": "#d8dde3",
+        "tonalRamp": [
+          "#1c2126",
+          "#2f363d",
+          "#474f58",
+          "#636c77",
+          "#848d99",
+          "#a7afba",
+          "#c4cbd3",
+          "#d8dde3"
+        ]
+      },
+      "lume-dim": {
+        "role": "primary",
+        "displayName": "Lume Dim",
+        "canonical": "#8b939e",
+        "tonalRamp": [
+          "#15181c",
+          "#242a30",
+          "#373e46",
+          "#4d555f",
+          "#666f7a",
+          "#8b939e",
+          "#adb4bd",
+          "#d0d5db"
+        ]
+      },
+      "caution": {
+        "role": "secondary",
+        "displayName": "Caution Amber",
+        "canonical": "#d9a441",
+        "tonalRamp": [
+          "#2a1e07",
+          "#452f0b",
+          "#634311",
+          "#845a18",
+          "#a67221",
+          "#c78c30",
+          "#d9a441",
+          "#ecc47f"
+        ]
+      },
+      "absent": {
+        "role": "neutral",
+        "displayName": "Absent Grey",
+        "canonical": "#7d8794",
+        "tonalRamp": [
+          "#12151a",
+          "#20252b",
+          "#31383f",
+          "#454d56",
+          "#5c656f",
+          "#7d8794",
+          "#a3abb6",
+          "#c9ced5"
+        ]
+      },
+      "dead": {
+        "role": "neutral",
+        "displayName": "Dead Grey",
+        "canonical": "#4d5560",
+        "tonalRamp": [
+          "#0b0d10",
+          "#161a1f",
+          "#232830",
+          "#333a44",
+          "#4d5560",
+          "#6a7380",
+          "#8f97a3",
+          "#bcc2ca"
+        ]
+      },
+      "sky": {
+        "role": "tertiary",
+        "displayName": "Instrument Sky",
+        "canonical": "#2d6d9e",
+        "tonalRamp": [
+          "#061019",
+          "#0c1f2f",
+          "#133249",
+          "#1c4667",
+          "#255a83",
+          "#2d6d9e",
+          "#4b91c4",
+          "#8dbee0"
+        ]
+      },
+      "ground": {
+        "role": "tertiary",
+        "displayName": "Instrument Ground",
+        "canonical": "#7a5326",
+        "tonalRamp": [
+          "#1a1108",
+          "#2b1d0d",
+          "#3f2b13",
+          "#54391a",
+          "#6a4820",
+          "#7a5326",
+          "#a5723a",
+          "#cfa571"
+        ]
+      },
+      "prediction": {
+        "role": "tertiary",
+        "displayName": "Prediction Blue-Grey",
+        "canonical": "#9fb4c9",
+        "tonalRamp": [
+          "#141c24",
+          "#22303c",
+          "#334656",
+          "#465d71",
+          "#5c778d",
+          "#7996ad",
+          "#9fb4c9",
+          "#c9d6e2"
+        ]
+      },
+      "track": {
+        "role": "tertiary",
+        "displayName": "Track Lavender",
+        "canonical": "#b6a6d9",
+        "tonalRamp": [
+          "#160f24",
+          "#2d204b",
+          "#453071",
+          "#5c4198",
+          "#7658b8",
+          "#967fc8",
+          "#b6a6d9",
+          "#ded7ee"
+        ]
+      },
+      "mission-route": {
+        "role": "tertiary",
+        "displayName": "Mission Cyan",
+        "canonical": "#c7f0ff",
+        "tonalRamp": [
+          "#0c1e26",
+          "#14323f",
+          "#1e4c5f",
+          "#296880",
+          "#3785a3",
+          "#63aecb",
+          "#9bd4ec",
+          "#c7f0ff"
+        ]
+      }
     },
     "typographyMeta": {
-      "lead": { "displayName": "Lead", "purpose": "The one available emphasis: a group's single headline value (17px mono tabular). Once per group, never six." },
-      "body": { "displayName": "Body", "purpose": "Control text, hints, prose in a panel, input text (12px mono)." },
-      "data": { "displayName": "Data", "purpose": "The value in a data row and the default size of the whole application (11px mono, tabular figures)." },
-      "label": { "displayName": "Label", "purpose": "Uppercase letter-spaced section headers and row labels (10px sans, 600). The only non-mono role." }
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "The one available emphasis: a group's single headline value (17px mono tabular). Once per group, never six. It leads each instrument group \u2014 altitude, ground speed, airspeed, battery \u2014 which is what gives the aux column a spine to scan down; before that it had one consumer application-wide, which made a four-step scale really three steps and a special case."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Control text, hints, prose in a panel, input text (12px mono)."
+      },
+      "data": {
+        "displayName": "Data",
+        "purpose": "The value in a data row and the default size of the whole application (11px mono, tabular figures)."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase letter-spaced section headers, row labels, and lever labels (10px sans, 600; the lever uses the mono face at 12px but the same tracking and uppercasing). Case is applied by CSS, never written into the source string."
+      }
     },
     "shadows": [
-      { "name": "selection-edge", "value": "inset 1px 0 0 var(--lume)", "purpose": "Marks the selected row in the fleet roster, paired with an 8% lume wash. Inset so it reads as a marked edge, not a lifted object." },
-      { "name": "overlay-ambient", "value": "0 4px 14px rgb(0 0 0 / 55%)", "purpose": "The Views popover, and only the Views popover. The single element in the build that genuinely floats above the plane." }
+      {
+        "name": "selection-edge",
+        "value": "inset 1px 0 0 var(--lume)",
+        "purpose": "Marks the selected row in the fleet roster, paired with an 8% lume wash. Inset so it reads as a marked edge, not a lifted object."
+      },
+      {
+        "name": "overlay-ambient",
+        "value": "0 4px 14px rgb(0 0 0 / 55%)",
+        "purpose": "The Views popover, and only the Views popover. The single element in the build that genuinely floats above the plane."
+      }
     ],
     "motion": [
-      { "name": "provenance-drain", "value": "transform 120ms linear", "purpose": "The provenance bar draining toward its TTL. Transform, not width: every reading on screen holds one and they redraw four times a second. Disabled under prefers-reduced-motion." }
+      {
+        "name": "provenance-drain",
+        "value": "transform 120ms linear",
+        "purpose": "The provenance bar draining toward its TTL. Transform, not width: every reading on screen holds one and they redraw four times a second. Disabled under prefers-reduced-motion."
+      }
     ],
     "breakpoints": [
-      { "name": "stack", "value": "60rem", "purpose": "Below this the three flex columns become one scrolling stack of bounded regions, reordered rail then aux then center. Type never scales." }
+      {
+        "name": "stack",
+        "value": "60rem",
+        "purpose": "Below this the three flex columns become one scrolling stack of bounded regions, reordered rail then aux then center. Type never scales, and the row unit does not change with it."
+      }
     ]
   },
   "components": [
@@ -41,129 +265,225 @@
       "name": "Lever",
       "kind": "button",
       "refersTo": "lever",
-      "description": "The one button shape in the application. Variants change colour and width, never form.",
-      "html": "<button class=\"ds-lever\">Download mission</button>",
-      "css": ".ds-lever { display: inline-flex; align-items: center; justify-content: center; gap: 0.35em; min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #272c34; border-radius: 2px; background: #14171c; color: #d8dde3; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 600; line-height: 1; letter-spacing: 0.06em; white-space: nowrap; cursor: pointer; } .ds-lever:hover { background: #1b1f26; border-color: #8b939e; } .ds-lever:active { background: #0d1013; } .ds-lever:focus-visible { outline: 2px solid #d8dde3; outline-offset: 1px; }"
+      "description": "The one button shape. Inline in a lever row at content width, or wide filling its group. Sentence case in source; CSS does the uppercasing. Disabled puts \"disabled\" on the border and leaves the label readable, because the command lever is often the only control on screen.",
+      "html": "<div style=\"display:flex;gap:0.25rem\"><button class=\"ds-lever\">Fit mission</button><button class=\"ds-lever\" aria-pressed=\"true\">Follow vehicle</button><button class=\"ds-lever\" disabled>Download mission</button></div>",
+      "css": ".ds-lever { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #272c34; border-radius: 2px; background: #14171c; color: #d8dde3; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 600; line-height: 1.5; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; cursor: pointer; } .ds-lever:hover:not(:disabled) { background: #1b1f26; border-color: #8b939e; } .ds-lever:active:not(:disabled) { background: #0d1013; } .ds-lever:focus-visible { outline: 2px solid #d8dde3; outline-offset: 1px; } .ds-lever[aria-pressed=\"true\"] { background: #0d1013; border-color: #8b939e; } .ds-lever:disabled { color: #7d8794; border-color: #4d5560; cursor: default; }"
+    },
+    {
+      "name": "Lever, wide",
+      "kind": "button",
+      "refersTo": "lever",
+      "description": "A group's one committing action, filling the slot. The second and last placement \u2014 status prose sits above it, never beside it.",
+      "html": "<div style=\"width:15rem\"><p class=\"ds-note\">No command issued</p><button class=\"ds-lever ds-lever--wide\">Disarm</button></div>",
+      "css": ".ds-lever { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #272c34; border-radius: 2px; background: #14171c; color: #d8dde3; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 600; line-height: 1.5; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; cursor: pointer; } .ds-lever:hover:not(:disabled) { background: #1b1f26; border-color: #8b939e; } .ds-lever:active:not(:disabled) { background: #0d1013; } .ds-lever:focus-visible { outline: 2px solid #d8dde3; outline-offset: 1px; } .ds-lever--wide { width: 100%; } .ds-note { margin: 0; padding: 0.0625rem 0.5rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; line-height: 1.5; color: #8b939e; }"
     },
     {
       "name": "Lever, caution",
       "kind": "button",
       "refersTo": "lever-caution",
-      "description": "Amber-edged because the action itself is the hazard — arming a vehicle — not because it is primary.",
-      "html": "<button class=\"ds-lever-caution\">DISARM</button>",
-      "css": ".ds-lever-caution { display: inline-flex; align-items: center; justify-content: center; min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #d9a441; border-radius: 2px; background: #14171c; color: #d9a441; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 600; line-height: 1; letter-spacing: 0.06em; cursor: pointer; } .ds-lever-caution:hover { background: color-mix(in srgb, #d9a441 12%, #14171c); color: #d8dde3; } .ds-lever-caution:focus-visible { outline: 2px solid #d8dde3; outline-offset: 1px; }"
+      "description": "Amber-edged because the action itself is the hazard \u2014 arming a vehicle. Never because it is primary, and never for an action destructive only to data.",
+      "html": "<button class=\"ds-lever ds-lever--caution\">Confirm arm</button>",
+      "css": ".ds-lever { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #272c34; border-radius: 2px; background: #14171c; color: #d8dde3; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 600; line-height: 1.5; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; cursor: pointer; } .ds-lever:hover:not(:disabled) { background: #1b1f26; border-color: #8b939e; } .ds-lever:active:not(:disabled) { background: #0d1013; } .ds-lever:focus-visible { outline: 2px solid #d8dde3; outline-offset: 1px; } .ds-lever--caution { border-color: #d9a441; color: #d9a441; } .ds-lever--caution:hover:not(:disabled) { background: color-mix(in srgb, #d9a441 12%, transparent); color: #d8dde3; }"
     },
     {
-      "name": "Lever, disabled",
+      "name": "Lever, navigating",
       "kind": "button",
-      "refersTo": "lever-disabled",
-      "description": "The border carries 'disabled'; the label stays readable, because the command lever is often the only control on screen.",
-      "html": "<button class=\"ds-lever-disabled\" disabled>Download mission</button>",
-      "css": ".ds-lever-disabled { display: inline-flex; align-items: center; justify-content: center; min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #4d5560; border-radius: 2px; background: #14171c; color: #7d8794; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 600; line-height: 1; letter-spacing: 0.06em; cursor: default; }"
+      "refersTo": "lever",
+      "description": "A lever that changes the address is an anchor, so it can be opened in a new tab, copied, and announced as a link. It borrows nothing \u2014 it is the same primitive with an href.",
+      "html": "<a class=\"ds-lever\" href=\"#\">Bench run</a>",
+      "css": ".ds-lever { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #272c34; border-radius: 2px; background: #14171c; color: #d8dde3; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 600; line-height: 1.5; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; cursor: pointer; } .ds-lever:hover:not(:disabled) { background: #1b1f26; border-color: #8b939e; } .ds-lever:active:not(:disabled) { background: #0d1013; } .ds-lever:focus-visible { outline: 2px solid #d8dde3; outline-offset: 1px; } a.ds-lever { text-decoration: none; color: #d8dde3; }"
     },
     {
-      "name": "Field",
-      "kind": "input",
-      "refersTo": "field-input",
-      "description": "A labelled input, sized on the target axis rather than the density axis.",
-      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">Altitude</span><input class=\"ds-field-input\" value=\"25.8\" /></label>",
-      "css": ".ds-field { display: grid; gap: 0.125rem; padding: 0.0625rem 0.5rem; } .ds-field-label { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.625rem; line-height: 1.25; letter-spacing: 0.06em; text-transform: uppercase; color: #8b939e; } .ds-field-input { min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #272c34; border-radius: 2px; background: #0d1013; color: #d8dde3; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-variant-numeric: tabular-nums; } .ds-field-input::placeholder { color: #8b939e; } .ds-field-input:focus-visible { outline: 2px solid #d8dde3; outline-offset: 1px; border-color: #8b939e; }"
+      "name": "Group header",
+      "kind": "nav",
+      "refersTo": "group-head",
+      "description": "A filled bar one row unit tall, bled to the slot edge \u2014 ImGui's CollapsingHeader. A header and a row label previously differed only by weight and tracking while standing the same height, so a rail of groups read as one wall of text.",
+      "html": "<div class=\"ds-group__head\"><span class=\"ds-group__label\">Target state</span><div class=\"ds-prov\"><div class=\"ds-prov__text\"><span>SYS_STATUS</span><span>0.2s</span></div><div class=\"ds-prov__track\"><div class=\"ds-prov__fill\"></div></div></div></div>",
+      "css": ".ds-group__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; min-height: 1.25rem; padding: 0 0.5rem; background: color-mix(in srgb, #d8dde3 7%, transparent); border-bottom: 1px solid #272c34; } .ds-group__label { font-family: ui-sans-serif, system-ui, \"Helvetica Neue\", Arial, sans-serif; font-size: 0.625rem; font-weight: 600; line-height: 1.4; letter-spacing: 0.14em; text-transform: uppercase; color: #8b939e; } .ds-prov { display: flex; flex-direction: column-reverse; flex: 0 0 auto; } .ds-prov__track { height: 1px; background: #272c34; overflow: hidden; } .ds-prov__fill { height: 100%; background: #8b939e; transform-origin: left; transform: scaleX(0.62); transition: transform 120ms linear; } .ds-prov__text { display: flex; justify-content: space-between; gap: 0.5rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; line-height: 1.4; letter-spacing: 0.06em; color: #8b939e; }"
     },
     {
       "name": "Data row",
       "kind": "custom",
       "refersTo": "row",
-      "description": "The atom: a two-column grid, uppercase label left, mono tabular value right-aligned against a shared edge, unit dimmer. A grid and not a flex row because the shared edge is what makes a column of readings scan as one table.",
-      "html": "<div class=\"ds-row\"><span class=\"ds-row-label\">Ground speed</span><span class=\"ds-row-value\">6.0<span class=\"ds-row-unit\">m/s</span></span></div><div class=\"ds-row\"><span class=\"ds-row-label\">Climb</span><span class=\"ds-row-value ds-row-value-caution\">+0.5<span class=\"ds-row-unit\">m/s</span></span></div><div class=\"ds-row\"><span class=\"ds-row-label\">Airspeed</span><span class=\"ds-row-value ds-row-value-absent\">&ndash;&ndash;</span></div>",
-      "css": ".ds-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0.5rem; padding: 0.0625rem 0.5rem; } .ds-row:hover { background: color-mix(in srgb, #d8dde3 4%, transparent); } .ds-row-label { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.625rem; line-height: 1.25; letter-spacing: 0.06em; text-transform: uppercase; color: #8b939e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-row-value { font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.6875rem; font-variant-numeric: tabular-nums; line-height: 1.25; color: #d8dde3; text-align: right; white-space: nowrap; } .ds-row-value-caution { color: #d9a441; } .ds-row-value-absent { color: #7d8794; } .ds-row-unit { font-size: 0.625rem; color: #8b939e; margin-left: 0.3em; }"
+      "description": "The atom: label left, value right-aligned against a shared edge so a column scans as one table. Exactly one row unit; a row carrying a note is exactly two. The note is subordinated by typeface, indent and case \u2014 not by colour, which at this size cannot carry a rank on its own.",
+      "html": "<div style=\"width:15rem\"><div class=\"ds-row\"><span class=\"ds-row__label\">Ground speed</span><span class=\"ds-row__value\">6.1<span class=\"ds-row__unit\">m/s</span></span></div><div class=\"ds-row\"><span class=\"ds-row__label\">Climb</span><span class=\"ds-row__value\">+0.7<span class=\"ds-row__unit\">m/s</span></span></div><div class=\"ds-row ds-row--noted\"><span class=\"ds-row__label\">Crosstrack<span class=\"ds-row__note\">+ right of leg</span></span><span class=\"ds-row__value\">+0.8<span class=\"ds-row__unit\">m</span></span></div></div>",
+      "css": ".ds-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0.5rem; min-height: 1.25rem; padding: 0.0625rem 0.5rem; } .ds-row:hover { background: color-mix(in srgb, #d8dde3 4%, transparent); } .ds-row__label { font-family: ui-sans-serif, system-ui, \"Helvetica Neue\", Arial, sans-serif; font-size: 0.625rem; line-height: 1.25; letter-spacing: 0.06em; text-transform: uppercase; color: #8b939e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-row__value { font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.6875rem; font-variant-numeric: tabular-nums; line-height: 1.25; color: #d8dde3; text-align: right; white-space: nowrap; } .ds-row__unit { font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; color: #8b939e; margin-left: 0.3rem; } .ds-row--noted { min-height: 2.5rem; } .ds-row__note { display: block; padding-left: 0.5rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; line-height: 1.25; letter-spacing: 0.06em; color: #7d8794; text-transform: none; }"
     },
     {
-      "name": "Group with provenance",
-      "kind": "card",
-      "refersTo": "group-head",
-      "description": "A labelled section of rows over a hairline, with the MAVLink source and age stated once for the whole table and a 1px bar that drains as the readings age toward their TTL.",
-      "html": "<section class=\"ds-group\"><div class=\"ds-group-head\"><span class=\"ds-group-label\">Flight path</span><div class=\"ds-prov\"><div class=\"ds-prov-track\"><div class=\"ds-prov-fill\"></div></div><div class=\"ds-prov-text\"><span>VFR_HUD</span><span>0.3s</span></div></div></div><div class=\"ds-group-body\"><div class=\"ds-row\"><span class=\"ds-row-label\">Ground speed</span><span class=\"ds-row-value\">6.0<span class=\"ds-row-unit\">m/s</span></span></div><div class=\"ds-row ds-row-lead\"><span class=\"ds-row-label\">Altitude<span class=\"ds-row-note\">above home</span></span><span class=\"ds-row-value\">25.8<span class=\"ds-row-unit\">m</span></span></div></div></section>",
-      "css": ".ds-group { background: #14171c; } .ds-group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; padding: 0.0625rem 0.5rem; border-bottom: 1px solid #272c34; } .ds-group-label { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.625rem; font-weight: 600; line-height: 1.4; letter-spacing: 0.14em; text-transform: uppercase; color: #8b939e; } .ds-group-body { padding: 0.0625rem 0; } .ds-prov { flex: 0 0 auto; min-width: 7rem; } .ds-prov-track { height: 1px; background: #272c34; overflow: hidden; } .ds-prov-fill { height: 100%; background: #8b939e; transform-origin: left center; transform: scaleX(0.7); transition: transform 120ms linear; } .ds-prov-text { display: flex; justify-content: space-between; gap: 0.4rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; line-height: 1.5; letter-spacing: 0.02em; color: #8b939e; } .ds-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0.5rem; padding: 0.0625rem 0.5rem; } .ds-row:hover { background: color-mix(in srgb, #d8dde3 4%, transparent); } .ds-row-label { font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.625rem; line-height: 1.25; letter-spacing: 0.06em; text-transform: uppercase; color: #8b939e; } .ds-row-note { display: block; color: #7d8794; letter-spacing: 0.02em; text-transform: none; } .ds-row-value { font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.6875rem; font-variant-numeric: tabular-nums; line-height: 1.25; color: #d8dde3; text-align: right; } .ds-row-lead .ds-row-value { font-size: 1.0625rem; line-height: 1.15; } .ds-row-unit { font-size: 0.625rem; color: #8b939e; margin-left: 0.3em; }"
+      "name": "Data row, lead",
+      "kind": "custom",
+      "refersTo": "row-lead",
+      "description": "The one emphasis, once per group. It leads each instrument group, which is what gives the aux column a spine the eye can run down.",
+      "html": "<div style=\"width:15rem\"><div class=\"ds-row ds-row--lead\"><span class=\"ds-row__label\">Altitude<span class=\"ds-row__note\">above home</span></span><span class=\"ds-row__value\">26.1<span class=\"ds-row__unit\">m</span></span></div></div>",
+      "css": ".ds-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 0.5rem; min-height: 1.25rem; padding: 0.0625rem 0.5rem; } .ds-row:hover { background: color-mix(in srgb, #d8dde3 4%, transparent); } .ds-row__label { font-family: ui-sans-serif, system-ui, \"Helvetica Neue\", Arial, sans-serif; font-size: 0.625rem; line-height: 1.25; letter-spacing: 0.06em; text-transform: uppercase; color: #8b939e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-row__value { font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.6875rem; font-variant-numeric: tabular-nums; line-height: 1.25; color: #d8dde3; text-align: right; white-space: nowrap; } .ds-row__unit { font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; color: #8b939e; margin-left: 0.3rem; } .ds-row--lead { min-height: 2.5rem; } .ds-row--lead .ds-row__value { font-size: 1.0625rem; line-height: 1.15; } .ds-row__note { display: block; padding-left: 0.5rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; line-height: 1.25; letter-spacing: 0.06em; color: #7d8794; text-transform: none; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field-input",
+      "description": "A labelled well sized on the target axis rather than the density axis, so it stays hittable in the field.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field__label\">Speed</span><input class=\"ds-field__input\" value=\"1x\" /></label>",
+      "css": ".ds-field { display: flex; flex-direction: column; gap: 0.0625rem; padding: 0.0625rem 0.5rem; } .ds-field__label { font-family: ui-sans-serif, system-ui, \"Helvetica Neue\", Arial, sans-serif; font-size: 0.625rem; line-height: 1.25; letter-spacing: 0.06em; text-transform: uppercase; color: #8b939e; } .ds-field__input { min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #272c34; border-radius: 2px; background: #0d1013; color: #d8dde3; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-variant-numeric: tabular-nums; } .ds-field__input:focus-visible { outline: 2px solid #d8dde3; outline-offset: 1px; border-color: #8b939e; }"
+    },
+    {
+      "name": "Confirm",
+      "kind": "input",
+      "refersTo": "field-input",
+      "description": "The assertion is spelled out in full, because a checkbox beside the word \"confirm\" attests to nothing. It guards actions destructive to data, which is why no browser confirm() dialog remains in the application.",
+      "html": "<label class=\"ds-check\"><input type=\"checkbox\" /><span>Permanently delete bench run</span></label>",
+      "css": ".ds-check { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 0.625rem; min-height: 1.75rem; padding: 0.0625rem 0.5rem; } .ds-check input { width: 0.875rem; height: 0.875rem; accent-color: #8b939e; } .ds-check span { font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; line-height: 1.5; color: #d8dde3; }"
     },
     {
       "name": "Tab strip",
       "kind": "nav",
       "refersTo": "tab",
-      "description": "Several panels sharing one slot, one visible at a time. How the developer tier stays resident without spending a column on every inspection view.",
-      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab\" aria-selected=\"true\">Families</button><button class=\"ds-tab\">Raw sample</button><span class=\"ds-tabs-note\">10/10 fresh</span></div>",
-      "css": ".ds-tabs { display: flex; align-items: stretch; border-bottom: 1px solid #272c34; background: #14171c; } .ds-tab { min-height: 1.75rem; padding: 0 0.625rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #8b939e; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; } .ds-tab:hover { color: #d8dde3; background: #1b1f26; } .ds-tab[aria-selected=\"true\"] { color: #d8dde3; border-bottom-color: #d8dde3; } .ds-tab:focus-visible { outline: 2px solid #d8dde3; outline-offset: -2px; } .ds-tabs-note { margin-left: auto; align-self: center; padding: 0 0.625rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; color: #8b939e; }"
+      "description": "Several panels sharing one slot. How the developer tier stays resident without spending a column on every inspection view at once.",
+      "html": "<div class=\"ds-tabs\"><button class=\"ds-tab\" aria-selected=\"true\">Families</button><button class=\"ds-tab\">Raw sample</button><span class=\"ds-tabs__note\">10/10 fresh</span></div>",
+      "css": ".ds-tabs { display: flex; align-items: stretch; border-bottom: 1px solid #272c34; } .ds-tab { min-height: 1.75rem; padding: 0 0.625rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: #8b939e; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer; } .ds-tab:hover { color: #d8dde3; background: #1b1f26; } .ds-tab[aria-selected=\"true\"] { color: #d8dde3; border-bottom-color: #d8dde3; } .ds-tabs__note { margin-left: auto; align-self: center; padding: 0 0.625rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; letter-spacing: 0.06em; color: #8b939e; }"
     },
     {
       "name": "Chip",
       "kind": "chip",
       "refersTo": "chip",
-      "description": "A state badge sitting inline with text. Rows carry values; a chip carries a label's own state.",
-      "html": "<span class=\"ds-chip ds-chip-active\">Active</span> <span class=\"ds-chip ds-chip-caution\">Stale</span> <span class=\"ds-chip ds-chip-dead\">Disabled</span>",
-      "css": ".ds-chip { display: inline-flex; align-items: baseline; gap: 0.3rem; padding: 0 0.3rem; border: 1px solid #272c34; border-radius: 2px; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; letter-spacing: 0.06em; color: #8b939e; } .ds-chip-active { color: #d8dde3; border-color: #8b939e; } .ds-chip-caution { color: #d9a441; border-color: #d9a441; } .ds-chip-dead { color: #4d5560; }"
+      "description": "Carries a label's own state, where a row carries a value. Sits on the text baseline beside what it annotates.",
+      "html": "<span class=\"ds-chip ds-chip--active\">Active</span> <span class=\"ds-chip ds-chip--caution\">Lost</span>",
+      "css": ".ds-chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0 0.3rem; border: 1px solid #272c34; border-radius: 2px; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; letter-spacing: 0.06em; color: #8b939e; } .ds-chip--active { color: #d8dde3; border-color: #8b939e; } .ds-chip--caution { color: #d9a441; border-color: #d9a441; }"
     },
     {
       "name": "App bar and view subbar",
       "kind": "nav",
       "refersTo": "app-bar",
-      "description": "Two stacked 28px bars. The subbar is Panel Deep because it is the subordinate of the two.",
-      "html": "<div class=\"ds-bar\"><span class=\"ds-bar-title\">Ground control</span><span class=\"ds-bar-meta\">Mock</span></div><div class=\"ds-bar ds-bar-view\"><button class=\"ds-lever\">Fleet</button><button class=\"ds-lever\">Views (12)</button></div>",
-      "css": ".ds-bar { display: flex; align-items: center; gap: 0.875rem; min-height: 1.75rem; padding: 0 0.5rem; border-bottom: 1px solid #272c34; background: #14171c; } .ds-bar-view { gap: 0.25rem; background: #0d1013; } .ds-bar-title { font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #d8dde3; } .ds-bar-meta { margin-left: auto; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; letter-spacing: 0.08em; text-transform: uppercase; color: #8b939e; } .ds-lever { display: inline-flex; align-items: center; min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #272c34; border-radius: 2px; background: #14171c; color: #d8dde3; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.06em; cursor: pointer; } .ds-lever:hover { background: #1b1f26; border-color: #8b939e; }"
+      "description": "Two stacked bars: the app bar in graphite carrying the title and source badge, the view subbar beneath it in panel deep because it is the subordinate of the two.",
+      "html": "<div><div class=\"ds-bar ds-bar--app\"><span class=\"ds-bar__title\">Ground control</span><span class=\"ds-bar__meta\">Mock</span></div><div class=\"ds-bar ds-bar--view\"><button class=\"ds-lever\">&#8592; Fleet</button><button class=\"ds-lever\">Views (12)</button></div></div>",
+      "css": ".ds-lever { display: inline-flex; align-items: center; justify-content: center; gap: 0.25rem; min-height: 1.75rem; padding: 0 0.625rem; border: 1px solid #272c34; border-radius: 2px; background: #14171c; color: #d8dde3; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; font-weight: 600; line-height: 1.5; letter-spacing: 0.14em; text-transform: uppercase; white-space: nowrap; cursor: pointer; } .ds-lever:hover:not(:disabled) { background: #1b1f26; border-color: #8b939e; } .ds-lever:active:not(:disabled) { background: #0d1013; } .ds-lever:focus-visible { outline: 2px solid #d8dde3; outline-offset: 1px; } .ds-bar { display: flex; align-items: center; gap: 0.625rem; min-height: 1.75rem; padding: 0 0.5rem; border-bottom: 1px solid #272c34; } .ds-bar--app { background: #14171c; } .ds-bar--view { background: #0d1013; } .ds-bar__title { font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #d8dde3; } .ds-bar__meta { margin-left: auto; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; letter-spacing: 0.14em; text-transform: uppercase; color: #8b939e; }"
     },
     {
       "name": "Views popover",
-      "kind": "nav",
-      "refersTo": "view-bar",
-      "description": "The one floating menu in the build, and the only element carrying an ambient shadow. Options are 28px tall on the target axis; tier headings use the label step.",
-      "html": "<div class=\"ds-views\"><div class=\"ds-views-tier\">Operator</div><label class=\"ds-views-option\"><input type=\"checkbox\" checked />Target state</label><label class=\"ds-views-option\"><input type=\"checkbox\" checked />Position</label><div class=\"ds-views-tier\">Developer</div><label class=\"ds-views-option\"><input type=\"checkbox\" />Raw sample</label></div>",
-      "css": ".ds-views { min-width: 11rem; padding: 0.0625rem 0; border: 1px solid #272c34; border-radius: 2px; background: #14171c; box-shadow: 0 4px 14px rgb(0 0 0 / 55%); } .ds-views-tier { padding: 0.625rem 0.625rem 0.0625rem; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #8b939e; } .ds-views-option { display: flex; align-items: center; gap: 0.625rem; min-height: 1.75rem; padding: 0 0.625rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; color: #d8dde3; cursor: pointer; } .ds-views-option:hover { background: #1b1f26; } .ds-views-option input { width: 0.875rem; height: 0.875rem; accent-color: #8b939e; }"
+      "kind": "custom",
+      "refersTo": "lever",
+      "description": "The one floating menu, and the only element in the build that genuinely floats above the plane. Tier headings take the same header bar as any other section.",
+      "html": "<div class=\"ds-pop\"><div class=\"ds-pop__tier\">Operator</div><label class=\"ds-pop__opt\"><input type=\"checkbox\" checked /><span>Position</span></label><label class=\"ds-pop__opt\"><input type=\"checkbox\" checked /><span>Mission</span></label></div>",
+      "css": ".ds-pop { min-width: 11rem; padding: 0.0625rem 0; background: #14171c; border: 1px solid #272c34; border-radius: 2px; box-shadow: 0 4px 14px rgb(0 0 0 / 55%); } .ds-pop__tier { display: flex; align-items: center; min-height: 1.25rem; padding: 0 0.625rem; background: color-mix(in srgb, #d8dde3 7%, transparent); border-bottom: 1px solid #272c34; font-family: ui-sans-serif, system-ui, \"Helvetica Neue\", Arial, sans-serif; font-size: 0.625rem; font-weight: 600; line-height: 1.4; letter-spacing: 0.14em; text-transform: uppercase; color: #8b939e; } .ds-pop__opt { display: flex; align-items: center; gap: 0.625rem; min-height: 1.75rem; padding: 0 0.625rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; color: #d8dde3; cursor: pointer; } .ds-pop__opt:hover { background: #1b1f26; } .ds-pop__opt input { width: 0.875rem; height: 0.875rem; accent-color: #8b939e; }"
     },
-    {"name": "Note", "kind": "text", "refersTo": "note", "description": "Panel prose: normal, caution, or readable absence.", "html": "<p class=\"ds-note\">Snapshot retained until the next download.</p>", "css": ".ds-note { margin: 0; padding: 0.0625rem 0.5rem; color: #8b939e; font: 0.625rem/1.5 ui-monospace, monospace; }"}
+    {
+      "name": "Note",
+      "kind": "custom",
+      "refersTo": "row-absent",
+      "description": "Panel prose. Missing information stays readable in Absent Grey and says what is absent and why \u2014 never \"no data\", which an operator cannot act on.",
+      "html": "<div style=\"width:18rem\"><p class=\"ds-note ds-note--absent\">Not received. ArduPilot sends home when home is set, not on an interval.</p><p class=\"ds-note ds-note--caution\">Not mapped: frame MISSION is not supported on the map</p></div>",
+      "css": ".ds-note { margin: 0; padding: 0.0625rem 0.5rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; line-height: 1.5; color: #8b939e; } .ds-note--absent { color: #7d8794; } .ds-note--caution { color: #d9a441; }"
+    }
   ],
   "narrative": {
     "northStar": "The Instrument Bezel",
-    "overview": "The screen is a declaration of the telemetry stream, not a composed page. Flat graphite panels butt against each other on 1px bezel rules — no gaps, no cards, no shadows, nothing centered in void. Every number is a labelled row that names the MAVLink message it came from and how old that message is. Whitespace that carries no information is screen area stolen from data, so the density is closer to an avionics panel or a DearImGui debug window than to a dashboard.\n\nThe palette is taken from instrument hardware rather than from a generic dark theme: a graphite bezel, the blue-over-ochre split of a real attitude indicator, off-white engraved lettering, and amber as the only warning colour. There is deliberately no \"good\" green under any name. Normal flight is unremarkable, and a panel that lights up to say nothing is wrong trains an operator to ignore it — the test gate asserts no --ok, --good, --success, --healthy, or --nominal token can ever be reintroduced.\n\nTwo axes govern size, and they are independent on purpose. The density axis (--row-*, --group-y) sizes data and goes as tight as it reads. The target axis (--target-*) sizes anything a pointer has to hit and stays generous regardless, because field operation on a laptop is expected and a control sized off the data scale would be unhittable there. Tight data, generous levers.",
+    "overview": "The screen is a declaration of the telemetry stream, not a composed page. Flat graphite panels butt against each other on 1px bezel rules \u2014 no gaps, no cards, no shadows, nothing centered in void. Every number is a labelled row that names the MAVLink message it came from and how old that message is. Whitespace that carries no information is screen area stolen from data, so the density is closer to an avionics panel or a DearImGui debug window than to a dashboard.\n\nThe palette is taken from instrument hardware rather than from a generic dark theme: a graphite bezel, the blue-over-ochre split of a real attitude indicator, off-white engraved lettering, and amber as the only warning colour. There is deliberately no \"good\" green under any name. Normal flight is unremarkable, and a panel that lights up to say nothing is wrong trains an operator to ignore it \u2014 the test gate asserts no `--ok`, `--good`, `--success`, `--healthy`, or `--nominal` token can ever be reintroduced.\n\nTwo axes govern size, and they are independent on purpose. The density axis (`--row-*`) sizes data and goes as tight as it reads, on one unit \u2014 `--row-h` \u2014 so a column has a rhythm rather than whatever height its type happened to sum to. The target axis (`--target-*`) sizes anything a pointer has to hit and stays generous regardless, because field operation on a laptop is expected and a control sized off the data scale would be unhittable there. Tight data, generous levers.",
     "keyCharacteristics": [
       "Panels butted edge to edge on 1px rules; no gaps, no floating cards, no drop shadows on content",
+      "Every section announces itself with a filled header bar one row unit tall",
       "Every reading states its source and age over a rule that drains toward its TTL",
-      "Four fixed type steps and no fifth",
+      "Four fixed type steps, four leadings, and no fifth of either",
+      "Data columns are built on one row unit: a row is one, a noted row is two",
       "Monospace tabular values right-aligned against a shared edge",
       "Amber for caution only; no green for \"good\"",
-      "One button shape in the entire application"
+      "One button shape and two placements in the entire application"
     ],
     "rules": [
-      { "name": "The Amber-Means-Aircraft Rule", "body": "Amber says something is wrong with the aircraft. It may only ever land on color, a background, a border-color, fill, or stroke — the test gate rejects any other property — and it may never be spent on chrome or on a focus ring. --focus is lume.", "section": "colors" },
-      { "name": "The No-Good-Green Rule", "body": "There is no green under any name. Normal is the absence of amber, never the presence of a reassuring colour.", "section": "colors" },
-      { "name": "The Two Absences Rule", "body": "Disabled chrome is Dead Grey and is exempt from the contrast floor. A missing value is Absent Grey and is not — it is content and owes 4.5:1. Never use Dead Grey for something the operator has to read. A disabled lever is the exception that proves it: its border goes Dead, its label stays Absent, because the command lever is often the only control on screen and rendering it as the dimmest object on the page is bad regardless of what the exemption allows.", "section": "colors" },
-      { "name": "The Four Steps Rule", "body": "Four type steps exist — 10px, 11px, 12px, 17px — and src/ui/system.test.ts asserts the count. A fifth step is a decision someone has to make at every call site, which is how the predecessor drifted into six unrelated font sizes.", "section": "typography" },
-      { "name": "The Fixed-DPI Rule", "body": "Sizes are fixed rem, never fluid, never clamp(). An operator views this at one DPI, and a heading that shrinks inside a rail looks broken rather than responsive.", "section": "typography" },
-      { "name": "The One Viewport Rule", "body": "The page never scrolls. If content does not fit, a slot scrolls inside its own bounds.", "section": "layout" },
-      { "name": "The Registry Rule", "body": "Adding or removing information on screen is one registry entry plus a renderer. If a new panel needs layout CSS, the slot model is being worked around.", "section": "layout" },
-      { "name": "The Hidden-Never-Unmounted Rule", "body": "Panels are hidden with the hidden attribute and stay mounted. Unmounting tears down the MapLibre context and drops an in-flight mission download. display: none on a flex item leaves the layout identical to a slot that was never there, so there is no reason to unmount.", "section": "layout" },
-      { "name": "The Butted-Panels Rule", "body": "Surfaces meet on a hairline. Never a gap, never a card, never a radius above 2px, never a shadow to separate two things a rule already separates.", "section": "elevation" },
-      { "name": "The Only-Overlays-Float Rule", "body": "A shadow is permission to float, and only a popover or a map overlay has it. If a resident panel needs a shadow to be legible, its tonal step is wrong.", "section": "elevation" },
-      { "name": "The Once-Per-Group Rule", "body": "Provenance is stated once on a group header, not once per row. Per-row provenance inserted a second right-aligned value at a different edge, so ten readings rendered as twenty alternating half-rows with VFR_HUD three times running — the exact opposite of the shared value edge the row exists to form.", "section": "components" }
+      {
+        "name": "The Amber-Means-Aircraft Rule",
+        "body": "Amber says something is wrong with the aircraft. It may only ever land on `color`, a `background`, a `border-color`, `fill`, or `stroke` \u2014 the test gate rejects any other property \u2014 and it may never be spent on chrome or on a focus ring. `--focus` is lume.",
+        "section": "colors"
+      },
+      {
+        "name": "The No-Good-Green Rule",
+        "body": "There is no green under any name. Normal is the absence of amber, never the presence of a reassuring colour.",
+        "section": "colors"
+      },
+      {
+        "name": "The Rank Ladder Rule",
+        "body": "Three content voices \u2014 Lume for a value, Lume Dim for the label that names it, Absent Grey for the subordinate line beneath \u2014 and all three owe 4.5:1 on every surface they sit on, because all three are read and acted on. `src/ui/system.test.ts` checks each against Panel Graphite, Panel Deep, and Panel Raised. **Rank is never carried by colour alone.** Colour is the weakest signal here: at 10px on graphite, two greys a few points apart are the same grey, and the row note proved it by being Absent Grey and still reading as a second label. A change of rank moves at least two of surface, typeface, indent, and case. See ADR 0005.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Absences Rule",
+        "body": "Disabled chrome is Dead Grey and is exempt from the contrast floor. A missing value is Absent Grey and is not \u2014 it is content and owes 4.5:1. Never use Dead Grey for something the operator has to read. A disabled lever is the exception that proves it: its border goes Dead, its label stays Absent, because the command lever is often the only control on screen and rendering it as the dimmest object on the page is bad regardless of what the exemption allows.",
+        "section": "colors"
+      },
+      {
+        "name": "The Four Steps Rule",
+        "body": "Four type steps exist \u2014 10px, 11px, 12px, 17px \u2014 and `src/ui/system.test.ts` asserts the count. A fifth step is a decision someone has to make at every call site, which is how the predecessor drifted into six unrelated font sizes.",
+        "section": "typography"
+      },
+      {
+        "name": "The Leading Rule",
+        "body": "A step is a size *and* a leading. Four `--lh-*` tokens pair to the four sizes and the gate asserts one per step, so a fifth leading cannot appear without a fifth step to hang it on. Four sizes carrying six unrelated line-heights is the Four Steps drift wearing a property name nobody was counting \u2014 and because a unitless `line-height` and a `font: \u2026/1.6` shorthand carry no unit, the literal check had to be widened to see them at all. Tracking is two tokens for the same reason. See ADR 0005.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed-DPI Rule",
+        "body": "Sizes are fixed rem, never fluid, never `clamp()`. An operator views this at one DPI, and a heading that shrinks inside a rail looks broken rather than responsive.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Viewport Rule",
+        "body": "The page never scrolls. If content does not fit, a slot scrolls inside its own bounds.",
+        "section": "layout"
+      },
+      {
+        "name": "The Registry Rule",
+        "body": "Adding or removing information on screen is one registry entry plus a renderer. If a new panel needs layout CSS, the slot model is being worked around.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hidden-Never-Unmounted Rule",
+        "body": "Panels are hidden with the `hidden` attribute and stay mounted. Unmounting tears down the MapLibre context and drops an in-flight mission download. `display: none` on a flex item leaves the layout identical to a slot that was never there, so there is no reason to unmount.",
+        "section": "layout"
+      },
+      {
+        "name": "The Butted-Panels Rule",
+        "body": "Surfaces meet on a hairline. Never a gap, never a card, never a radius above 2px, never a shadow to separate two things a rule already separates.",
+        "section": "elevation-depth"
+      },
+      {
+        "name": "The Only-Overlays-Float Rule",
+        "body": "A shadow is permission to float, and only a popover or a map overlay has it. If a resident panel needs a shadow to be legible, its tonal step is wrong.",
+        "section": "elevation-depth"
+      },
+      {
+        "name": "The Lever Law",
+        "body": "Two placements and no third: inline in a `LeverRow` at content width, or `wide` filling the group. A lever is never floated beside its own status text \u2014 status prose sits *above* it as a `Note`, because a control and its status read as one thing stacked and as two unrelated things side by side. Labels are written in sentence case and uppercased by CSS, the same way `Group` and `Row` labels are; screaming the string at the call site produces identical pixels by a second mechanism. `caution` means the aircraft is the hazard; a destructive *data* action is guarded by `Confirm` instead, which is also why no `globalThis.confirm()` dialog remains in the application. A lever that changes the address takes `href` and renders an anchor rather than borrowing the lever class.",
+        "section": "components"
+      },
+      {
+        "name": "The Once-Per-Group Rule",
+        "body": "Provenance is stated once on a group header, not once per row. On a header the drain track sits *beneath* its own text, against the bar's bottom edge; above it, the track read as a hairline floating over unrelated words rather than as a meter. Per-row provenance inserted a second right-aligned value at a different edge, so ten readings rendered as twenty alternating half-rows with `VFR_HUD` three times running \u2014 the exact opposite of the shared value edge the row exists to form.",
+        "section": "components"
+      }
     ],
     "dos": [
-      "Do build every panel from the closed primitive set — Group, Row, Lever, LeverRow, Field, Confirm, Tabs. If one cannot express a new panel, extend a primitive rather than styling the panel directly.",
-      "Do keep the two axes separate: --row-* for data, --target-* for anything a pointer hits. Tight data, generous levers.",
-      "Do right-align every value against the shared edge with tabular-nums, so a column of readings scans as one table.",
+      "Do build every panel from the closed primitive set \u2014 `Group`, `Row`, `Lever`, `LeverRow`, `Field`, `Confirm`, `Tabs`, `Chip`, `Note`. If one cannot express a new panel, extend a primitive rather than styling the panel directly.",
+      "Do keep the two axes separate: `--row-*` for data, `--target-*` for anything a pointer hits. Tight data, generous levers.",
+      "Do right-align every value against the shared edge with `tabular-nums`, so a column of readings scans as one table.",
       "Do state provenance once per group header.",
-      "Do put instrument-specific styling in display.css built only from system.css tokens; geometry (a marker's 20px box, a MapLibre circle radius) is the one exemption.",
-      "Do say what is absent and why in the absent slot — never \"no data\", which an operator cannot act on.",
+      "Do put instrument-specific styling in `display.css` built only from `system.css` tokens; geometry (a marker's 20px box, a MapLibre circle radius) is the one exemption.",
+      "Do say what is absent and why in the `absent` slot \u2014 never \"no data\", which an operator cannot act on.",
       "Do keep the default basemap a desaturated dark canvas (Esri Dark Gray Canvas), so the flown track, the prediction and the commanded route are the only saturated things on the map.",
-      "Do hide panels with hidden and leave them mounted."
+      "Do hide panels with `hidden` and leave them mounted."
     ],
     "donts": [
-      "Don't introduce a colour, a font size, or a spacing value in display.css or any panel stylesheet. src/ui/system.test.ts fails the build for it. If a panel needs one, the token is missing and belongs in system.css.",
-      "Don't add a fifth type step.",
-      "Don't spend amber on chrome, on a focus ring, or on a background behind text; and don't introduce a green, or any token named ok, good, success, healthy, or nominal.",
+      "Don't introduce a colour, a font size, or a spacing value in `display.css` or any panel stylesheet. `src/ui/system.test.ts` fails the build for it. If a panel needs one, the token is missing and belongs in `system.css`.",
+      "Don't add a fifth type step, a fifth leading, or a third tracking value.",
+      "Don't carry a change of rank on colour alone; move at least two of surface, typeface, indent, and case.",
+      "Don't float a lever beside its own status text, or uppercase a lever label at the call site.",
+      "Don't re-derive a primitive's geometry in `display.css`. Recolouring one of its elements is fine; restating its layout is a second implementation.",
+      "Don't spend amber on chrome, on a focus ring, or on a background behind text; and don't introduce a green, or any token named `ok`, `good`, `success`, `healthy`, or `nominal`.",
       "Don't use Dead Grey for anything the operator has to read.",
-      "Don't add a second button shape. A variant may change colour or width; never form.",
+      "Don't add a second button shape, or a third placement. A variant may change colour or width; never form.",
+      "Don't spend `caution` on an action that is destructive to data rather than to the aircraft; guard that with `Confirm`.",
       "Don't give a resident surface a drop shadow, a card border, a background, or a radius above 2px. Only a popover or a map overlay floats.",
-      "Don't put more than one lead value in a group.",
+      "Don't put more than one `lead` value in a group.",
       "Don't make the page scroll, and don't nest a scroll region inside a region that already scrolls.",
       "Don't write layout CSS to add a panel; add a registry entry.",
-      "Don't use fluid or clamp() type. Sizes are fixed at every viewport."
+      "Don't use fluid or `clamp()` type. Sizes are fixed at every viewport."
     ]
   }
 }
