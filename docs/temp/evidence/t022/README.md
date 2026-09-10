@@ -118,6 +118,13 @@ one MapLibre context at all times; no console error or page exception.
   `Not downloaded`. In the fleet view **no** focusable element remains inside
   the hidden vehicle workspace, so hidden controls leave the focus order; the
   roster's `Open`/`Center` are ordinary buttons and are always available.
+- `views.json`, `marker-open.json` — entry points and navigation. Both the live
+  page and `?source=mock` open on Fleet (`MOCK` chip, `Fixture fleet`, its one
+  fixture identity as a marker); only replay URLs still open the vehicle
+  workspace. Clicking the `2:1` **map marker** opened that exact vehicle, with
+  the workspace selector reading `2:1`. Hiding the Mission pane, leaving for
+  Fleet and reopening the same vehicle kept it hidden, so navigation does not
+  reset pane visibility.
 - `replay.json` — recorded path. Recording 2, `T-022 fleet acceptance`, 827
   events over 27.9 s, stopped with reason `shutdown` when the backend was
   stopped above. `?source=replay&recording=2` opened the **vehicle** workspace
@@ -135,6 +142,10 @@ one MapLibre context at all times; no console error or page exception.
   no command was submitted. Clearing an unsubmitted arm confirmation on leaving
   a vehicle view, and retaining submitted transaction evidence, are covered by
   `FlightDisplay.lifecycle.test.tsx`, not by this live run.
+- The operator's fleet screenshot is conversation evidence and was never copied
+  into the repository, so this run measured the composition described in the
+  card — a compact roster beside a dominant shared map — rather than diffing
+  against that image.
 - `docker pause` stops all traffic from a container. It models a lost link, not
   a simulator fault, and it is not an in-flight failure: both vehicles were
   disarmed and stationary at their homes for every observation here.
