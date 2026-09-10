@@ -4,8 +4,7 @@ import type { AttitudeResult } from '@/logic/attitude';
 
 import { NO_VALUE, num } from './format';
 import { horizonTransform, PITCH_RANGE_DEG } from './instruments';
-import { Provenance } from './Provenance';
-import { Row } from './primitives';
+import { Group, Row } from './primitives';
 import { hasDisplayValue, type Reading } from './readings';
 
 const WIDTH = 240;
@@ -32,8 +31,7 @@ export function AttitudeIndicator({ reading }: AttitudeIndicatorProps) {
   const attitude = hasDisplayValue(reading) ? reading.value : null;
 
   return (
-    <div className="panel instrument">
-      <div className="label">Attitude</div>
+    <Group label="Attitude" reading={reading} className="instrument">
       <svg viewBox={VIEW_BOX} role="img" aria-label={describe(attitude)}>
         <defs>
           <clipPath id="horizon-clip">
@@ -80,8 +78,7 @@ export function AttitudeIndicator({ reading }: AttitudeIndicatorProps) {
         tone={hasDisplayValue(reading) ? 'normal' : 'dead'}
       />
 
-      <Provenance reading={reading} />
-    </div>
+    </Group>
   );
 }
 
@@ -93,7 +90,6 @@ function Horizon({ rollDeg, pitchDeg }: { rollDeg: number; pitchDeg: number }) {
 
   return (
     <g
-      className="horizon__moving"
       transform={`translate(${String(WIDTH / 2)} ${String(HALF)}) rotate(${String(rotateDeg)}) translate(0 ${String(translateY)})`}
     >
       <rect x={-span} y={-span} width={span * 2} height={span} fill="var(--sky)" />

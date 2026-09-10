@@ -32,12 +32,12 @@ import { HeartbeatStateSchema, VehicleIdSchema } from '@/gen/gcs/v1/vehicle_pb';
 
 import type { StreamEvent } from './events';
 
-/** The mock vehicle's identity: one autopilot, the ordinary single-vehicle case. */
+/** The mock vehicle's identity: the initially selected autopilot. */
 export const MOCK_SYS_ID = 1;
 export const MOCK_COMP_ID = 1;
 
 /** Milliseconds between representative mock events; this is not a rate emulator. */
-export const MOCK_FRAME_MS = 100;
+export const MOCK_FRAME_MS = 50;
 
 /** One scheduled step of the fixture. */
 export interface MockFrame {
@@ -53,16 +53,17 @@ function vehicleId() {
 /** ArduCopter GUIDED. Numeric because the UI does not decode firmware modes. */
 const GUIDED_CUSTOM_MODE = 4;
 
-function heartbeatFrame(): MockFrame {
+function heartbeatFrame(type = FleetEventType.VEHICLE_DISCOVERED): MockFrame {
   return {
     delayMs: MOCK_FRAME_MS,
     build: (receivedAtMs) => ({
       kind: 'fleet',
       receivedAtMs,
       event: create(FleetEventSchema, {
-        type: FleetEventType.VEHICLE_DISCOVERED,
+        type,
         vehicleId: vehicleId(),
         heartbeat: create(HeartbeatStateSchema, {
+          observedAt: timestampFromMs(receivedAtMs),
           id: vehicleId(),
           type: MavType.QUADROTOR,
           autopilot: MavAutopilot.ARDUPILOTMEGA,
@@ -316,6 +317,7 @@ export function mockFrames(cycles = 60): MockFrame[] {
     // sensors it is actively sending. At ten the margin was already zero, and
     // adding a sixth frame to the cycle consumed it. mock.test.ts pins this.
     if (i % 5 === 0) {
+      if (i > 0) frames.push(heartbeatFrame(FleetEventType.HEARTBEAT_UPDATED));
       frames.push(telemetryFrame(gpsRawAt, i));
       frames.push(telemetryFrame(systemStatusAt, i));
       frames.push(telemetryFrame(ekfAt, i));
@@ -324,5 +326,41 @@ export function mockFrames(cycles = 60): MockFrame[] {
     }
   }
 
-  return frames;
+  const fleetFrames: MockFrame[] = [];
+  for (const [index, frame] of frames.entries()) {
+    fleetFrames.push(frame, forVehicle(frame, 2));
+    // The backend owns loss detection. Explicitly model its lifecycle event;
+    // withholding telemetry alone cannot change frontend lifecycle state.
+    if (index === 0) {
+      fleetFrames.push(forVehicle(heartbeatFrame(), 3));
+      fleetFrames.push({ delayMs: MOCK_FRAME_MS, build: (receivedAtMs) => ({
+        kind: 'fleet', receivedAtMs,
+        event: create(FleetEventSchema, {
+          type: FleetEventType.VEHICLE_LOST,
+          vehicleId: create(VehicleIdSchema, { systemId: 3, componentId: 1 }),
+        }),
+      }) });
+    }
+  }
+  return fleetFrames;
+}
+
+/** Each build creates fresh protobuf objects, so remapping never mutates vehicle 1. */
+function forVehicle(frame: MockFrame, sysId: number): MockFrame {
+  return { delayMs: frame.delayMs, build: (receivedAtMs) => {
+    const event = frame.build(receivedAtMs);
+    if (event.kind !== 'fleet' && event.kind !== 'telemetry') return event;
+    if (event.event.vehicleId) event.event.vehicleId.systemId = sysId;
+    if (event.kind === 'fleet') {
+      if (event.event.heartbeat?.id) event.event.heartbeat.id.systemId = sysId;
+    } else {
+      const payload = event.event.payload;
+      if (payload.case === 'globalPosition' || payload.case === 'gpsRaw' || payload.case === 'homePosition') {
+        payload.value.latDeg += 0.001;
+        payload.value.lonDeg += 0.001;
+      }
+      if (payload.case === 'vfrHud') payload.value.groundspeedMS += 2;
+    }
+    return event;
+  } };
 }

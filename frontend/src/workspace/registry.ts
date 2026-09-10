@@ -39,9 +39,6 @@ export interface PanelDef {
   /** Whether the operator may hide it. A panel carrying the link's own health
    *  is not hideable: losing it is how you stop knowing the display is lying. */
   fixed?: boolean;
-  /** Renders without a group header — the map and the instrument stack draw
-   *  their own chrome, and a title bar above them is a second competing header. */
-  bare?: boolean;
 }
 
 /**
@@ -55,13 +52,13 @@ export const PANELS: readonly PanelDef[] = [
   { id: 'command', label: 'Command', slot: 'rail', tier: 'operator' },
   { id: 'position', label: 'Position', slot: 'rail', tier: 'operator' },
   { id: 'mission', label: 'Mission', slot: 'rail', tier: 'operator' },
-  { id: 'guidance', label: 'Guidance', slot: 'rail', tier: 'operator', bare: true },
-  { id: 'home', label: 'Home', slot: 'rail', tier: 'operator', bare: true },
-  { id: 'radiolink', label: 'Radio link', slot: 'rail', tier: 'operator', bare: true },
+  { id: 'guidance', label: 'Guidance', slot: 'rail', tier: 'operator' },
+  { id: 'home', label: 'Home', slot: 'rail', tier: 'operator' },
+  { id: 'radiolink', label: 'Radio link', slot: 'rail', tier: 'operator' },
 
-  { id: 'map', label: 'Map', slot: 'center', tier: 'operator', bare: true },
+  { id: 'map', label: 'Map', slot: 'center', tier: 'operator' },
 
-  { id: 'instruments', label: 'Instruments', slot: 'aux', tier: 'operator', bare: true },
+  { id: 'instruments', label: 'Instruments', slot: 'aux', tier: 'operator' },
 
   { id: 'families', label: 'Families', slot: 'dev', tier: 'dev' },
   { id: 'sample', label: 'Raw sample', slot: 'dev', tier: 'dev' },

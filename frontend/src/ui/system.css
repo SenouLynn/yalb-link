@@ -18,6 +18,13 @@
  */
 
 :root {
+  /* Solid lavender history separates the flown track from cyan commands. */
+  --track: #b6a6d9;
+  --selection-edge: inset 1px 0 0 var(--lume);
+  --overlay-ambient: 0 4px 14px rgb(0 0 0 / 55%);
+  --focus-ring: 2px solid var(--focus);
+  --focus-offset: 1px;
+
   /*
    * The palette is taken from instrument hardware rather than from a generic
    * dark theme: a graphite bezel, the blue-over-ochre split of a real attitude
@@ -158,8 +165,7 @@ body {
   border-bottom: var(--rule);
 }
 
-.group__label,
-.label {
+.group__label {
   font-family: var(--label);
   font-size: var(--fs-label);
   font-weight: 600;
@@ -180,13 +186,17 @@ body {
   padding: var(--row-y) 0;
 }
 
-.group__absent {
+.note {
+  margin: 0;
+  flex-basis: 100%;
   padding: var(--row-y) var(--row-x);
   font-family: var(--data);
   font-size: var(--fs-label);
   line-height: 1.5;
-  color: var(--absent);
+  color: var(--lume-dim);
 }
+.note--absent { color: var(--absent); }
+.note--caution { color: var(--caution); }
 
 /*
  * Provenance on a group header.
@@ -239,8 +249,7 @@ body {
   white-space: nowrap;
 }
 
-.row__value,
-.value {
+.row__value {
   font-family: var(--data);
   font-size: var(--fs-data);
   font-variant-numeric: tabular-nums;
@@ -256,8 +265,7 @@ body {
   line-height: 1.15;
 }
 
-.row__unit,
-.unit {
+.row__unit {
   font-family: var(--data);
   font-size: var(--fs-label);
   color: var(--lume-dim);
@@ -268,10 +276,7 @@ body {
   color: var(--caution);
 }
 
-.row--dead .row__value,
-.row__value--unavailable,
-.value--unavailable,
-.unit--unavailable {
+.row--dead .row__value {
   color: var(--absent);
 }
 
@@ -436,12 +441,12 @@ body {
 }
 
 .lever:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
 }
 
 .lever[aria-pressed="true"],
-.lever[data-active="true"] {
+.lever[aria-expanded="true"] {
   color: var(--lume);
   border-color: var(--lume-dim);
   background: var(--panel-deep);
@@ -498,8 +503,8 @@ body {
 }
 
 .field__input:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
   border-color: var(--lume-dim);
 }
 
@@ -565,7 +570,7 @@ body {
 }
 
 .tab:focus-visible {
-  outline: 2px solid var(--focus);
+  outline: var(--focus-ring);
   outline-offset: -2px;
 }
 
@@ -756,7 +761,7 @@ body {
   border: var(--rule);
   border-radius: var(--radius);
   background: var(--panel);
-  box-shadow: 0 4px 14px rgb(0 0 0 / 55%);
+  box-shadow: var(--overlay-ambient);
 }
 
 .views__option {
@@ -882,98 +887,6 @@ body {
 
 /* --- one button shape ---------------------------------------------------- */
 
-/*
- * Every button in the app resolves to the lever, from this one definition.
- *
- * These are the class names that already existed on buttons around the app.
- * Listing them here rather than restyling each in its own file is the point:
- * there is exactly one place that decides what a button is, so "the commit
- * button looks different over here" cannot happen. A variant may override
- * colour below — never form.
- */
-.command-control button,
-.command-control__attest button,
-.mission-panel button,
-.replay__button,
-.replay__pick,
-.replay__delete,
-.selector__button,
-.map-actions button,
-.fleet-roster button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35em;
-  min-height: var(--target-h);
-  padding: 0 var(--target-x);
-  border: var(--rule);
-  border-radius: var(--radius);
-  background: var(--panel);
-  color: var(--lume);
-  font-family: var(--data);
-  font-size: var(--fs-body);
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: var(--track-data);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.command-control button:hover:not(:disabled),
-.mission-panel button:hover:not(:disabled),
-.replay__button:hover:not(:disabled),
-.replay__pick:hover:not(:disabled),
-.replay__delete:hover:not(:disabled),
-.selector__button:hover:not(:disabled),
-.map-actions button:hover:not(:disabled),
-.fleet-roster button:hover:not(:disabled) {
-  background: var(--panel-raised);
-  border-color: var(--lume-dim);
-}
-
-.command-control button:disabled,
-.mission-panel button:disabled,
-.replay__button:disabled,
-.replay__pick:disabled,
-.replay__delete:disabled,
-.selector__button:disabled,
-.map-actions button:disabled,
-.fleet-roster button:disabled {
-  color: var(--absent);
-  border-color: var(--dead);
-  cursor: default;
-}
-
-.command-control button:focus-visible,
-.mission-panel button:focus-visible,
-.replay__button:focus-visible,
-.replay__pick:focus-visible,
-.replay__delete:focus-visible,
-.selector__button:focus-visible,
-.map-actions button:focus-visible,
-.fleet-roster button:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
-}
-
-.selector__button[aria-pressed="true"] {
-  border-color: var(--lume-dim);
-  background: var(--panel-deep);
-}
-
-/* --- containers ---------------------------------------------------------- */
-
-/*
- * `.panel` is a plain block, not a card.
- *
- * It used to draw a border, a background, and a radius, which is what turned a
- * column of six readings into six floating objects. Panel chrome now belongs
- * to the slot; a panel inside a slot is just a run of rows.
- */
-.panel {
-  min-width: 0;
-}
-
 #root {
   height: 100%;
 }
@@ -1030,3 +943,7 @@ body {
 .slot__body > [hidden] {
   display: none;
 }
+
+.group { min-width: 0; }
+.heading-tick { font-size: var(--fs-label); }
+.fleet-card[data-selected="true"] { box-shadow: var(--selection-edge); }

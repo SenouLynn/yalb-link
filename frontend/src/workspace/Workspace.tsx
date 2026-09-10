@@ -8,7 +8,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
-import { Group, Tabs } from '@/ui/primitives';
+import { Tabs, Lever } from '@/ui/primitives';
 import {
   PANELS,
   panelsInSlot,
@@ -143,18 +143,13 @@ function Slot({
           const hidden = visible[panel.id] !== true || (tabbed && panel.id !== current);
           const node = content[panel.id];
 
-          if (panel.bare === true || tabbed) {
-            return (
-              <div key={panel.id} id={`panel-${panel.id}`} className="panel-mount" hidden={hidden}>
+          return (
+              <div key={panel.id} id={`panel-${panel.id}`} className="panel-mount" hidden={hidden}
+                role={tabbed ? 'tabpanel' : undefined}
+                aria-labelledby={tabbed ? `tab-${panel.id}` : undefined}
+                tabIndex={tabbed ? 0 : undefined}>
                 {node}
               </div>
-            );
-          }
-
-          return (
-            <div key={panel.id} id={`panel-${panel.id}`} hidden={hidden}>
-              <Group label={panel.label}>{node}</Group>
-            </div>
           );
         })}
       </div>
@@ -213,10 +208,7 @@ export function ViewsMenu({
 
   return (
     <div className="views" ref={root}>
-      <button
-        type="button"
-        className="lever"
-        data-active={open ? 'true' : 'false'}
+      <Lever
         aria-expanded={open}
         aria-haspopup="true"
         onClick={() => {
@@ -224,7 +216,7 @@ export function ViewsMenu({
         }}
       >
         Views ({shown})
-      </button>
+      </Lever>
 
       {open ? (
         <div className="views__popover" role="group" aria-label="Visible panels">

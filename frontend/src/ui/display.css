@@ -12,27 +12,6 @@
 
 /* --- command ------------------------------------------------------------- */
 
-.command-control {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--lever-gap);
-  padding: var(--row-y) var(--row-x);
-}
-
-/* Amber-edged because the action itself is the hazard. Arming a vehicle is the
-   one control on this display that can move an aircraft. */
-.command-control button {
-  border-color: var(--caution);
-  color: var(--caution);
-}
-
-.command-control button:hover:not(:disabled) {
-  border-color: var(--caution);
-  background: color-mix(in srgb, var(--caution) 12%, var(--panel));
-  color: var(--lume);
-}
-
 .command-control__state {
   color: var(--lume-dim);
   font: var(--fs-label) var(--data);
@@ -45,45 +24,7 @@
   font: var(--fs-label) var(--data);
 }
 
-.command-control__ambiguous,
-.command-control__evidence,
-.command-control__prompt {
-  flex-basis: 100%;
-  margin: 0;
-  font: var(--fs-body)/1.5 var(--data);
-}
-
-.command-control__ambiguous {
-  color: var(--caution);
-}
-
-.command-control__evidence,
-.command-control__prompt {
-  color: var(--lume-dim);
-}
-
-.command-control__attest {
-  display: flex;
-  flex-basis: 100%;
-  gap: var(--lever-gap);
-}
-
 /* --- instruments --------------------------------------------------------- */
-
-.instruments {
-  display: grid;
-  gap: var(--row-y);
-  grid-template-columns: 1fr;
-}
-
-/* Grid and flex children default to min-width: auto, so an item whose
-   min-content is wider than its track pushes the whole page sideways instead
-   of shrinking. On a panel this dense that shows up as everything clipped at
-   the right edge. */
-.instruments > *,
-.readouts > * {
-  min-width: 0;
-}
 
 /*
  * A single column of readings, never a grid of cards.
@@ -91,19 +32,9 @@
  * Two columns would break the shared value edge that makes a column of
  * readings scan as one table, which is the entire reason a readout is a row.
  */
-.readouts {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-content: start;
-}
-
-.instrument {
-  display: grid;
-  gap: var(--row-y);
-  padding: var(--row-y) var(--row-x);
-}
 
 .instrument svg {
+  /* design-geometry: bounded SVG instrument face */
   display: block;
   width: 100%;
   height: auto;
@@ -114,6 +45,7 @@
 }
 
 .instrument--heading svg {
+  /* design-geometry: compass tape aspect */
   max-height: 4rem;
 }
 
@@ -139,26 +71,23 @@
  * second cluster cannot land on top of the first — which is exactly what
  * "Fit mission" and "Follow vehicle" did when each positioned itself.
  */
-.map-actions {
+.map-overlays {
   position: absolute;
   z-index: 2;
   top: var(--row-x);
   left: var(--row-x);
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
   gap: var(--lever-gap);
   max-width: calc(100% - 2 * var(--row-x));
 }
 
 /*
- * The two map keys stack under the action row, each positioning itself —
- * MapPanel renders them as siblings of the map with no wrapper to lay them out.
+ * The map keys follow the action row in normal flow, without measured offsets.
  */
 .trajectory-key,
 .mission-key {
-  position: absolute;
-  z-index: 1;
-  left: var(--row-x);
   padding: 0 var(--pad-chip);
   pointer-events: none;
   background: color-mix(in srgb, var(--panel-deep) 88%, transparent);
@@ -170,14 +99,12 @@
 }
 
 .trajectory-key {
-  top: calc(var(--row-x) + var(--target-h) + var(--lever-gap));
   color: var(--prediction);
   border-color: var(--prediction);
 }
 
 /* Second row, under the trajectory key. */
 .mission-key {
-  top: calc(var(--row-x) + var(--target-h) + var(--lever-gap) + 1.4rem);
   color: var(--mission-route);
   border-color: var(--mission-route);
 }
@@ -185,6 +112,7 @@
 /* Sequence badge for a mission point. Sized to sit inside the 10px-radius
    circle drawn by the mission-points layer, which shares its coordinate. */
 .mission-marker {
+  /* design-geometry: matches MapLibre circle radius */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -196,6 +124,7 @@
 }
 
 .vehicle-marker {
+  /* design-geometry: SVG viewBox */
   width: 28px;
   height: 28px;
 }
@@ -205,26 +134,6 @@
 }
 
 /* --- mission ------------------------------------------------------------- */
-
-.mission-panel button {
-  border-color: var(--mission-route);
-}
-
-.mission-panel__error,
-.mission-list__note {
-  color: var(--caution);
-}
-
-.mission-panel__error,
-.mission-panel__empty {
-  margin: 0;
-  padding: var(--row-y) var(--row-x);
-  font: var(--fs-label)/1.5 var(--data);
-}
-
-.mission-panel__empty {
-  color: var(--dead);
-}
 
 /*
  * The mission as a list of waypoints.
@@ -268,11 +177,6 @@
   color: var(--mission-route);
 }
 
-.mission-list__note {
-  padding: 0 var(--row-x) var(--row-y);
-  font: var(--fs-label)/1.5 var(--data);
-}
-
 /* --- replay transport ---------------------------------------------------- */
 
 /*
@@ -286,16 +190,13 @@
   align-items: center;
   gap: var(--lever-gap);
   padding: var(--row-y) var(--row-x);
-  border: 1px solid var(--caution);
+  border: var(--rule);
+  border-color: var(--caution);
   border-radius: var(--radius);
 }
 
 .replay--error {
   color: var(--caution);
-}
-
-.replay__button {
-  min-width: 4.5rem;
 }
 
 .replay__clock {
@@ -306,46 +207,13 @@
 
 .replay__scrub {
   flex: 1;
-  min-width: 6rem;
+  min-width: calc(3 * var(--target-h));
   accent-color: var(--lume-dim);
-}
-
-.replay__speed {
-  display: flex;
-  align-items: center;
-  gap: var(--lever-gap);
-  font: var(--fs-label) var(--data);
-  color: var(--lume-dim);
-}
-
-.replay__speed select {
-  min-height: var(--target-h);
-  padding: 0 var(--target-x);
-  border: var(--rule);
-  border-radius: var(--radius);
-  background: var(--panel-deep);
-  color: var(--lume);
-  font: var(--fs-body) var(--data);
-}
-
-.replay__speed select:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
 }
 
 .replay__name {
   font: var(--fs-label) var(--data);
   color: var(--lume-dim);
-}
-
-.replay__note {
-  flex-basis: 100%;
-  font: var(--fs-label)/1.5 var(--data);
-  color: var(--lume-dim);
-}
-
-.replay__note--warn {
-  color: var(--caution);
 }
 
 .replay__pick-row {
@@ -354,17 +222,6 @@
   gap: var(--lever-gap);
 }
 
-.replay__delete {
-  border-color: var(--caution);
-  color: var(--caution);
-}
-
-/* --- inspection tier ----------------------------------------------------- */
-
-/* Guidance, home and link, below the primary readings in the instrument
-   slot's scroll body. Consulted rather than flown by, so it is separated from
-   the instruments by rule and spacing rather than by colour: nothing here
-   earns a hue the attitude indicator does not already own. */
 /* --- fleet --------------------------------------------------------------- */
 
 /* The roster is the rail's own scroll body: it is the slot, not inside one. */
@@ -411,7 +268,6 @@
 
 .fleet-card[data-selected="true"] {
   background: color-mix(in srgb, var(--lume) 8%, transparent);
-  box-shadow: inset 1px 0 0 var(--lume);
 }
 
 .fleet-card__title {
@@ -467,29 +323,12 @@
   padding: var(--row-y) var(--row-x);
 }
 
-.fleet-roster__heading {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--row-x);
-  padding: var(--row-y) var(--row-x);
-  border-bottom: var(--rule);
-}
-
-.fleet-roster h2 {
-  margin: 0;
-  font-family: var(--label);
-  font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--lume-dim);
-}
-
 .fleet-marker {
+  /* design-geometry: map identity marker */
   width: 28px;
   height: 28px;
-  border: 1px solid var(--lume);
+  border: var(--rule);
+  border-color: var(--lume);
   border-radius: var(--radius);
   background: var(--panel);
   color: var(--lume);
@@ -512,3 +351,6 @@
   color: var(--lume-dim);
   font: var(--fs-label) var(--data);
 }
+
+.map-actions { display: flex; flex-wrap: wrap; gap: var(--lever-gap); }
+.replay > .group__body { display: flex; flex-wrap: wrap; align-items: center; gap: var(--lever-gap); }

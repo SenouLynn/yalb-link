@@ -1,0 +1,47 @@
+ROWS
+the atom
+GROUND SPEED
+17.5m/s
+ALTITUDE
+501.3m
+ARMED
+ARMED
+EKF
+- - -
+REMAINING
+87%
+POSITION
+47.393227, 8.545423
+LEVERS
+target axis
+Arm
+Take off
+Disarm
+Land
+Follow
+Track up
+NOTES AND STATUS
+Active LOST
+
+Snapshot retained until the next download.
+
+Command outcome is unresolved.
+
+Position has not been received.
+
+FIELDS
+LATITUDE
+LONGITUDE
+I confirm target 1:1, its armed Guided state, and this bounded movement.
+Send reposition
+ABSENT
+HOME
+- - -
+NEVER HEARD
+
+Not received. ArduPilot sends home when home is set, not on an interval.
+
+FAMILIES
+RAW SAMPLE
+19/19 receiving
+Family inspection

@@ -16,6 +16,7 @@
       "sky": { "role": "tertiary", "displayName": "Instrument Sky", "canonical": "#2d6d9e", "tonalRamp": ["#061019", "#0c1f2f", "#133249", "#1c4667", "#255a83", "#2d6d9e", "#4b91c4", "#8dbee0"] },
       "ground": { "role": "tertiary", "displayName": "Instrument Ground", "canonical": "#7a5326", "tonalRamp": ["#1a1108", "#2b1d0d", "#3f2b13", "#54391a", "#6a4820", "#7a5326", "#a5723a", "#cfa571"] },
       "prediction": { "role": "tertiary", "displayName": "Prediction Blue-Grey", "canonical": "#9fb4c9", "tonalRamp": ["#141c24", "#22303c", "#334656", "#465d71", "#5c778d", "#7996ad", "#9fb4c9", "#c9d6e2"] },
+      "track": { "role": "tertiary", "displayName": "Track Lavender", "canonical": "#b6a6d9", "tonalRamp": ["#b6a6d9"] },
       "mission-route": { "role": "tertiary", "displayName": "Mission Cyan", "canonical": "#c7f0ff", "tonalRamp": ["#0c1e26", "#14323f", "#1e4c5f", "#296880", "#3785a3", "#63aecb", "#9bd4ec", "#c7f0ff"] }
     },
     "typographyMeta": {
@@ -97,7 +98,7 @@
       "kind": "chip",
       "refersTo": "chip",
       "description": "A state badge sitting inline with text. Rows carry values; a chip carries a label's own state.",
-      "html": "<span class=\"ds-chip ds-chip-active\">Active</span> <span class=\"ds-chip ds-chip-caution\">Stale</span> <span class=\"ds-chip ds-chip-dead\">Lost</span>",
+      "html": "<span class=\"ds-chip ds-chip-active\">Active</span> <span class=\"ds-chip ds-chip-caution\">Stale</span> <span class=\"ds-chip ds-chip-dead\">Disabled</span>",
       "css": ".ds-chip { display: inline-flex; align-items: baseline; gap: 0.3rem; padding: 0 0.3rem; border: 1px solid #272c34; border-radius: 2px; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.625rem; letter-spacing: 0.06em; color: #8b939e; } .ds-chip-active { color: #d8dde3; border-color: #8b939e; } .ds-chip-caution { color: #d9a441; border-color: #d9a441; } .ds-chip-dead { color: #4d5560; }"
     },
     {
@@ -115,7 +116,8 @@
       "description": "The one floating menu in the build, and the only element carrying an ambient shadow. Options are 28px tall on the target axis; tier headings use the label step.",
       "html": "<div class=\"ds-views\"><div class=\"ds-views-tier\">Operator</div><label class=\"ds-views-option\"><input type=\"checkbox\" checked />Target state</label><label class=\"ds-views-option\"><input type=\"checkbox\" checked />Position</label><div class=\"ds-views-tier\">Developer</div><label class=\"ds-views-option\"><input type=\"checkbox\" />Raw sample</label></div>",
       "css": ".ds-views { min-width: 11rem; padding: 0.0625rem 0; border: 1px solid #272c34; border-radius: 2px; background: #14171c; box-shadow: 0 4px 14px rgb(0 0 0 / 55%); } .ds-views-tier { padding: 0.625rem 0.625rem 0.0625rem; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.625rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: #8b939e; } .ds-views-option { display: flex; align-items: center; gap: 0.625rem; min-height: 1.75rem; padding: 0 0.625rem; font-family: ui-monospace, \"SF Mono\", Menlo, Consolas, monospace; font-size: 0.75rem; color: #d8dde3; cursor: pointer; } .ds-views-option:hover { background: #1b1f26; } .ds-views-option input { width: 0.875rem; height: 0.875rem; accent-color: #8b939e; }"
-    }
+    },
+    {"name": "Note", "kind": "text", "refersTo": "note", "description": "Panel prose: normal, caution, or readable absence.", "html": "<p class=\"ds-note\">Snapshot retained until the next download.</p>", "css": ".ds-note { margin: 0; padding: 0.0625rem 0.5rem; color: #8b939e; font: 0.625rem/1.5 ui-monospace, monospace; }"}
   ],
   "narrative": {
     "northStar": "The Instrument Bezel",

@@ -1,0 +1,50 @@
+GROUND CONTROL
+MOCK
+Open selected vehicle
+FLEET
+Fit fleet
+3 vehicles
+SOURCE
+MOCK
+1:1
+HEARD
+
+Position unavailable
+
+ALTITUDE
+- - -
+GROUND SPEED
+5.8 m/s
+POSITION AGE
+- - - · unavailable
+Open
+Center
+2:1
+HEARD
+
+Position unavailable
+
+ALTITUDE
+- - -
+GROUND SPEED
+7.8 m/s
+POSITION AGE
+- - - · unavailable
+Open
+Center
+3:1
+LOST
+
+Position unavailable
+
+ALTITUDE
+- - -
+GROUND SPEED
+- - -
+POSITION AGE
+- - - · lost
+Open
+Center
+Tiles © Esri
+
+No fresh vehicle positions

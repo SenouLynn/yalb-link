@@ -55,8 +55,9 @@ export function FleetMap({ positions, onOpen, camera, request }: {
     for (const position of positions) {
       let marker = markers.current.get(position.key);
       if (!marker) {
+        // design-exemption: imperative MapLibre marker uses the lever class.
         const button = document.createElement('button');
-        button.type = 'button'; button.className = 'fleet-marker';
+        button.type = 'button'; button.className = 'fleet-marker lever';
         button.textContent = position.key;
         button.setAttribute('aria-label', `Open vehicle ${position.key}`);
         button.onclick = () => { open.current(position.key); };

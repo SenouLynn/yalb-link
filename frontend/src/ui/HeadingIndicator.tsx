@@ -4,8 +4,7 @@ import type { HeadingResult } from '@/logic/heading';
 
 import { bearing, cardinal, NO_VALUE } from './format';
 import { headingTicks, HEADING_SPAN_DEG } from './instruments';
-import { Provenance } from './Provenance';
-import { Row } from './primitives';
+import { Group, Row } from './primitives';
 import { hasDisplayValue, type Reading } from './readings';
 
 const WIDTH = 240;
@@ -28,11 +27,7 @@ export function HeadingIndicator({ reading }: HeadingIndicatorProps) {
   const ticks = heading === null ? [] : headingTicks(heading.headingDeg);
 
   return (
-    <div className="panel instrument instrument--heading">
-      <div className="label">
-        Heading
-        {heading?.isFallback === true ? ' · fallback source' : ''}
-      </div>
+    <Group label="Heading" note={heading?.isFallback === true ? 'fallback source' : undefined} reading={reading} className="instrument instrument--heading">
 
       <svg
         viewBox={VIEW_BOX}
@@ -62,7 +57,7 @@ export function HeadingIndicator({ reading }: HeadingIndicatorProps) {
                   x={x}
                   y={BASELINE - 18}
                   textAnchor="middle"
-                  fontSize="9"
+                  className="heading-tick"
                   fontFamily="var(--data)"
                   fill="var(--lume)"
                 >
@@ -105,8 +100,7 @@ export function HeadingIndicator({ reading }: HeadingIndicatorProps) {
         tone={hasDisplayValue(reading) ? 'normal' : 'dead'}
       />
 
-      <Provenance reading={reading} />
-    </div>
+    </Group>
   );
 }
 

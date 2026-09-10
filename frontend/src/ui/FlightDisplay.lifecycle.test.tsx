@@ -328,3 +328,26 @@ it('retains a pending mission through Fleet, clears arm confirmation, and remoun
   expect(fetch).toHaveBeenCalledTimes(1);
   act(() => { root.unmount(); });
 });
+
+it('auto-loads mock missions, refreshes, switches identity and clears fixtures on switching to live', async () => {
+  const fetch = vi.fn();
+  vi.stubGlobal('fetch', fetch);
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  const render = (sysId: number, source: 'mock' | 'live') => { root.render(
+    <FlightDisplay initialSection="vehicle" fleet={fleet(view(sysId))} nowMs={Date.now()} source={source} onSelect={() => undefined} />,
+  ); };
+  await act(async () => { render(1, 'mock'); await Promise.resolve(); });
+  expect(container.querySelector('.mission-panel')?.textContent).toContain('Complete');
+  expect(container.querySelector('.mission-panel')?.textContent).toContain('MISSION SNAPSHOT');
+  for (let count = 0; count < 2; count++) {
+    await act(async () => { container.querySelector<HTMLButtonElement>('.mission-panel button')?.click(); await Promise.resolve(); });
+    expect(container.querySelector('.mission-panel')?.textContent).toContain('Complete');
+  }
+  await act(async () => { render(2, 'mock'); await Promise.resolve(); });
+  expect(container.querySelector('.mission-panel')?.textContent).toContain('Complete');
+  await act(async () => { render(2, 'live'); await Promise.resolve(); });
+  expect(container.querySelector('.mission-panel')?.textContent).toContain('Not downloaded');
+  expect(fetch).not.toHaveBeenCalled();
+  act(() => { root.unmount(); });
+});

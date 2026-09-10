@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { StreamEvent } from './events';
-import { MOCK_COMP_ID, MOCK_SYS_ID, mockFrames } from './fixtures';
+import { MOCK_COMP_ID, mockFrames } from './fixtures';
 import { TELEMETRY_TTL_MS } from '@/fleet/state';
 import { MockEventSource, type Cancel } from './mock';
 
@@ -65,20 +65,22 @@ describe('MockEventSource', () => {
     const { events, stop } = play(5);
     stop();
 
-    const kinds = events.filter((e) => e.kind !== 'connection').map((e) => e.kind);
-
-    expect(kinds[0]).toBe('fleet');
-    expect(kinds.slice(1).every((kind) => kind === 'telemetry')).toBe(true);
+    const discovered = new Set<number>();
+    for (const event of events) {
+      if (event.kind === 'fleet') discovered.add(event.event.vehicleId?.systemId ?? 0);
+      if (event.kind === 'telemetry') expect(discovered.has(event.event.vehicleId?.systemId ?? 0)).toBe(true);
+    }
+    expect(discovered).toEqual(new Set([1, 2, 3]));
   });
 
-  it('carries the mock vehicle identity on every event', () => {
+  it('carries a known fleet identity on every event', () => {
     const { events, stop } = play(10);
     stop();
 
     for (const event of events) {
       if (event.kind === 'connection' || event.kind === 'reset') continue;
 
-      expect(event.event.vehicleId?.systemId).toBe(MOCK_SYS_ID);
+      expect([1, 2, 3]).toContain(event.event.vehicleId?.systemId);
       expect(event.event.vehicleId?.componentId).toBe(MOCK_COMP_ID);
     }
   });
@@ -127,11 +129,12 @@ describe('MockEventSource', () => {
   });
 
   it('loops when asked, so a demo left running does not go silent', () => {
-    const { events, stop } = play(400, { loop: true });
+    const frameCount = mockFrames().length;
+    const { events, stop } = play(frameCount + 10, { loop: true });
     stop();
 
-    // The bounded script is shorter than 400 steps; looping keeps producing.
-    expect(events.length).toBeGreaterThan(300);
+    // Play beyond the enlarged fleet script, not just beyond the old single vehicle cycle.
+    expect(events.length).toBe(frameCount + 12);
   });
 });
 
@@ -167,12 +170,12 @@ describe('mock family cadence', () => {
     const worstGap = new Map<string, number>();
     let elapsedMs = 0;
 
-    for (const frame of frames) {
+    for (const frame of [...frames, ...frames]) {
       elapsedMs += frame.delayMs;
       const event = frame.build(START_MS + elapsedMs);
       if (event.kind !== 'telemetry') continue;
 
-      const family = event.event.payload.case ?? 'unknown';
+      const family = `${String(event.event.vehicleId?.systemId)}:${event.event.payload.case ?? 'unknown'}`;
       const previous = lastSeen.get(family);
       if (previous !== undefined) {
         worstGap.set(family, Math.max(worstGap.get(family) ?? 0, elapsedMs - previous));
@@ -200,4 +203,23 @@ describe('mock family cadence', () => {
     expect(families).toContain('homePosition');
     expect(families).toContain('radioStatus');
   });
+});
+
+it('folds two distinct fresh vehicles and a lost observer through the real reducer', async () => {
+  const { fleetReducer, initialFleetState } = await import('@/fleet/state');
+  const { FleetEventType } = await import('@/gen/gcs/v1/fleet_pb');
+  let state = initialFleetState;
+  let now = START_MS;
+  for (const frame of mockFrames(6)) {
+    state = fleetReducer(state, { type: 'stream', event: frame.build(now) });
+    now += frame.delayMs;
+  }
+  expect(state.order).toEqual(['1:1', '2:1', '3:1']);
+  expect(state.vehicles['3:1']?.lifecycle).toBe(FleetEventType.VEHICLE_LOST);
+  expect(state.vehicles['3:1']?.track).toEqual([]);
+  const first = state.vehicles['1:1'];
+  const second = state.vehicles['2:1'];
+  expect(first?.track.length).toBeGreaterThan(0);
+  expect(second?.track.length).toBe(first?.track.length);
+  expect(second?.track[second.track.length - 1]?.latDeg).not.toBe(first?.track[first.track.length - 1]?.latDeg);
 });

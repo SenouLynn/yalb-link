@@ -1,5 +1,7 @@
 /** Vehicle picker. Rendered only when there is a choice to make. */
 
+import { Group, LeverRow, Lever } from '@/ui/primitives';
+
 import { FleetEventType } from '@/gen/gcs/v1/fleet_pb';
 import type { FleetState, VehicleKey } from '@/fleet/state';
 
@@ -21,9 +23,8 @@ export function VehicleSelector({ fleet, onSelect }: VehicleSelectorProps) {
   }
 
   return (
-    <div className="panel">
-      <div className="label">Fleet · {fleet.order.length} vehicles</div>
-      <div className="selector" role="group" aria-label="Select vehicle">
+    <Group label="Fleet" note={`${String(fleet.order.length)} vehicles`}>
+      <LeverRow label="Select vehicle">
         {fleet.order.map((key) => {
           const view = fleet.vehicles[key];
 
@@ -34,21 +35,19 @@ export function VehicleSelector({ fleet, onSelect }: VehicleSelectorProps) {
           const lost = view.lifecycle === FleetEventType.VEHICLE_LOST;
 
           return (
-            <button
+            <Lever
               key={key}
-              type="button"
-              className="selector__button"
-              aria-pressed={fleet.selected === key}
+              pressed={fleet.selected === key}
               onClick={() => {
                 onSelect(key);
               }}
             >
               {view.sysId}:{view.compId}
               {lost ? ' · LOST' : ''}
-            </button>
+            </Lever>
           );
         })}
-      </div>
-    </div>
+      </LeverRow>
+    </Group>
   );
 }

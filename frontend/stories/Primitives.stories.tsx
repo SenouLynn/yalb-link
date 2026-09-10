@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Confirm, Field, Group, Lever, LeverRow, Row, Tabs } from '@/ui/primitives';
+import { Chip, Note, Confirm, Field, Group, Lever, LeverRow, Row, Tabs } from '@/ui/primitives';
 
 /**
  * The whole vocabulary on one page.
@@ -38,6 +38,12 @@ function Vocabulary() {
         </LeverRow>
       </Group>
 
+      <Group label="Notes and status">
+        <Chip tone="active">Active</Chip> <Chip tone="caution">LOST</Chip>
+        <Note>Snapshot retained until the next download.</Note>
+        <Note tone="caution">Command outcome is unresolved.</Note>
+        <Note tone="absent">Position has not been received.</Note>
+      </Group>
       <Group label="Fields">
         <Field label="Latitude" value={latitude} onChange={setLatitude} inputMode="decimal" />
         <Field label="Longitude" value="" onChange={() => undefined} placeholder="required" />
@@ -72,6 +78,8 @@ function Vocabulary() {
         onSelect={setTab}
         note="19/19 receiving"
       />
+      <div id="panel-families" role="tabpanel" aria-labelledby="tab-families" hidden={tab !== 'families'}>Family inspection</div>
+      <div id="panel-sample" role="tabpanel" aria-labelledby="tab-sample" hidden={tab !== 'sample'}>Raw sample inspection</div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { Group, LeverRow, Note, Lever } from '@/ui/primitives';
 import { useEffect, useState } from 'react';
 import { CommandState, type CommandResolution, type CommandTransaction } from '@/gen/gcs/v1/commands_pb';
 import { ArmState } from '@/gen/gcs/v1/commands_pb';
@@ -133,22 +134,22 @@ export function ArmControl({ view, connected, source, latest, staleLatest = fals
 
   if (unresolved !== null) {
     return (
-      <div className="panel command-control command-control--unresolved">
-        <p className="command-control__ambiguous" role="status">
+      <Group className="command-control" label="Command">
+        <Note tone="caution" role="status">
           {`Command ${String(unresolved.id)} ${terminalPhrase(unresolved.state)}. What the vehicle did is unknown.`}
-        </p>
-        <p className="command-control__evidence">{heartbeatEvidence(view, nowMs)}</p>
-        <p className="command-control__prompt">Report the armed state you observed:</p>
-        <div className="command-control__attest">
-          <button type="button" disabled={busy} onClick={() => void attest('ARMED')}>
+        </Note>
+        <Note>{heartbeatEvidence(view, nowMs)}</Note>
+        <Note>Report the armed state you observed:</Note>
+        <LeverRow>
+          <Lever caution disabled={busy} onClick={() => void attest('ARMED')}>
             OBSERVED ARMED
-          </button>
-          <button type="button" disabled={busy} onClick={() => void attest('DISARMED')}>
+          </Lever>
+          <Lever caution disabled={busy} onClick={() => void attest('DISARMED')}>
             OBSERVED DISARMED
-          </button>
-        </div>
+          </Lever>
+        </LeverRow>
         {error !== null && <span className="command-control__state" role="alert">{error}</span>}
-      </div>
+      </Group>
     );
   }
 
@@ -163,19 +164,21 @@ export function ArmControl({ view, connected, source, latest, staleLatest = fals
   const superseded = staleLatest && !answered && result !== undefined && error === null && !quarantined;
 
   return (
-    <div className="panel command-control">
-      <button type="button" disabled={disabled} onClick={() => void act()}>
+    <Group className="command-control" label="Command">
+      <LeverRow>
+      <Lever caution disabled={disabled} onClick={() => void act()}>
         {busy ? 'WAITING…' : confirming ? `CONFIRM ${label}` : label}
-      </button>
+      </Lever>
       <span className="command-control__state" role="status">
         {quarantined
           ? `Commanding paused for ${String(remainingS)}s after the resolution`
           : (error ?? (result === undefined ? 'No command issued' : stateLabel(result)))}
       </span>
+      </LeverRow>
       {superseded && (
         <span className="command-control__stale">Seen before a link gap; may be superseded</span>
       )}
-    </div>
+    </Group>
   );
 }
 

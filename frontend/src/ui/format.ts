@@ -1,3 +1,4 @@
+import type { StreamSource } from '@/stream/select';
 /**
  * Value formatting for the display.
  *
@@ -58,4 +59,16 @@ export function cardinal(deg: number): string | null {
   const points: Record<number, string> = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' };
 
   return points[((Math.round(deg) % 360) + 360) % 360] ?? null;
+}
+
+/** Source identity comes from the selected transport, never inferred telemetry. */
+export function sourceLabel(source: StreamSource, connected: boolean): string {
+  switch (source) {
+    case 'mock':
+      return 'MOCK';
+    case 'replay':
+      return 'REPLAY';
+    default:
+      return connected ? 'LIVE' : 'DISCONNECTED';
+  }
 }

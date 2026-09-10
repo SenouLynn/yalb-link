@@ -13,7 +13,9 @@
  * it through a token would invent a token that means nothing.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
+import ts from 'typescript';
+import { MISSION_ROUTE_COLOR, PREDICTION_COLOR, TRACK_COLOR, PANEL_COLOR, PANEL_DEEP_COLOR } from './palette';
 import { describe, expect, it } from 'vitest';
 
 const SYSTEM = readFileSync(new URL('./system.css', import.meta.url), 'utf8');
@@ -30,7 +32,7 @@ function declarations(css: string): string[] {
 
 /** Properties whose values carry the design scale rather than geometry. */
 const SCALE_PROPERTIES =
-  /^(font|font-size|font-weight|letter-spacing|line-height|padding|padding-[a-z]+|margin|margin-[a-z]+|gap|row-gap|column-gap|border-radius)$/;
+  /^(font|font-size|font-weight|letter-spacing|line-height|padding|padding-[a-z]+|margin|margin-[a-z]+|gap|row-gap|column-gap|border-radius|border|border-[a-z]+|outline|outline-offset|box-shadow|top|left|right|bottom|width|height|min-[a-z]+|max-[a-z]+|flex-basis)$/;
 
 const COLOR_LITERAL = /#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/;
 
@@ -42,7 +44,10 @@ describe('design system boundary', () => {
   });
 
   it('keeps the design scale out of instrument styling', () => {
-    const offenders = declarations(DISPLAY).filter((line) => {
+    const scaleCSS = DISPLAY.replace(/[^{}]+\{([^{}]*)\}/g, (block: string, body: string) =>
+      body.includes('design-geometry:')
+        ? block.replace(/(?:min-|max-)?(?:width|height):[^;]+;/g, '') : block);
+    const offenders = declarations(scaleCSS).filter((line) => {
       const [property = '', ...rest] = line.split(':');
       const value = rest.join(':');
 
@@ -113,3 +118,78 @@ function luminance(hex: string): number {
 
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
+
+/** Production TSX only: fixtures/assertions are not rendered application vocabulary. */
+function tsxFiles(dir = new URL('../', import.meta.url)): { name: string; source: string }[] {
+  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
+    if (entry.name === 'gen') return [];
+    const url = new URL(entry.name + (entry.isDirectory() ? '/' : ''), dir);
+    if (entry.isDirectory()) return tsxFiles(url);
+    return entry.name.endsWith('.tsx') && !entry.name.endsWith('.test.tsx')
+      ? [{ name: url.pathname, source: readFileSync(url, 'utf8') }] : [];
+  });
+}
+
+const TSX = tsxFiles();
+
+describe('component vocabulary boundary', () => {
+  it('loads tokens and primitives before feature CSS in Storybook', () => {
+    const preview = readFileSync(new URL('../../.storybook/preview.tsx', import.meta.url), 'utf8');
+    const system = preview.indexOf("import '../src/ui/system.css'");
+    const display = preview.indexOf("import '../src/ui/display.css'");
+    expect(system, 'Storybook must render the same design system as the app').toBeGreaterThanOrEqual(0);
+    expect(display).toBeGreaterThan(system);
+  });
+
+  it('keeps color literals out of production TSX (DESIGN.md Colors)', () => {
+    expect(TSX.filter(({ source }) => COLOR_LITERAL.test(source)).map(({ name }) => name)).toEqual([]);
+  });
+
+  it('uses Lever for buttons (DESIGN.md Buttons)', () => {
+    const offenders = TSX.filter(({ name }) => !name.endsWith('/primitives.tsx')).flatMap(({ name, source }) => {
+      const problems = [];
+      if (/<button\b/.test(source)) problems.push(name);
+      for (const match of source.matchAll(/document\.createElement\(['"]button['"]\)/g)) {
+        const prefix = source.slice(Math.max(0, match.index - 160), match.index);
+        if (!prefix.includes('design-exemption: imperative MapLibre marker uses the lever class.') || !source.includes('fleet-marker lever')) problems.push(name);
+      }
+      return problems;
+    });
+    expect(offenders).toEqual([]);
+  });
+
+  it('rejects fontSize attributes and exact legacy panel/label classes (DESIGN.md Four Steps and Components)', () => {
+    const offenders: string[] = [];
+    for (const { name, source } of TSX) {
+      const tree = ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const visit = (node: ts.Node) => {
+        if (ts.isJsxAttribute(node)) {
+          const attribute = node.name.getText(tree);
+          if (attribute === 'fontSize') offenders.push(`${name}: fontSize belongs in token CSS`);
+          if (attribute === 'className' && !name.endsWith('/primitives.tsx') && !name.endsWith('/Workspace.tsx')) {
+            const classes = node.initializer?.getText(tree) ?? '';
+            if (/(?:^|[\s"'`])(?:panel|label)(?=[\s"'`]|$)/.test(classes)) offenders.push(`${name}: use Group`);
+          }
+        }
+        ts.forEachChild(node, visit);
+      };
+      visit(tree);
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('pins MapLibre mirrors to CSS tokens (DESIGN.md Colors)', () => {
+    for (const [name, value] of Object.entries({ 'mission-route': MISSION_ROUTE_COLOR, prediction: PREDICTION_COLOR, track: TRACK_COLOR, panel: PANEL_COLOR, 'panel-deep': PANEL_DEEP_COLOR })) {
+      expect(SYSTEM).toContain(`--${name}: ${value};`);
+    }
+  });
+
+  it('permits only the two named shadow uses (DESIGN.md Only-Overlays-Float)', () => {
+    expect(declarations(DISPLAY).filter((line) => line.startsWith('box-shadow:'))).toEqual([]);
+    expect(declarations(SYSTEM).filter((line) => line.startsWith('box-shadow:')).sort()).toEqual([
+      'box-shadow: var(--overlay-ambient)', 'box-shadow: var(--selection-edge)',
+    ]);
+    expect(SYSTEM).toMatch(/\.views__popover\s*\{[^}]*box-shadow: var\(--overlay-ambient\)/);
+    expect(SYSTEM).toMatch(/\.fleet-card\[data-selected="true"\]\s*\{[^}]*box-shadow: var\(--selection-edge\)/);
+  });
+});

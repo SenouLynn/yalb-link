@@ -29,9 +29,9 @@ it('keeps one active stream and selection across pane toggles and rerenders in S
   });
   expect(container.querySelector('[aria-label="Fleet roster"]')).not.toBeNull();
   act(() => { container.querySelector<HTMLButtonElement>('[aria-label="Open vehicle 2:1"]')?.click(); });
-  const selector = Array.from(container.querySelectorAll<HTMLButtonElement>('.selector button'));
+  const selector = Array.from(container.querySelectorAll<HTMLButtonElement>('[aria-label="Select vehicle"] button'));
   act(() => { selector[1]?.click(); });
-  const selectedText = container.querySelector('.selector [aria-pressed="true"]')?.textContent;
+  const selectedText = container.querySelector('[aria-label="Select vehicle"] [aria-pressed="true"]')?.textContent;
   expect(selectedText).toContain('2:1');
   for (const button of container.querySelectorAll<HTMLButtonElement>('[aria-controls]')) {
     act(() => { button.click(); });
@@ -41,7 +41,7 @@ it('keeps one active stream and selection across pane toggles and rerenders in S
   expect(container.querySelector('[aria-label="Fleet roster"]')).not.toBeNull();
   act(() => { container.querySelector<HTMLButtonElement>('[aria-label="Open vehicle 2:1"]')?.click(); });
   expect(harness.start).toHaveBeenCalledTimes(starts);
-  expect(container.querySelector('.selector [aria-pressed="true"]')?.textContent).toBe(selectedText);
+  expect(container.querySelector('[aria-label="Select vehicle"] [aria-pressed="true"]')?.textContent).toBe(selectedText);
   act(() => { root.unmount(); });
   expect(harness.stop).toHaveBeenCalledTimes(starts);
   expect(vi.getTimerCount()).toBe(0);

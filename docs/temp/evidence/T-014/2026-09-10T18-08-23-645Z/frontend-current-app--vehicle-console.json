@@ -1,0 +1,226 @@
+[
+  {
+    "method": "Runtime.consoleAPICalled",
+    "params": {
+      "type": "debug",
+      "args": [
+        {
+          "type": "string",
+          "value": "[vite] connecting..."
+        }
+      ],
+      "executionContextId": 2,
+      "timestamp": 1789063715284.174,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "functionName": "",
+            "scriptId": "9",
+            "url": "http://127.0.0.1:6010/@vite/client",
+            "lineNumber": 788,
+            "columnNumber": 8
+          }
+        ]
+      }
+    }
+  },
+  {
+    "method": "Runtime.consoleAPICalled",
+    "params": {
+      "type": "debug",
+      "args": [
+        {
+          "type": "string",
+          "value": "[vite] connected."
+        }
+      ],
+      "executionContextId": 2,
+      "timestamp": 1789063715288.123,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "functionName": "handleMessage",
+            "scriptId": "9",
+            "url": "http://127.0.0.1:6010/@vite/client",
+            "lineNumber": 911,
+            "columnNumber": 14
+          },
+          {
+            "functionName": "",
+            "scriptId": "9",
+            "url": "http://127.0.0.1:6010/@vite/client",
+            "lineNumber": 489,
+            "columnNumber": 42
+          },
+          {
+            "functionName": "dequeue",
+            "scriptId": "9",
+            "url": "http://127.0.0.1:6010/@vite/client",
+            "lineNumber": 515,
+            "columnNumber": 9
+          },
+          {
+            "functionName": "",
+            "scriptId": "9",
+            "url": "http://127.0.0.1:6010/@vite/client",
+            "lineNumber": 503,
+            "columnNumber": 11
+          },
+          {
+            "functionName": "enqueue",
+            "scriptId": "9",
+            "url": "http://127.0.0.1:6010/@vite/client",
+            "lineNumber": 497,
+            "columnNumber": 11
+          },
+          {
+            "functionName": "",
+            "scriptId": "9",
+            "url": "http://127.0.0.1:6010/@vite/client",
+            "lineNumber": 489,
+            "columnNumber": 28
+          },
+          {
+            "functionName": "onMessage",
+            "scriptId": "9",
+            "url": "http://127.0.0.1:6010/@vite/client",
+            "lineNumber": 308,
+            "columnNumber": 10
+          },
+          {
+            "functionName": "",
+            "scriptId": "9",
+            "url": "http://127.0.0.1:6010/@vite/client",
+            "lineNumber": 438,
+            "columnNumber": 8
+          }
+        ]
+      }
+    }
+  },
+  {
+    "method": "Log.entryAdded",
+    "params": {
+      "entry": {
+        "source": "network",
+        "level": "error",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "timestamp": 1789063715414.296,
+        "url": "http://127.0.0.1:6010/favicon.ico",
+        "networkRequestId": "1587.50"
+      }
+    }
+  },
+  {
+    "method": "Runtime.consoleAPICalled",
+    "params": {
+      "type": "info",
+      "args": [
+        {
+          "type": "string",
+          "value": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools"
+        },
+        {
+          "type": "string",
+          "value": "font-weight:bold"
+        }
+      ],
+      "executionContextId": 2,
+      "timestamp": 1789063715667.917,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "functionName": "",
+            "scriptId": "121",
+            "url": "http://127.0.0.1:6010/node_modules/.cache/storybook/10.6.0/1e8d972d900bca133086bd0f2a507dc200194c3a4e84ff3ab0634962711df360/sb-vite/deps/chunk-P2KFR2AL.js?v=903a61f0",
+            "lineNumber": 20102,
+            "columnNumber": 53
+          },
+          {
+            "functionName": "node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/cjs/react-dom-client.development.js",
+            "scriptId": "121",
+            "url": "http://127.0.0.1:6010/node_modules/.cache/storybook/10.6.0/1e8d972d900bca133086bd0f2a507dc200194c3a4e84ff3ab0634962711df360/sb-vite/deps/chunk-P2KFR2AL.js?v=903a61f0",
+            "lineNumber": 20176,
+            "columnNumber": 6
+          },
+          {
+            "functionName": "__require2",
+            "scriptId": "38",
+            "url": "http://127.0.0.1:6010/node_modules/.cache/storybook/10.6.0/1e8d972d900bca133086bd0f2a507dc200194c3a4e84ff3ab0634962711df360/sb-vite/deps/chunk-KEXKKQVW.js?v=903a61f0",
+            "lineNumber": 14,
+            "columnNumber": 49
+          },
+          {
+            "functionName": "node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/client.js",
+            "scriptId": "121",
+            "url": "http://127.0.0.1:6010/node_modules/.cache/storybook/10.6.0/1e8d972d900bca133086bd0f2a507dc200194c3a4e84ff3ab0634962711df360/sb-vite/deps/chunk-P2KFR2AL.js?v=903a61f0",
+            "lineNumber": 20187,
+            "columnNumber": 23
+          },
+          {
+            "functionName": "__require2",
+            "scriptId": "38",
+            "url": "http://127.0.0.1:6010/node_modules/.cache/storybook/10.6.0/1e8d972d900bca133086bd0f2a507dc200194c3a4e84ff3ab0634962711df360/sb-vite/deps/chunk-KEXKKQVW.js?v=903a61f0",
+            "lineNumber": 14,
+            "columnNumber": 49
+          },
+          {
+            "functionName": "",
+            "scriptId": "120",
+            "url": "http://127.0.0.1:6010/node_modules/.cache/storybook/10.6.0/1e8d972d900bca133086bd0f2a507dc200194c3a4e84ff3ab0634962711df360/sb-vite/deps/chunk-PWFNYJGJ.js?v=903a61f0",
+            "lineNumber": 12,
+            "columnNumber": 23
+          }
+        ]
+      }
+    }
+  },
+  {
+    "method": "Log.entryAdded",
+    "params": {
+      "entry": {
+        "source": "rendering",
+        "level": "warning",
+        "text": "[.WebGL-0x10c000da400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "timestamp": 1789063718604.393,
+        "url": "http://127.0.0.1:6010/iframe.html?id=frontend-current-app--vehicle&viewMode=story"
+      }
+    }
+  },
+  {
+    "method": "Log.entryAdded",
+    "params": {
+      "entry": {
+        "source": "rendering",
+        "level": "warning",
+        "text": "[.WebGL-0x10c000da400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "timestamp": 1789063719030.257,
+        "url": "http://127.0.0.1:6010/iframe.html?id=frontend-current-app--vehicle&viewMode=story"
+      }
+    }
+  },
+  {
+    "method": "Log.entryAdded",
+    "params": {
+      "entry": {
+        "source": "rendering",
+        "level": "warning",
+        "text": "[.WebGL-0x10c000da400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "timestamp": 1789063719030.294,
+        "url": "http://127.0.0.1:6010/iframe.html?id=frontend-current-app--vehicle&viewMode=story"
+      }
+    }
+  },
+  {
+    "method": "Log.entryAdded",
+    "params": {
+      "entry": {
+        "source": "rendering",
+        "level": "warning",
+        "text": "[.WebGL-0x10c000da400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+        "timestamp": 1789063719031.777,
+        "url": "http://127.0.0.1:6010/iframe.html?id=frontend-current-app--vehicle&viewMode=story"
+      }
+    }
+  }
+]

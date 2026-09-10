@@ -11,7 +11,7 @@
  * styling the panel directly. A one-off style is how the next drift starts.
  */
 
-import type { ReactNode } from 'react';
+import type { ReactNode, Ref, AriaAttributes } from 'react';
 
 import { Provenance } from './Provenance';
 import type { Reading } from './readings';
@@ -19,6 +19,8 @@ import type { Reading } from './readings';
 /* --- group ---------------------------------------------------------------- */
 
 export interface GroupProps {
+  className?: string;
+  'aria-label'?: string;
   /** Uppercase section label. Names a category, not a sentence. */
   label: string;
   /** Right-aligned annotation on the header line — a count, an age, a source. */
@@ -42,9 +44,9 @@ export interface GroupProps {
 }
 
 /** A labelled section of rows, separated from its neighbours by a hairline. */
-export function Group({ label, note, actions, reading, absent, children }: GroupProps) {
+export function Group({ label, note, actions, reading, absent, children, className, 'aria-label': ariaLabel }: GroupProps) {
   return (
-    <section className="group">
+    <section className={`group${className ? ` ${className}` : ''}`} aria-label={ariaLabel}>
       <div className="group__head">
         <span className="group__label">{label}</span>
         {actions}
@@ -54,10 +56,18 @@ export function Group({ label, note, actions, reading, absent, children }: Group
       {absent === undefined ? (
         <div className="group__body">{children}</div>
       ) : (
-        <p className="group__absent">{absent}</p>
+        <Note tone="absent">{absent}</Note>
       )}
     </section>
   );
+}
+
+export function Chip({ children, tone = 'normal' }: { children: ReactNode; tone?: 'normal' | 'active' | 'caution' | 'dead' }) {
+  return <span className={`chip chip--${tone}`}>{children}</span>;
+}
+
+export function Note({ children, tone = 'normal', role }: { children: ReactNode; tone?: 'normal' | 'caution' | 'absent'; role?: 'status' | 'alert' }) {
+  return <p className={`note note--${tone}`} role={role}>{children}</p>;
 }
 
 /* --- row ------------------------------------------------------------------ */
@@ -122,7 +132,8 @@ export function Row({ label, value, unit, tone = 'normal', lead, stacked, note }
 
 /* --- lever ---------------------------------------------------------------- */
 
-export interface LeverProps {
+export interface LeverProps extends AriaAttributes {
+  ref?: Ref<HTMLButtonElement>;
   children: ReactNode;
   onClick?: (() => void) | undefined;
   /** Amber-edged. For an action whose effect on the aircraft is the hazard. */
@@ -187,6 +198,7 @@ export function LeverRow({ children, label }: { children: ReactNode; label?: str
 
 export interface FieldProps {
   label: string;
+  options?: readonly { value: string; label: string }[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string | undefined;
@@ -195,11 +207,14 @@ export interface FieldProps {
 }
 
 /** A labelled input, sized on the target axis rather than the density axis. */
-export function Field({ label, value, onChange, placeholder, disabled, inputMode }: FieldProps) {
+export function Field({ label, value, onChange, placeholder, disabled, inputMode, options }: FieldProps) {
   return (
     <label className="field">
       <span className="row__label">{label}</span>
-      <input
+      {options ? <select className="field__input" value={value} disabled={disabled}
+        onChange={(event) => { onChange(event.target.value); }}>
+        {options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+      </select> : <input
         className="field__input"
         value={value}
         onChange={(event) => {
@@ -209,7 +224,7 @@ export function Field({ label, value, onChange, placeholder, disabled, inputMode
         disabled={disabled}
         inputMode={inputMode}
         autoComplete="off"
-      />
+      />}
     </label>
   );
 }
@@ -282,6 +297,22 @@ export function Tabs({
           type="button"
           role="tab"
           className="tab"
+          id={`tab-${tab.id}`}
+          aria-controls={`panel-${tab.id}`}
+          tabIndex={tab.id === active ? 0 : -1}
+          onKeyDown={(event) => {
+            const index = tabs.findIndex((item) => item.id === tab.id);
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+              : event.key === 'ArrowRight' ? (index + 1) % tabs.length
+              : event.key === 'ArrowLeft' ? (index - 1 + tabs.length) % tabs.length : null;
+            if (next === null) return;
+            event.preventDefault();
+            const target = tabs[next];
+            if (target) {
+              onSelect(target.id);
+              document.getElementById(`tab-${target.id}`)?.focus();
+            }
+          }}
           aria-selected={tab.id === active}
           onClick={() => {
             onSelect(tab.id);

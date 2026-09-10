@@ -8,10 +8,11 @@ import {
   type PanelContent,
   type PanelVisibility,
 } from '@/workspace/Workspace';
+import { GuidancePanel, HomePanel, RadioLinkPanel } from '@/ui/InspectionPanel';
 import { InstrumentPanel } from '@/ui/InstrumentPanel';
 import { FamiliesPanel, SamplePanel } from '@/ui/DevPanels';
 import { LinkRows, StateRows } from '@/ui/StatusBar';
-import { Row } from '@/ui/primitives';
+import { Group, Row } from '@/ui/primitives';
 import { MissionPanel } from '@/mission/MissionPanel';
 import { mockMissionSnapshot } from '@/mission/fixtures';
 import { missionGeometry } from '@/mission/model';
@@ -32,16 +33,17 @@ function Workshop() {
   const content: PanelContent = {
     link: <LinkRows {...status} />,
     state: <StateRows {...status} />,
-    command: <Row label="Arm" value="DISARMED" />,
+    command: <Group label="Command"><Row label="Arm" value="DISARMED" /></Group>,
     position: (
-      <>
+      <Group label="Position" reading={instrumentReadings('live').position}>
         <Row label="Latitude" value="47.393227" />
         <Row label="Longitude" value="8.545423" />
         <Row label="Track" value="160 / 500" unit="pts" />
-      </>
+      </Group>
     ),
     mission: (
       <MissionPanel
+        nowMs={NOW}
         status={loaded ? 'complete' : 'idle'}
         snapshot={snapshot}
         error={null}
@@ -55,6 +57,9 @@ function Workshop() {
     map: (
       <div className="slot__empty">Map placeholder · layout preview</div>
     ),
+    guidance: <GuidancePanel readings={instrumentReadings('live')} />,
+    home: <HomePanel readings={instrumentReadings('live')} />,
+    radiolink: <RadioLinkPanel readings={instrumentReadings('live')} />,
     instruments: <InstrumentPanel readings={instrumentReadings('live')} />,
     families: <FamiliesPanel view={vehicle} nowMs={NOW} />,
     sample: <SamplePanel view={vehicle} />,

@@ -5,8 +5,8 @@ import { GpsFixType } from '@/gen/gcs/v1/types_pb';
 import { isFamilyFresh, type VehicleView } from '@/fleet/state';
 import type { StreamSource } from '@/stream/select';
 
-import { NO_VALUE } from './format';
-import { Row, type Tone } from './primitives';
+import { NO_VALUE, sourceLabel } from './format';
+import { Group, Row, type Tone } from './primitives';
 
 export interface StatusRowsProps {
   view: VehicleView;
@@ -26,11 +26,11 @@ export interface StatusRowsProps {
  * one rail group the operator cannot hide — losing it is how you stop knowing
  * that the display is lying to you.
  */
-export function LinkRows({ view, connected, source }: StatusRowsProps) {
+export function LinkRows({ view, nowMs, connected, source }: StatusRowsProps) {
   const lost = view.lifecycle === FleetEventType.VEHICLE_LOST;
 
   return (
-    <>
+    <Group label="Link" reading={heartbeatReading(view, nowMs)}>
       <Row
         label="Source"
         value={sourceLabel(source, connected)}
@@ -42,7 +42,7 @@ export function LinkRows({ view, connected, source }: StatusRowsProps) {
         tone={lost ? 'caution' : 'normal'}
       />
       <Row label="Target" value={view.key} />
-    </>
+    </Group>
   );
 }
 
@@ -51,7 +51,7 @@ export function StateRows({ view, nowMs }: StatusRowsProps) {
   const heartbeat = view.heartbeat;
 
   return (
-    <>
+    <Group label="Target state" reading={heartbeatReading(view, nowMs)}>
       <Row
         label="Armed"
         value={armedLabel(heartbeat?.armed)}
@@ -69,26 +69,8 @@ export function StateRows({ view, nowMs }: StatusRowsProps) {
 
       <Row label="GPS" value={gpsLabel(view, nowMs)} tone={gpsTone(view, nowMs)} />
       <Row label="EKF" value={ekfLabel(view, nowMs)} tone={ekfTone(view, nowMs)} />
-    </>
+    </Group>
   );
-}
-
-/**
- * What the display is showing, named plainly.
- *
- * Fixtures and recordings are both marked amber rather than left neutral.
- * Neither is a flying aircraft, and an operator glancing at the row has to be
- * able to tell that without reading the URL.
- */
-function sourceLabel(source: StreamSource, connected: boolean): string {
-  switch (source) {
-    case 'mock':
-      return 'MOCK';
-    case 'replay':
-      return 'REPLAY';
-    default:
-      return connected ? 'LIVE' : 'DISCONNECTED';
-  }
 }
 
 function sourceTone(source: StreamSource, connected: boolean): Tone {
@@ -190,4 +172,17 @@ function ekfTone(view: VehicleView, nowMs: number): Tone {
   const healthy = (flags & EKF_UNINITIALIZED) === 0 && (flags & EKF_ATTITUDE) !== 0;
 
   return healthy ? 'normal' : 'caution';
+}
+
+function heartbeatReading(view: VehicleView, nowMs: number) {
+  // Fleet events report changes, not every heartbeat (internal/vehicle/fold.go).
+  // Age the retained observation; a LOST event must not reset it to "just heard".
+  const observed = view.heartbeat?.observedAt;
+  const seen = observed === undefined ? (view.heartbeat ? view.lastFleetAtMs : undefined)
+    : Number(observed.seconds) * 1000 + observed.nanos / 1e6;
+  const age = seen === undefined ? null : Math.max(0, nowMs - seen);
+  return {
+    state: age === null ? 'unavailable' as const : view.lifecycle === FleetEventType.VEHICLE_LOST ? 'stale' as const : 'live' as const,
+    value: view.heartbeat ?? null, source: 'HEARTBEAT STATE', ageMs: age, ttlMs: Infinity,
+  };
 }

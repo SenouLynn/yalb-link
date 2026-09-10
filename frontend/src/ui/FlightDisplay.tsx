@@ -25,13 +25,13 @@ import type { StreamSource } from '@/stream/select';
 import { ArmControl } from './ArmControl';
 import { FamiliesPanel, SamplePanel } from './DevPanels';
 import { GuidancePanel, HomePanel, RadioLinkPanel } from './InspectionPanel';
-import { NO_VALUE } from './format';
-import { Row } from './primitives';
+import { NO_VALUE, sourceLabel } from './format';
+import { Group, Row, Lever } from './primitives';
 import { hasDisplayValue, readFlight } from './readings';
 import { ReplayControls } from './ReplayControls';
 import { LinkRows, StateRows } from './StatusBar';
 import { VehicleSelector } from './VehicleSelector';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { InstrumentPanel } from './InstrumentPanel';
 import {
   DEFAULT_VISIBILITY,
@@ -79,7 +79,7 @@ export function FlightDisplay({
 
   const [visible, setVisible] = useState<PanelVisibility>(DEFAULT_VISIBILITY);
   const toggle = (id: string) => {
-    // Moving focus out before the panel unmounts; otherwise focus lands on the
+    // Moving focus out before the panel is hidden; otherwise focus lands on the
     // body and the next Tab starts over at the top of the page.
     const panel = document.getElementById(`panel-${id}`);
     if (visible[id] === true && panel?.contains(document.activeElement) === true) {
@@ -94,10 +94,8 @@ export function FlightDisplay({
       meta={<span>{sourceLabel(source, fleet.connected)}</span>}
       viewBar={
         <>
-          <button
+          <Lever
             ref={navigation}
-            type="button"
-            className="lever"
             onClick={() => {
               if (section === 'fleet' && view) openVehicle(view.key);
               else setSection('fleet');
@@ -105,7 +103,7 @@ export function FlightDisplay({
             disabled={section === 'fleet' && !view}
           >
             {section === 'fleet' ? 'Open selected vehicle' : '← Fleet'}
-          </button>
+          </Lever>
           {section === 'vehicle' && (
             <>
               <VehicleSelector fleet={fleet} onSelect={onSelect} />
@@ -193,7 +191,7 @@ function SelectedFlightDisplay({
       />
     ),
     position: (
-      <>
+      <Group label="Position" reading={readings.position}>
         <Row
           label="Latitude"
           value={position === null ? NO_VALUE : position.latDeg.toFixed(6)}
@@ -205,10 +203,11 @@ function SelectedFlightDisplay({
           tone={position === null ? 'dead' : 'normal'}
         />
         <Row label="Track" value={`${String(view.track.length)} / 500`} unit="pts" />
-      </>
+      </Group>
     ),
     mission: (
       <MissionPanel
+        nowMs={nowMs}
         status={mission.status}
         snapshot={mission.snapshot}
         error={mission.error}
@@ -239,37 +238,38 @@ function SelectedFlightDisplay({
 }
 
 function useMission(key: VehicleKey, sysId: number, compId: number, source: StreamSource) {
-  const [state, setState] = useState<MissionViewState>(() => emptyMissionState(key));
+  const [state, setState] = useState<MissionViewState & { source: StreamSource }>(() => ({ ...emptyMissionState(key), source }));
   const request = useRef<AbortController | null>(null);
 
-  useEffect(() => {
-    request.current?.abort();
-    setState(emptyMissionState(key));
-    return () => request.current?.abort();
-  }, [key]);
-
-  const visible = visibleMissionState(state, key);
+  const visible = state.source === source ? visibleMissionState(state, key) : emptyMissionState(key);
   const load = missionLoaderFor(source);
-  const onDownload = () => {
+  const onDownload = useCallback(() => {
     request.current?.abort();
     const controller = new AbortController();
     request.current = controller;
-    setState({ key, status: 'loading', snapshot: null, error: null });
+    setState({ source, key, status: 'loading', snapshot: null, error: null });
     void load(sysId, compId, controller.signal)
       .then((snapshot) => {
-        if (request.current === controller)
-          setState({ key, status: 'complete', snapshot, error: null });
+        if (request.current === controller && !controller.signal.aborted)
+          setState({ source, key, status: 'complete', snapshot, error: null });
       })
       .catch((error: unknown) => {
         if (request.current !== controller || controller.signal.aborted) return;
         setState({
+          source,
           key,
           status: 'error',
           snapshot: null,
           error: error instanceof Error ? error.message : 'Mission download failed',
         });
       });
-  };
+  }, [key, sysId, compId, load, source]);
+  useEffect(() => {
+    request.current?.abort();
+    setState({ ...emptyMissionState(key), source });
+    if (source === 'mock') onDownload();
+    return () => request.current?.abort();
+  }, [key, source, onDownload]);
   return { ...missionPanelState(visible), onDownload };
 }
 
@@ -315,18 +315,6 @@ function displayTrajectory(
   }
 
   return projectTrajectoryToGeo(readings.position.value, offsets);
-}
-
-/** What the display is showing, for the app bar. Never inferred from the data. */
-function sourceLabel(source: StreamSource, connected: boolean): string {
-  switch (source) {
-    case 'mock':
-      return 'MOCK';
-    case 'replay':
-      return 'REPLAY';
-    default:
-      return connected ? 'LIVE' : 'DISCONNECTED';
-  }
 }
 
 function emptyHint(source: StreamSource, connected: boolean): string {

@@ -1,3 +1,4 @@
+import { Lever } from '@/ui/primitives';
 /** Imperative MapLibre adapter for one vehicle and its breadcrumb track. */
 
 import maplibregl from 'maplibre-gl';
@@ -7,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { GeoPoint } from '@/logic/geoTrack';
 import type { PositionResult } from '@/logic/position';
 import type { GeoCoordinate } from '@/logic/trajectory';
-import { MISSION_ROUTE_COLOR, PREDICTION_COLOR } from '@/ui/palette';
+import { MISSION_ROUTE_COLOR, PREDICTION_COLOR, TRACK_COLOR, PANEL_COLOR, PANEL_DEEP_COLOR } from '@/ui/palette';
 import type { MissionGeometry } from '@/mission/model';
 
 import { framePoints, nextFollowMode, shouldFollow, type FollowMode } from './camera';
@@ -52,7 +53,7 @@ export function buildStyle(tileSource: TileSource): maplibregl.StyleSpecificatio
       },
     },
     layers: [
-      { id: 'background', type: 'background', paint: { 'background-color': '#0d1013' } },
+      { id: 'background', type: 'background', paint: { 'background-color': PANEL_DEEP_COLOR } },
       { id: 'basemap', type: 'raster', source: 'basemap' },
     ],
   };
@@ -85,7 +86,7 @@ export function flightLayers(missionColor = MISSION_ROUTE_COLOR): maplibregl.Lay
       type: 'line',
       source: TRACK_SOURCE,
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#74d7ff', 'line-width': 2.5, 'line-opacity': 0.9 },
+      paint: { 'line-color': TRACK_COLOR, 'line-width': 2.5, 'line-opacity': 0.9 },
     },
     {
       id: TRAJECTORY_LAYER,
@@ -113,7 +114,7 @@ export function flightLayers(missionColor = MISSION_ROUTE_COLOR): maplibregl.Lay
       filter: ['==', '$type', 'Point'],
       paint: {
         'circle-radius': 10,
-        'circle-color': '#14171c',
+        'circle-color': PANEL_COLOR,
         'circle-stroke-color': missionColor,
         'circle-stroke-width': 2,
       },
@@ -167,7 +168,7 @@ function createVehicleMarkerElement(): HTMLElement {
   const element = document.createElement('div');
   element.classList.add('vehicle-marker');
   element.innerHTML = `<svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true">
-    <polygon points="14,3 21,24 14,19 7,24" fill="#d9a441" stroke="#14171c" stroke-width="1.5" stroke-linejoin="round" />
+    <polygon points="14,3 21,24 14,19 7,24" fill="var(--lume)" stroke="var(--panel)" stroke-width="1.5" stroke-linejoin="round" />
   </svg>`;
   return element;
 }
@@ -344,13 +345,15 @@ export function MapPanel({
 
   return (
     <div className="map-shell">
+      <div className="map-overlays">
       <div className="map-actions">
-        <button type="button" onClick={fitMission} disabled={mission.points.length === 0}>Fit mission</button>
-        <button type="button" onClick={() => { changeMode('follow'); }} disabled={position === null} aria-pressed={mode === 'follow'}>Follow vehicle</button>
+        <Lever onClick={fitMission} disabled={mission.points.length === 0}>Fit mission</Lever>
+        <Lever onClick={() => { changeMode('follow'); }} disabled={position === null} pressed={mode === 'follow'}>Follow vehicle</Lever>
       </div>
-      <div ref={containerRef} className="map-panel" aria-label="Vehicle position map" />
       {trajectory.length > 1 ? <div className="trajectory-key">5 s prediction</div> : null}
       {mission.points.length > 0 ? <div className="mission-key">Commanded mission</div> : null}
+      </div>
+      <div ref={containerRef} className="map-panel" aria-label="Vehicle position map" />
     </div>
   );
 }

@@ -1,0 +1,28 @@
+
+DevTools listening on ws://127.0.0.1:56387/devtools/browser/b937b173-462e-491a-a1c1-72866370f076
+Trying to load the allocator multiple times. This is *not* supported.
+[1343:6886533:0910/140824.136326:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140824.136634:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886533:0910/140824.136865:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140824.136903:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886533:0910/140824.136999:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140824.137039:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886533:0910/140824.137123:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140824.137161:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886533:0910/140824.137287:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140824.137325:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886533:0910/140824.143119:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140824.143508:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886533:0910/140826.719928:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140826.720006:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886533:0910/140827.023755:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140827.023831:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886533:0910/140827.282551:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140827.282630:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886533:0910/140827.329667:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1343:6886603:0910/140827.329751:ERROR:ui/display/mac/cv_display_link_mac.mm:195] CVDisplayLinkCreateWithCGDisplay failed. CVReturn: -6670
+[1337:6886514:0910/140827.335864:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[1337:6886514:0910/140827.344889:ERROR:google_apis/gcm/engine/registration_request.cc:291] Registration response error message: PHONE_REGISTRATION_ERROR
+[1337:6886454:0910/140827.347450:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 6 rejected by interface blink.mojom.WidgetHost
+[1337:6886454:0910/140827.347478:ERROR:mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:748] Message 7 rejected by interface blink.mojom.WidgetHost
+[1337:6886454:0910/140827.480395:ERROR:chrome/browser/web_applications/externally_managed_app_manager.cc:680] https://docs.google.com/spreadsheets/installwebapp?usp=chrome_default from install source 1 failed to install with reason 21

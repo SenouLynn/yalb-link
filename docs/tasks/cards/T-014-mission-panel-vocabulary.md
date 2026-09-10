@@ -1,70 +1,101 @@
 ---
 id: T-014
-title: Bring the mission panel into the display's design vocabulary
-status: ready
+title: Unify flight-display primitives and make mock review reproducible
+status: in_progress
 priority: 2
-owner: unassigned
+owner: codex
 depends_on: none
 ---
 
 ## Motivation and evidence
 
-`display.css` documents a deliberate instrument palette — graphite bezel, the
-blue-over-ochre attitude split, amber as the only warning colour, and no "good"
-green, because a panel that lights up to say nothing is wrong trains an operator
-to ignore it. Thirteen tokens carry it, and `Readout`, `Provenance`, `.panel`,
-`.label`, `.value` and `.unit` apply it.
-
-The mission panel added by T-007 uses none of that:
-
-- `#c7f0ff` is hardcoded in six places across `display.css` and `MapPanel.tsx`
-  and is not a palette token. T-010's map marker CSS copied it rather than
-  questioning it.
-- No provenance at all, though `MissionSnapshot.observed_at` is populated and
-  every instrument beside it names its source message and age.
-- A bare `<ol>` that dumps wire values: `params [15, 0, 0, 0] · autocontinue yes`.
-- `.mission-list__active` needs an `!important`; nothing else in the sheet does.
+The Impeccable round-two plan extends this card's mission vocabulary work to
+adopting the existing primitives throughout the flight display. The prior
+system defined controls but retained raw buttons, parallel headers, untested
+palette mirrors, and incomplete mock/Storybook compositions.
 
 ## Outcome
 
-The mission panel reads as part of the same instrument, and its snapshot carries
-provenance like every other reading.
+One shared panel vocabulary, provenance in rail and instrument headers,
+a multi-vehicle mock demonstration, and reproducible browser review evidence.
 
 ## Scope
 
-- In: palette tokens, reuse of the existing readout/provenance components,
-  typography, item presentation, and removing the `!important`.
-- Out: layout and density rework and the message log (T-013), map viewport
-  behaviour (T-012), and any change to what the mission download fetches.
+- In: primitive adoption and CSS cleanup, keyboard tabs, map palette, mock
+  mission auto-load and fleet fixtures, Storybook startup, gates and CDP driver.
+- Out: fleet registry integration, fleet/map mount lifecycle redesign, offline
+  tiles, backend telemetry acquisition, persistence, guided-command forms.
 
 ## Acceptance criteria
 
-- [ ] No hardcoded colour remains in the mission panel or its map layers; the
-      commanded-route colour is a named token with a stated rationale.
-- [ ] The snapshot's `observed_at` is shown as provenance in the established
-      form.
-- [ ] Item fields are presented rather than dumped; raw parameter arrays do not
-      appear as bare arrays.
-- [ ] The stylesheet needs no `!important`.
-- [ ] Existing mission tests still pass unchanged in intent.
+- [x] All app buttons use Lever; imperative map markers have an explicit exemption.
+- [x] Group owns headers; position, heartbeat and mission snapshots show age/source.
+- [x] Chip/Note/Field/LeverRow replace repeated component vocabulary.
+- [x] Map colors use named tokens; TS mirrors are pinned by tests.
+- [x] Mock supplies two fresh streams and a LOST vehicle; only mock auto-loads missions.
+- [x] Tabs have keyboard navigation and tab/panel relationships without unmounting.
+- [x] Design gates cover TSX and CSS, with explicit geometry exceptions.
+- [x] Unit/lifecycle tests, lint, typecheck and Storybook build/start pass.
+- [x] Fresh desktop and stacked captures plus interaction smoke have recorded results.
 
 ## Verification
 
 ```sh
-cd frontend && pnpm typecheck && pnpm lint
-cd frontend && pnpm vitest run src/mission src/map src/ui
-cd frontend && pnpm dev   # /?source=mock, download, compare against the HUD above it
+cd frontend && pnpm test && pnpm lint && pnpm typecheck && pnpm build-storybook
+cd frontend && pnpm storybook
+cd frontend && pnpm dev --port 3001
+node scripts/shoot.mjs
+./scripts/kanban check
 ```
+
+Browser: mock fleet, open selected vehicle, switch vehicles, toggle each panel,
+restore all, refresh mission twice, navigate developer tabs by keyboard.
+Artifacts belong under `docs/temp/evidence/T-014/<run-id>/`.
 
 ## Open questions
 
-None blocking. If T-013's layout rework lands first it may absorb this card;
-until then this is independently mergeable and does not depend on the reference
-artifact being available.
+None blocking.
 
 ## Notes
 
-Split out of T-013 deliberately: this is unblocked and small, whereas parity
-with flight-hud-trajectory cannot start until that reference is supplied.
+Reviewed plan: `/Users/senoulynn/.claude-home-personal/.claude/plans/create-a-plan-for-tender-snail.md`.
+The worktree was clean; the stacked slot-order fix was already committed.
+Corrections: frontend loss requires an explicit lifecycle event, not silence;
+LOST uses readable caution, never disabled grey; TSX gates match exact legacy
+class tokens, not substrings such as map-panel. CDP device emulation sets the
+actual CSS viewport. Fixed Link remains visible in the hide/restore smoke.
+Storybook uses 6010 (6008 was also occupied) with CI mode (no interactive port prompt); Vite keeps strictPort.
+Confirm is not forced into arm resolution: the existing controls are action
+attestations, not checkboxes. Field gains a select variant for replay speed.
+The Impeccable engine could not initialize its external cache; skill-directed
+fallback reads PRODUCT.md, DESIGN.md and the surface contract directly.
 
-See [[yalb-ui-emulate-flight-hud]] in operator memory.
+Verification completed 2026-09-10:
+
+- `pnpm test`: 42 files / 367 tests passed, including per-vehicle TTL across
+  mock loop boundaries, real fleet fold, mission source/selection isolation,
+  keyboard tabs, lifecycle retention and Storybook stylesheet ordering.
+- `pnpm lint` and `pnpm typecheck`: passed.
+- `pnpm build-storybook`: passed (existing large-chunk advisories only).
+- Storybook started successfully at localhost:6010. Browser rendering checked
+  System/Vocabulary, Panels/Instruments, Composition/Layout shell,
+  Frontend/Current app and the exact Layout shell Docs page reported by owner.
+- Owner reported black Storybook pages during verification. Root cause:
+  preview imported display.css but omitted system.css, leaving black default
+  text and unstyled controls on the dark background. Added the import before
+  feature CSS and a regression gate; the reported Docs page now renders.
+- CDP desktop 1600×1000 and stacked 560×900: no page overflow; Position width
+  239px / 544px respectively; common row inset 8px; lume aircraft marker;
+  aux above developer tier. All toggleable panels hide/restore, mission refresh
+  twice, vehicle switching and arrow-key tabs passed without runtime errors.
+- Heartbeat correction: backend emits state changes, not every heartbeat.
+  Header provenance uses heartbeat observed_at, never the LOST event receipt
+  as a new observation; unchanged heartbeat state has no telemetry TTL.
+- Fresh review rasters and root text are generated by scripts/shoot.mjs;
+  `.impeccable/review/README.md` points to their timestamped source evidence.
+  Full-telemetry readiness plus WebGL settling avoids startup-only captures.
+- Deferred fleet registry/mount/Row work: T-039; remaining token cleanup: T-040;
+  registry/menu/fleet interaction coverage: T-041. T-023 and T-030 remain separate.
+
+All behavioral evidence here is synthetic mock/browser evidence, not acceptance
+of live aircraft telemetry. No backend or live command behavior was changed.

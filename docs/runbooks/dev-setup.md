@@ -232,8 +232,8 @@ corepack pnpm install --frozen-lockfile
 corepack pnpm storybook
 ```
 
-Open the URL printed by Storybook (normally <http://localhost:6006>). It may
-choose another port if 6006 is occupied. No backend, Docker, or SITL is needed.
+Open <http://localhost:6010>. Storybook uses an explicit port and `--ci` to fail
+without an interactive prompt on a collision; override with `pnpm storybook --port <free-port>` if needed. No backend, Docker, or SITL is needed.
 Use Corepack to select the pnpm version pinned in `package.json`.
 
 The catalog is ordered from individual components up to the actual frontend:
@@ -457,3 +457,39 @@ endpoint was added.
 T-008 was completed in the same session after a separate claim: independent
 MAVLink/HTTP ordered-value comparison and true zero-item mission downloads
 passed for Copter and Plane. See the evidence README's T-008 follow-through.
+
+## Reproduce the Impeccable mock UI review
+
+Use the host checkout so screenshots reflect current source:
+
+```sh
+cd frontend
+pnpm dev --port 3001 --host 127.0.0.1
+# In a second terminal, at repository root:
+node scripts/shoot.mjs
+```
+
+Port 3001 is the expected host UI review port; Vite retains `strictPort` and its
+ordinary default of 3000. Compose examples above continue to use port 3000.
+Storybook uses 6010 because 6006–6008 were occupied during round-two review.
+
+The driver needs Node 22+ (built-in WebSocket) and Chrome; set `CHROME_BIN` for
+another install path. `SHOOT_URL` may override the mock URL, and `SHOOT_OUT` the
+output directory. It uses CDP device metrics at 1600×1000 and 560×900, fresh
+browser profiles, software WebGL, and wall-clock settling. Do not disable GPU
+or use a virtual-time budget. Console events, exceptions, computed layout and
+root text accompany every capture under `docs/temp/evidence/T-014/<run-id>/`.
+The first capture is fleet overview; the driver opens vehicle detail, tests
+vehicle switching, every toggleable panel, mission refresh twice, and keyboard
+tabs. Fixed Link stays visible throughout hide/restore. The stacked instrument
+capture proves instruments precede the developer tier below the rail.
+
+These fixtures bypass the backend and establish no live-flight behavior. Public
+basemap fetch failures are recorded separately; other runtime errors fail the
+smoke. Offline basemaps remain T-030.
+
+To verify actual Storybook rendering (including the Layout shell Docs page),
+run `node scripts/shoot.mjs --storybook` while Storybook runs on 6010.
+`STORYBOOK_URL` overrides the server; `SHOOT_STORY_IDS` optionally selects a
+comma-separated subset. This checks non-empty content, palette loading and
+computed typography, rather than accepting a successful build alone.

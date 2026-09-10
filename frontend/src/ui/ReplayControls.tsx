@@ -1,5 +1,7 @@
 /** Transport controls for a recorded flight. */
 
+import { Group, Field, Note, Lever } from '@/ui/primitives';
+
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import {
@@ -40,18 +42,13 @@ function Transport({ source }: { source: ReplayEventSource }) {
 
   if (status.error !== null) {
     return (
-      <div className="panel replay replay--error">
-        <span className="label">Replay unavailable</span>
-        <span>{status.error}</span>
-      </div>
+      <Group label="Replay unavailable" className="replay"><Note tone="caution">{status.error}</Note></Group>
     );
   }
 
   return (
-    <div className="panel replay">
-      <button
-        type="button"
-        className="replay__button"
+    <Group label="Replay" className="replay">
+      <Lever
         onClick={() => {
           if (status.playing) {
             source.pause();
@@ -62,7 +59,7 @@ function Transport({ source }: { source: ReplayEventSource }) {
         disabled={status.loading || status.totalEvents === 0}
       >
         {status.playing ? 'Pause' : 'Play'}
-      </button>
+      </Lever>
 
       <span className="replay__clock">
         {formatOffset(offsetMs)} / {formatOffset(spanMs)}
@@ -81,31 +78,19 @@ function Transport({ source }: { source: ReplayEventSource }) {
         }}
       />
 
-      <label className="replay__speed">
-        <span className="label">Speed</span>
-        <select
-          value={status.speed}
-          onChange={(change) => {
-            source.setSpeed(Number(change.target.value));
-          }}
-        >
-          {SPEEDS.map((speed) => (
-            <option key={speed} value={speed}>
-              {speed}×
-            </option>
-          ))}
-        </select>
-      </label>
+      <Field label="Speed" value={String(status.speed)}
+        onChange={(value) => { source.setSpeed(Number(value)); }}
+        options={SPEEDS.map((speed) => ({ value: String(speed), label: `${String(speed)}×` }))} />
 
       <span className="replay__name">{status.recording?.name ?? NO_VALUE}</span>
 
-      {status.loading && <span className="replay__note">loading…</span>}
+      {status.loading && <Note>loading…</Note>}
       {status.truncated && (
-        <span className="replay__note replay__note--warn">
+        <Note tone="caution">
           first {status.totalEvents} events only
-        </span>
+        </Note>
       )}
-    </div>
+    </Group>
   );
 }
 
@@ -150,24 +135,22 @@ function RecordingPicker() {
   }, []);
 
   return (
-    <div className="panel replay">
-      <span className="label">Replay</span>
-      {error !== null && <span className="replay__note replay__note--warn">{error}</span>}
-      {error === null && recordings === null && <span className="replay__note">loading…</span>}
+    <Group label="Replay" className="replay">
+      {error !== null && <Note tone="caution">{error}</Note>}
+      {error === null && recordings === null && <Note>loading…</Note>}
       {error === null && recordings?.length === 0 && (
-        <span className="replay__note">No recordings yet.</span>
+        <Note>No recordings yet.</Note>
       )}
       {recordings?.map((recording) => (
         <div key={recording.id} className="replay__pick-row">
-          <a className="replay__pick" href={replayUrl(recording.id)}>
+          <a className="lever" href={replayUrl(recording.id)}>
             {recording.name === '' ? `#${String(recording.id)}` : recording.name}
-            <span className="label">
+            <span className="replay__name">
               {recording.event_count} events · {recording.status}
             </span>
           </a>
-          <button
-            type="button"
-            className="replay__delete"
+          <Lever
+            caution
             disabled={deleting === recording.id}
             aria-label={`Delete ${recording.name === '' ? `recording ${String(recording.id)}` : recording.name}`}
             onClick={() => {
@@ -194,10 +177,10 @@ function RecordingPicker() {
             }}
           >
             {deleting === recording.id ? 'Deleting…' : 'Delete'}
-          </button>
+          </Lever>
         </div>
       ))}
-    </div>
+    </Group>
   );
 }
 

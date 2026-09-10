@@ -15,6 +15,7 @@ colors:
   ground: "#7a5326"
   prediction: "#9fb4c9"
   mission-route: "#c7f0ff"
+  track: "#b6a6d9"
 typography:
   lead:
     fontFamily: "ui-monospace, \"SF Mono\", \"SFMono-Regular\", Menlo, Consolas, monospace"
@@ -175,6 +176,8 @@ An instrument-hardware palette: graphite greys, off-white engraved lettering, an
 - **Prediction Blue-Grey** (`#9fb4c9`): the five-second projected path on the map and its legend chip. Deliberately not amber — a prediction is not a hazard.
 - **Mission Cyan** (`#c7f0ff`): the commanded route, its point markers and its legend chip. Distinct from both the flown track and the caution amber. Mirrored as a resolved literal in `src/ui/palette.ts` because MapLibre cannot read custom properties.
 
+- **Track Lavender** (`#b6a6d9`): solid flown history, separating observed travel from the pale cyan commanded mission and dashed blue-grey prediction. Mirrored for MapLibre and pinned by the token gate.
+
 ### Neutral
 - **Panel Graphite** (`#14171c`): the working surface of every panel and the app bar.
 - **Panel Deep** (`#0d1013`): the page beneath, the view subbar, input wells, and a pressed lever.
@@ -247,7 +250,7 @@ Silhouettes recur: the two-column row, the header-rule-body group, the horizonta
 ## Components
 
 ### Buttons
-The lever. There is exactly one button shape in the application, defined once and mapped onto every legacy button class name from a single block in `system.css` — so "the commit button looks different over here" cannot happen. Variants change colour and width, never form.
+The lever. There is exactly one button shape in the application, rendered by `Lever` and styled once in `system.css` — so "the commit button looks different over here" cannot happen. Variants change colour and width, never form.
 
 - **Shape:** near-square (`2px` radius), 1px Bezel border, 28px minimum height, 10px horizontal padding, 12px mono uppercase-agnostic label at weight 600.
 - **Default:** Panel Graphite on the surface it sits on, Lume label.
@@ -260,12 +263,16 @@ The lever. There is exactly one button shape in the application, defined once an
 
 ### Chips
 - **Style:** inline-flex, 1px Bezel border, 2px radius, 10px mono at 0.06em tracking, Lume Dim, `--pad-chip` inline padding and no vertical padding, so it sits on the text baseline beside a label.
-- **State:** `active` goes Lume with a Lume Dim border; `caution` goes amber on amber; `dead` goes Dead Grey. A chip carries a label's own state — rows carry values.
+- **State:** `active` goes Lume with a Lume Dim border; `caution` goes amber on amber; `dead` goes Dead Grey. LOST uses `caution`; `dead` is reserved for disabled chrome. A chip carries a label's own state — rows carry values.
+
+### Notes
+`Note` is panel prose with `normal`, `caution`, and `absent` tones. Missing information remains readable in Absent Grey. Group empty states use Note internally.
 
 ### Cards / Containers
-There are none. `.panel` is a plain block with `min-width: 0` and no border, background, or radius; it used to draw all three, which is what turned a column of six readings into six floating objects. The container is the slot, and its only chrome is a 1px rule against its neighbour.
+There are none. `Group` is a labelled section with `min-width: 0` and no border, background, or radius around its body. Every feature owns its Group and header provenance; the registry only mounts nodes. The container is the slot, and its only chrome is a 1px rule against its neighbour.
 
 ### Inputs / Fields
+- **Field:** accepts either text input or a native select with labelled options.
 - **Style:** a 10px-tracked label over a Panel Deep well with a 1px Bezel border, 2px radius, 28px minimum height, mono tabular text. Sized on the target axis, not the density axis.
 - **Focus:** 2px Lume outline at 1px offset, border to Lume Dim.
 - **Disabled:** Dead Grey text and border.
@@ -285,7 +292,7 @@ The signature of this display. A 1px Bezel track holding a Lume Dim fill that dr
 ## Do's and Don'ts
 
 ### Do:
-- **Do** build every panel from the closed primitive set — `Group`, `Row`, `Lever`, `LeverRow`, `Field`, `Confirm`, `Tabs`. If one cannot express a new panel, extend a primitive rather than styling the panel directly.
+- **Do** build every panel from the closed primitive set — `Group`, `Row`, `Lever`, `LeverRow`, `Field`, `Confirm`, `Tabs`, `Chip`, `Note`. If one cannot express a new panel, extend a primitive rather than styling the panel directly.
 - **Do** keep the two axes separate: `--row-*` for data, `--target-*` for anything a pointer hits. Tight data, generous levers.
 - **Do** right-align every value against the shared edge with `tabular-nums`, so a column of readings scans as one table.
 - **Do** state provenance once per group header.
@@ -305,3 +312,25 @@ The signature of this display. A 1px Bezel track holding a Lume Dim fill that dr
 - **Don't** make the page scroll, and don't nest a scroll region inside a region that already scrolls.
 - **Don't** write layout CSS to add a panel; add a registry entry.
 - **Don't** use fluid or `clamp()` type. Sizes are fixed at every viewport.
+
+## Round-two validation
+
+The production TSX gate rejects raw buttons, color literals, fontSize attributes,
+and exact legacy `panel`/`label` classes. The imperative MapLibre marker has an
+annotated Lever-class exemption. CSS geometry exceptions are explicit, palette
+mirrors are tested, and only named selection/overlay shadows are permitted.
+
+Developer tabs use roving focus (arrows, Home, End), linked tab/panel IDs and
+resident hidden panels. Mock missions load on identity/source change; live and
+replay still require an explicit download. Snapshot provenance identifies a
+non-expiring observation, not proof that the onboard mission is unchanged.
+
+Browser review: 1600×1000 and 560×900, generated by `node scripts/shoot.mjs`.
+The stacked instrument capture confirms the aux/developer order and shared 8px
+row inset. Source/viewport provenance accompanies `.impeccable/review/` captures.
+Fleet registry/mount lifecycle work remains explicitly deferred under T-039.
+
+Heartbeat state provenance uses the heartbeat's observed_at, with receipt-time
+fallback only for legacy fixtures. The backend emits changes, not periodic
+heartbeats, so an unchanged state has no telemetry TTL. LOST changes its
+provenance to caution without resetting its observation age.

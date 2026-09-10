@@ -1,0 +1,202 @@
+[
+  {
+    "method": "Runtime.consoleAPICalled",
+    "params": {
+      "type": "debug",
+      "args": [
+        {
+          "type": "string",
+          "value": "[vite] connecting..."
+        }
+      ],
+      "executionContextId": 2,
+      "timestamp": 1789063392384.768,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "functionName": "",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:3001/@vite/client",
+            "lineNumber": 788,
+            "columnNumber": 8
+          }
+        ]
+      }
+    }
+  },
+  {
+    "method": "Runtime.consoleAPICalled",
+    "params": {
+      "type": "debug",
+      "args": [
+        {
+          "type": "string",
+          "value": "[vite] connected."
+        }
+      ],
+      "executionContextId": 2,
+      "timestamp": 1789063392406.424,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "functionName": "handleMessage",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:3001/@vite/client",
+            "lineNumber": 911,
+            "columnNumber": 14
+          },
+          {
+            "functionName": "",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:3001/@vite/client",
+            "lineNumber": 489,
+            "columnNumber": 42
+          },
+          {
+            "functionName": "dequeue",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:3001/@vite/client",
+            "lineNumber": 515,
+            "columnNumber": 9
+          },
+          {
+            "functionName": "",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:3001/@vite/client",
+            "lineNumber": 503,
+            "columnNumber": 11
+          },
+          {
+            "functionName": "enqueue",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:3001/@vite/client",
+            "lineNumber": 497,
+            "columnNumber": 11
+          },
+          {
+            "functionName": "",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:3001/@vite/client",
+            "lineNumber": 489,
+            "columnNumber": 28
+          },
+          {
+            "functionName": "onMessage",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:3001/@vite/client",
+            "lineNumber": 308,
+            "columnNumber": 10
+          },
+          {
+            "functionName": "",
+            "scriptId": "5",
+            "url": "http://127.0.0.1:3001/@vite/client",
+            "lineNumber": 438,
+            "columnNumber": 8
+          }
+        ]
+      }
+    }
+  },
+  {
+    "method": "Runtime.consoleAPICalled",
+    "params": {
+      "type": "info",
+      "args": [
+        {
+          "type": "string",
+          "value": "%cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools"
+        },
+        {
+          "type": "string",
+          "value": "font-weight:bold"
+        }
+      ],
+      "executionContextId": 2,
+      "timestamp": 1789063392464.604,
+      "stackTrace": {
+        "callFrames": [
+          {
+            "functionName": "",
+            "scriptId": "12",
+            "url": "http://127.0.0.1:3001/node_modules/.vite/deps/react-dom_client.js?v=bf11334e",
+            "lineNumber": 20102,
+            "columnNumber": 53
+          },
+          {
+            "functionName": "node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/cjs/react-dom-client.development.js",
+            "scriptId": "12",
+            "url": "http://127.0.0.1:3001/node_modules/.vite/deps/react-dom_client.js?v=bf11334e",
+            "lineNumber": 20176,
+            "columnNumber": 6
+          },
+          {
+            "functionName": "__require",
+            "scriptId": "13",
+            "url": "http://127.0.0.1:3001/node_modules/.vite/deps/chunk-BUSYA2B4.js?v=bf11334e",
+            "lineNumber": 2,
+            "columnNumber": 49
+          },
+          {
+            "functionName": "node_modules/.pnpm/react-dom@19.2.8_react@19.2.8/node_modules/react-dom/client.js",
+            "scriptId": "12",
+            "url": "http://127.0.0.1:3001/node_modules/.vite/deps/react-dom_client.js?v=bf11334e",
+            "lineNumber": 20187,
+            "columnNumber": 23
+          },
+          {
+            "functionName": "__require",
+            "scriptId": "13",
+            "url": "http://127.0.0.1:3001/node_modules/.vite/deps/chunk-BUSYA2B4.js?v=bf11334e",
+            "lineNumber": 2,
+            "columnNumber": 49
+          },
+          {
+            "functionName": "",
+            "scriptId": "12",
+            "url": "http://127.0.0.1:3001/node_modules/.vite/deps/react-dom_client.js?v=bf11334e",
+            "lineNumber": 20191,
+            "columnNumber": 15
+          }
+        ]
+      }
+    }
+  },
+  {
+    "method": "Log.entryAdded",
+    "params": {
+      "entry": {
+        "source": "rendering",
+        "level": "warning",
+        "text": "[.WebGL-0x104000cb400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+        "timestamp": 1789063395237.184,
+        "url": "http://127.0.0.1:3001/?source=mock"
+      }
+    }
+  },
+  {
+    "method": "Log.entryAdded",
+    "params": {
+      "entry": {
+        "source": "rendering",
+        "level": "warning",
+        "text": "[.WebGL-0x104000cb400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)",
+        "timestamp": 1789063395445.999,
+        "url": "http://127.0.0.1:3001/?source=mock"
+      }
+    }
+  },
+  {
+    "method": "Log.entryAdded",
+    "params": {
+      "entry": {
+        "source": "network",
+        "level": "error",
+        "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+        "timestamp": 1789063395462.215,
+        "url": "http://127.0.0.1:3001/favicon.ico",
+        "networkRequestId": "91657.108"
+      }
+    }
+  }
+]
