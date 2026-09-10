@@ -13,6 +13,7 @@ import type { HeartbeatState } from '@/gen/gcs/v1/vehicle_pb';
 import type { CommandTransaction } from '@/gen/gcs/v1/commands_pb';
 import { isFresh } from '@/logic/freshness';
 import { accumulateGeoTrack, type GeoPoint } from '@/logic/geoTrack';
+import { lastLegM } from '@/logic/odometer';
 import { sampleFromEvent, type TelemetrySample } from '@/logic/sample';
 
 import type { StreamEvent } from '@/stream/events';
@@ -52,6 +53,25 @@ export interface VehicleView {
 
   /** In-memory geodetic breadcrumb trail, appended only by position families. */
   track: GeoPoint[];
+
+  /**
+   * Great-circle distance flown, metres, accumulated as fixes arrive.
+   *
+   * Held here rather than measured off `track` because the track is a
+   * fixed-capacity ring: a distance summed over what it still holds would mean
+   * "the last hundred seconds" while reading as the distance flown, and would
+   * shrink as the sortie went on. See `logic/odometer`.
+   */
+  odometerM: number;
+
+  /**
+   * When the first position fix landed, for time in the air.
+   *
+   * The first *fix*, not the first frame: a vehicle heartbeats on the bench
+   * long before it has a position, and an elapsed clock started there reports a
+   * sortie that has not begun.
+   */
+  firstFixAtMs: number | undefined;
 
   /**
    * When the backend observed each MAVLink family, by the resolver-facing
@@ -273,11 +293,20 @@ function applyTelemetry(event: TelemetryEvent, receivedAtMs: number): VehicleUpd
       // every attitude/battery frame would re-append the last known position.
       const track = accumulateGeoTrack(previous.track, partial);
 
+      /*
+       * Reference identity is the append test, not the length: once the track
+       * ring is full every append also evicts, so the length stops changing
+       * exactly when a flight is long enough for the odometer to matter.
+       */
+      const appended = track !== previous.track;
+
       return {
         ...previous,
         lastSeenMs: receivedAtMs,
         sample: { ...previous.sample, ...partial },
         track,
+        odometerM: previous.odometerM + (appended ? lastLegM(track) : 0),
+        firstFixAtMs: appended ? (previous.firstFixAtMs ?? observedMs) : previous.firstFixAtMs,
         familySeenMs: { ...previous.familySeenMs, [partial.sourceMessage]: observedMs },
       };
     },
@@ -313,6 +342,8 @@ function emptyVehicle(sysId: number, compId: number, atMs: number): VehicleView 
     lastFleetAtMs: undefined,
     sample: { sourceMessage: 'NONE', receivedAtMs: atMs },
     track: [],
+    odometerM: 0,
+    firstFixAtMs: undefined,
     familySeenMs: {},
     lastSeenMs: atMs,
   };

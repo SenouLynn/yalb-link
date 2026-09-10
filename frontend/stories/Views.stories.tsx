@@ -1,16 +1,24 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { ViewsMenu, DEFAULT_VISIBILITY, type PanelVisibility } from '@/workspace/Workspace';
+import { ViewBar, ViewsMenu, DEFAULT_VISIBILITY, toggleSection, type PanelVisibility } from '@/workspace/Workspace';
 
+/** In the bar it ships in, held to the right edge the way the vehicle pane holds it. */
 function Views() {
   const [visible, setVisible] = useState<PanelVisibility>(DEFAULT_VISIBILITY);
   return (
-    <div className="shell__bar shell__bar--view" style={{ width: 420, maxWidth: '100%' }}>
-      <ViewsMenu
-        visible={visible}
-        onToggle={(id) => {
-          setVisible((value) => ({ ...value, [id]: value[id] !== true }));
-        }}
+    <div style={{ width: 420, maxWidth: '100%' }}>
+      <ViewBar
+        trailing={
+          <ViewsMenu
+            visible={visible}
+            onToggle={(id) => {
+              setVisible((value) => ({ ...value, [id]: value[id] !== true }));
+            }}
+            onToggleSection={(id) => {
+              setVisible((value) => toggleSection(id, value));
+            }}
+          />
+        }
       />
     </div>
   );

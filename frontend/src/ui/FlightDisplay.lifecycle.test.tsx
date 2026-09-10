@@ -26,6 +26,8 @@ const view = (sysId: number): VehicleView => ({
   lastFleetAtMs: undefined,
   sample: { sourceMessage: 'NONE', receivedAtMs: 0 },
   track: [],
+  odometerM: 0,
+  firstFixAtMs: undefined,
   familySeenMs: {},
   lastSeenMs: 0,
 });
@@ -185,12 +187,12 @@ it('retains a completed mission when hidden and shown, and restores focus outsid
   act(() => { root.render(display(fleet(view(1)))); });
   const download = container.querySelector<HTMLButtonElement>('.mission-panel button');
   await act(async () => { download?.click(); await Promise.resolve(); });
-  expect(container.textContent).toContain('Complete');
+  expect(container.textContent).toContain('Refresh mission');
   download?.focus();
   const toggle = togglePanel(container, 'mission');
   expect(document.activeElement).toBe(toggle);
   act(() => { toggle?.click(); });
-  expect(container.textContent).toContain('Complete');
+  expect(container.textContent).toContain('Refresh mission');
   expect(fetch).toHaveBeenCalledTimes(1);
   act(() => { root.unmount(); });
   container.remove();
@@ -321,7 +323,7 @@ it('retains a pending mission through Fleet, clears arm confirmation, and remoun
     await Promise.resolve();
   });
   act(() => { click('Open selected vehicle'); });
-  expect(container.textContent).toContain('Complete');
+  expect(container.textContent).toContain('Refresh mission');
   expect(container.textContent).not.toContain('Confirm arm');
   expect(container.querySelector('[aria-label="Fleet position map"]')).toBeNull();
   expect(container.querySelector('[aria-label="Vehicle position map"]')).not.toBeNull();
@@ -338,14 +340,14 @@ it('auto-loads mock missions, refreshes, switches identity and clears fixtures o
     <FlightDisplay initialSection="vehicle" fleet={fleet(view(sysId))} nowMs={Date.now()} source={source} onSelect={() => undefined} />,
   ); };
   await act(async () => { render(1, 'mock'); await Promise.resolve(); });
-  expect(container.querySelector('.mission-panel')?.textContent).toContain('Complete');
+  expect(container.querySelector('.mission-panel')?.textContent).toContain('Refresh mission');
   expect(container.querySelector('.mission-panel')?.textContent).toContain('MISSION SNAPSHOT');
   for (let count = 0; count < 2; count++) {
     await act(async () => { container.querySelector<HTMLButtonElement>('.mission-panel button')?.click(); await Promise.resolve(); });
-    expect(container.querySelector('.mission-panel')?.textContent).toContain('Complete');
+    expect(container.querySelector('.mission-panel')?.textContent).toContain('Refresh mission');
   }
   await act(async () => { render(2, 'mock'); await Promise.resolve(); });
-  expect(container.querySelector('.mission-panel')?.textContent).toContain('Complete');
+  expect(container.querySelector('.mission-panel')?.textContent).toContain('Refresh mission');
   await act(async () => { render(2, 'live'); await Promise.resolve(); });
   expect(container.querySelector('.mission-panel')?.textContent).toContain('Not downloaded');
   expect(fetch).not.toHaveBeenCalled();

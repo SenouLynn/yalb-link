@@ -1,4 +1,5 @@
-import { fleetReducer, initialFleetState, type VehicleView } from '@/fleet/state';
+import { FleetEventType } from '@/gen/gcs/v1/fleet_pb';
+import { fleetReducer, initialFleetState, type FleetState, type VehicleView } from '@/fleet/state';
 import { mockFrames } from '@/stream/fixtures';
 import { readFlight, UNAVAILABLE, type Reading, type ReadingState } from '@/ui/readings';
 
@@ -36,4 +37,32 @@ export function instrumentReadings(state: ReadingState) {
     home: withState(live.home, state),
     link: withState(live.link, state),
   };
+}
+
+/**
+ * The same fixture flown by n aircraft.
+ *
+ * The mock stream carries one vehicle, so a picker built from it has nothing to
+ * pick. Cloning the fold keeps every reading real while giving the fleet a
+ * shape — including a lost node, because that is the state the picker has to
+ * report and the one a single-vehicle fixture can never show.
+ */
+export function fixtureFleetOf(count: number): FleetState {
+  const vehicles: Record<string, VehicleView> = {};
+  const order: string[] = [];
+
+  for (let index = 0; index < count; index++) {
+    const sysId = vehicle.sysId + index;
+    const key = `${String(sysId)}:${String(vehicle.compId)}`;
+    order.push(key);
+    vehicles[key] = {
+      ...vehicle,
+      key,
+      sysId,
+      // The last node has stopped reporting; the rest are heard.
+      lifecycle: index === count - 1 && count > 1 ? FleetEventType.VEHICLE_LOST : vehicle.lifecycle,
+    };
+  }
+
+  return { ...fixtureFleet, vehicles, order, selected: order[0] ?? null };
 }

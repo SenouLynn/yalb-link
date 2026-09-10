@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { fn } from 'storybook/test';
-import { MissionPanel, type MissionStatus } from '@/mission/MissionPanel';
+import { MissionPanel, WaypointList, type MissionStatus } from '@/mission/MissionPanel';
 import { mockMissionSnapshot } from '@/mission/fixtures';
 import { missionGeometry } from '@/mission/model';
 import { NOW } from './fixtures';
@@ -25,9 +25,14 @@ const meta = {
   },
   render: ({ status, itemCount, activeSeq, width, onDownload }) => {
     const snapshot = status === 'complete' ? missionSnapshot(itemCount) : null;
-    return <div style={{ width, maxWidth: '100%' }}><MissionPanel status={status} snapshot={snapshot}
-      error={status === 'error' ? 'Mission download timed out. Try again.' : null}
-      geometry={missionGeometry(snapshot)} activeSeq={activeSeq} onDownload={onDownload} /></div>;
+    // Both panels, because they are one feature split across two columns and a
+    // change to either is read against the other.
+    return <div style={{ width, maxWidth: '100%' }}>
+      <MissionPanel status={status} snapshot={snapshot}
+        error={status === 'error' ? 'Mission download timed out. Try again.' : null}
+        activeSeq={activeSeq} onDownload={onDownload} />
+      <WaypointList snapshot={snapshot} geometry={missionGeometry(snapshot)} activeSeq={activeSeq} />
+    </div>;
   },
 } satisfies Meta<{ status: MissionStatus; itemCount: number; activeSeq: number; width: number; onDownload: () => void }>;
 export default meta;

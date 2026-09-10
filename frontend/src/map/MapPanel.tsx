@@ -346,9 +346,28 @@ export function MapPanel({
   return (
     <div className="map-shell">
       <div className="map-overlays">
+        {/* Terse on purpose. These two sit ON the map rather than beside it, so
+            every character of label is a character of ground the operator came
+            here to look at; the full sentence is on the pointer. The 28px
+            target itself is not negotiable — field operation on a laptop is a
+            standing requirement, and a control shrunk below a gloved fingertip
+            stops being a control. */}
         <LeverRow label="Map view">
-          <Lever onClick={fitMission} disabled={mission.points.length === 0}>Fit mission</Lever>
-          <Lever onClick={() => { changeMode('follow'); }} disabled={position === null} pressed={mode === 'follow'}>Follow vehicle</Lever>
+          <Lever
+            onClick={fitMission}
+            disabled={mission.points.length === 0}
+            title="Frame the commanded mission"
+          >
+            Fit
+          </Lever>
+          <Lever
+            onClick={() => { changeMode('follow'); }}
+            disabled={position === null}
+            pressed={mode === 'follow'}
+            title="Keep the vehicle centred as it moves"
+          >
+            Follow
+          </Lever>
         </LeverRow>
       </div>
       {trajectory.length > 1 || mission.points.length > 0 ? (

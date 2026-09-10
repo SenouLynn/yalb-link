@@ -97,15 +97,21 @@ export interface RowProps {
   /** Wraps the value under the label — for coordinates and other long strings. */
   stacked?: boolean | undefined;
   /**
-   * A second, dimmer line under the label.
+   * Meaning the operator cannot infer, on the pointer rather than on the row.
    *
-   * For meaning the operator cannot infer and that must not be truncated — a
-   * sign convention like "+ below target" is the difference between reading a
-   * value correctly and reading it backwards. Putting it on its own line is
-   * deliberate: letting such a phrase wrap inside the label orphans its last
-   * word beside the next row's number, which reads as a second value.
+   * This used to be a second, dimmer line under the label, and every row that
+   * carried one stood two units tall. In a 240px rail that was the only place
+   * for it; in the wide columns the sections now have, it doubled the height of
+   * half a table to hold a phrase that is read once and remembered — and it
+   * broke the one thing a column of rows is for, which is scanning as evenly
+   * spaced pairs.
+   *
+   * A qualifier that DISTINGUISHES two rows is not a hint and does not belong
+   * here: if the row above says the same words, the difference goes in the
+   * label, where it is always visible. Radio link's local and remote pairs are
+   * the case that proves it.
    */
-  note?: string | undefined;
+  hint?: string | undefined;
 }
 
 /**
@@ -115,24 +121,67 @@ export interface RowProps {
  * of rows has to scan as one table the eye can run down; values that each stop
  * wherever their string ends read as separate objects that happen to be nearby.
  */
-export function Row({ label, value, unit, tone = 'normal', lead, stacked, note }: RowProps) {
+export function Row({ label, value, unit, tone = 'normal', lead, stacked, hint }: RowProps) {
   const classes = ['row'];
 
   if (tone !== 'normal') classes.push(`row--${tone}`);
   if (lead === true) classes.push('row--lead');
   if (stacked === true) classes.push('row--stacked');
+  if (hint !== undefined) classes.push('row--hinted');
 
   return (
-    <div className={classes.join(' ')}>
-      <span className="row__label">
-        {label}
-        {note === undefined ? null : <span className="row__note">{note}</span>}
-      </span>
+    <div className={classes.join(' ')} title={hint}>
+      <span className="row__label">{label}</span>
       <span className="row__value">
         {value}
         {unit === undefined || unit === '' ? null : <span className="row__unit">{unit}</span>}
       </span>
     </div>
+  );
+}
+
+/* --- glance --------------------------------------------------------------- */
+
+export interface GlanceProps {
+  label: string;
+  /** Pre-formatted, like a Row's. */
+  value: string;
+  unit?: string | undefined;
+  tone?: Tone | undefined;
+  /** Source and age, for the pointer. See the note below on why it is not drawn. */
+  title?: string | undefined;
+}
+
+/**
+ * A reading on a bar rather than in a column.
+ *
+ * The Row is a grid because a column of rows has to form a shared value edge.
+ * A bar has no column and no edge to share, so the same construction there
+ * would stretch six readings across the window with their numbers nowhere near
+ * their labels. This is the bar's form of the same atom: label then value, set
+ * tight, separated from its neighbour by the hairline every other surface in
+ * this system is separated by.
+ *
+ * It carries no drain bar. Fifteen provenance meters already redraw four times
+ * a second on this screen and a second rank of them along a 28px bar would read
+ * as a progress indicator, not as freshness — so a glance shows a number only
+ * while that number is live, and a dash the moment it is not. The source and
+ * age travel in `title` for the pointer, and the panel the value came from is
+ * still on screen carrying its own meter.
+ */
+export function Glance({ label, value, unit, tone = 'normal', title }: GlanceProps) {
+  const classes = ['glance'];
+
+  if (tone !== 'normal') classes.push(`glance--${tone}`);
+
+  return (
+    <span className={classes.join(' ')} title={title}>
+      <span className="glance__label">{label}</span>
+      <span className="glance__value">
+        {value}
+        {unit === undefined || unit === '' ? null : <span className="row__unit">{unit}</span>}
+      </span>
+    </span>
   );
 }
 

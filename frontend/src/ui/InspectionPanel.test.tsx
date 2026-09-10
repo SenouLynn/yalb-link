@@ -134,7 +134,7 @@ describe('InspectionPanel', () => {
       const markup = render(view, T0);
       expect(markup).toContain('+0.6');
       expect(markup).toContain('+12.5');
-      expect(markup).toContain('+ below target');
+      expect(markup).toContain('positive is below target');
     }
   });
 
@@ -152,8 +152,8 @@ describe('InspectionPanel', () => {
 
     expect(markup).toContain('-2.4'); // altitude error, above target
     expect(markup).toContain('+3.1'); // crosstrack, right of the leg
-    expect(markup).toContain('+ below target');
-    expect(markup).not.toContain('+ above target');
+    expect(markup).toContain('positive is below target');
+    expect(markup).not.toContain('positive is above target');
   });
 
   it('renders home and its elevation', () => {
@@ -190,7 +190,8 @@ describe('InspectionPanel', () => {
     const markup = render(viewOf(navAt(T0)), T0);
 
     expect(markup).toContain('Radio telemetry may be unavailable');
-    expect(markup).toContain('ArduPilot sends home when home is set');
+    // Home has no group of its own to collapse, so it says it on its row.
+    expect(markup).toContain('NOT SET');
   });
 
   it('keeps home showable long after the telemetry TTL has passed', () => {
@@ -217,6 +218,6 @@ describe('InspectionPanel', () => {
     const markup = render(viewOf(unset), T0);
 
     expect(markup).not.toContain('0.000000, 0.000000');
-    expect(markup).toContain('ArduPilot sends home when home is set');
+    expect(markup).toContain('NOT SET');
   });
 });

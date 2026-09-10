@@ -1,19 +1,21 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import {
+  ViewBar,
   WorkspaceShell,
   WorkspaceSlots,
   ViewsMenu,
   DEFAULT_VISIBILITY,
+  toggleSection,
   type PanelContent,
   type PanelVisibility,
 } from '@/workspace/Workspace';
-import { GuidancePanel, HomePanel, RadioLinkPanel } from '@/ui/InspectionPanel';
+import { GuidancePanel, HomeRows, RadioLinkPanel } from '@/ui/InspectionPanel';
 import { InstrumentPanel } from '@/ui/InstrumentPanel';
 import { FamiliesPanel, SamplePanel } from '@/ui/DevPanels';
 import { LinkRows, StateRows } from '@/ui/StatusBar';
-import { Group, Row } from '@/ui/primitives';
-import { MissionPanel } from '@/mission/MissionPanel';
+import { Group, Lever, Row } from '@/ui/primitives';
+import { MissionPanel, WaypointList } from '@/mission/MissionPanel';
 import { mockMissionSnapshot } from '@/mission/fixtures';
 import { missionGeometry } from '@/mission/model';
 import { instrumentReadings, NOW, vehicle } from './fixtures';
@@ -36,9 +38,9 @@ function Workshop() {
     command: <Group label="Command"><Row label="Arm" value="DISARMED" /></Group>,
     position: (
       <Group label="Position" reading={instrumentReadings('live').position}>
-        <Row label="Latitude" value="47.393227" />
-        <Row label="Longitude" value="8.545423" />
+        <Row label="Lat / lon" value="47.393227, 8.545423" />
         <Row label="Track" value="160 / 500" unit="pts" />
+        <HomeRows readings={instrumentReadings('live')} />
       </Group>
     ),
     mission: (
@@ -47,18 +49,24 @@ function Workshop() {
         status={loaded ? 'complete' : 'idle'}
         snapshot={snapshot}
         error={null}
-        geometry={missionGeometry(snapshot)}
         activeSeq={1}
         onDownload={() => {
           setLoaded(true);
         }}
       />
     ),
+    waypoints: (
+      <WaypointList
+        nowMs={NOW}
+        snapshot={snapshot}
+        geometry={missionGeometry(snapshot)}
+        activeSeq={1}
+      />
+    ),
     map: (
       <div className="slot__empty">Map placeholder · layout preview</div>
     ),
     guidance: <GuidancePanel readings={instrumentReadings('live')} />,
-    home: <HomePanel readings={instrumentReadings('live')} />,
     radiolink: <RadioLinkPanel readings={instrumentReadings('live')} />,
     instruments: <InstrumentPanel readings={instrumentReadings('live')} />,
     families: <FamiliesPanel view={vehicle} nowMs={NOW} />,
@@ -66,19 +74,23 @@ function Workshop() {
   };
 
   return (
-    <WorkspaceShell
-      title="Ground control"
-      meta={<span>STORY</span>}
-      viewBar={
-        <ViewsMenu
-          visible={visible}
-          onToggle={(id) => {
-            setVisible((current) => ({ ...current, [id]: current[id] !== true }));
-          }}
+    <WorkspaceShell meta={<span>STORY</span>} nav={<Lever disabled>← Fleet</Lever>}>
+      <div className="view">
+        <ViewBar
+          trailing={
+            <ViewsMenu
+              visible={visible}
+              onToggle={(id) => {
+                setVisible((current) => ({ ...current, [id]: current[id] !== true }));
+              }}
+              onToggleSection={(id) => {
+                setVisible((current) => toggleSection(id, current));
+              }}
+            />
+          }
         />
-      }
-    >
-      <WorkspaceSlots visible={visible} content={content} />
+        <WorkspaceSlots visible={visible} content={content} />
+      </div>
     </WorkspaceShell>
   );
 }

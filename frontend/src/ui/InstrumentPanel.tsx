@@ -36,7 +36,7 @@ export function InstrumentPanel({ readings }: { readings: FlightReadings }) {
       <Group label="Altitude" reading={position}>
         <Row
           label="Altitude"
-          note={datumNote(altitude)}
+          hint={datumNote(altitude)}
           value={altitude === null ? NO_VALUE : num(altitude.altM)}
           unit="m"
           tone={altitude === null ? 'dead' : 'normal'}

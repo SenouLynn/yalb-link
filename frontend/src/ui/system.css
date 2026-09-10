@@ -267,6 +267,71 @@ body {
  * so a header read as a stray hairline floating above unrelated text rather than
  * as a meter over its own label.
  */
+/*
+ * The header as a disclosure.
+ *
+ * A variant of the group header rather than a second header shape, because a
+ * collapsible section is still a section: the bar, the wash, the rule and the
+ * label step are unchanged, and only the affordance is added. It lives here and
+ * not in the panel that first needed it — the waypoint list — so that the next
+ * collapsible group is a class name rather than a second implementation.
+ */
+.group__head--disclosure {
+  cursor: pointer;
+  list-style: none;
+}
+
+.group__head--disclosure::-webkit-details-marker {
+  display: none;
+}
+
+/*
+ * The chevron, drawn rather than borrowed.
+ *
+ * The native `<details>` marker is a browser default that belongs to no design
+ * system, and it indents the label off the shared left edge every other header
+ * sits on. This is the same 1px hairline as every rule on the screen, turned
+ * 45 degrees.
+ */
+.group__head--disclosure::before {
+  content: '';
+  /* design-geometry: the drawn chevron's box. */
+  width: 0.3125rem;
+  height: 0.3125rem;
+  border-right: var(--rule);
+  border-bottom: var(--rule);
+  border-color: var(--lume-dim);
+  transform: rotate(-45deg);
+  transition: transform 120ms cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+details[open] > .group__head--disclosure::before {
+  transform: rotate(45deg);
+}
+
+/*
+ * The label sits against the chevron, not spread across the row.
+ *
+ * `.group__head` is `space-between`, which is right for a label and one
+ * right-hand value and wrong for four children: it put even gaps between the
+ * chevron, the name, the state chip and the annotation, so the labels started
+ * at four different x positions down a list and the column stopped scanning.
+ * Pushing everything after the label to the right edge restores the
+ * two-column reading the rows below it already have.
+ */
+.group__head--disclosure > .group__label {
+  margin-right: auto;
+}
+
+.group__head--disclosure:hover {
+  background: color-mix(in srgb, var(--lume) 11%, transparent);
+}
+
+.group__head--disclosure:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: calc(-1 * var(--focus-offset));
+}
+
 .group__head .provenance {
   display: flex;
   flex: 0 0 auto;
@@ -296,9 +361,14 @@ body {
   padding: var(--row-y) var(--row-x);
 }
 
-/* A row carrying a note is exactly two units. Never one and a half, never three. */
-.row:has(.row__note) {
-  min-height: calc(var(--row-h) * 2);
+/*
+ * Every row is exactly one unit. There is no longer a two-unit row: the note
+ * that made one is a tooltip, and `cursor: help` is the whole affordance —
+ * the only chrome this world would spend on it, and the one every pointer
+ * already understands.
+ */
+.row--hinted {
+  cursor: help;
 }
 
 /* The ImGui table hover. Free, and it tells the pointer which row it is on. */
@@ -351,29 +421,6 @@ body {
 
 .row--dead .row__value {
   color: var(--absent);
-}
-
-/*
- * A label carrying a convention the operator cannot infer — a sign convention
- * like "+ below target" is the difference between reading a value correctly and
- * reading it backwards.
- *
- * It was already `--absent` and it still read as a second label, because the
- * only thing separating it from the label above was 0.79 points of contrast at
- * 10px. Rank is not carried by colour alone: the note switches to the data
- * font, indents past the label's left edge, and keeps its lowercase. Four
- * signals, of which colour is the weakest and the last.
- */
-.row__note {
-  display: block;
-  padding-left: var(--row-x);
-  font-family: var(--data);
-  line-height: var(--lh-data);
-  letter-spacing: var(--track-data);
-  color: var(--absent);
-  text-transform: none;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* A row whose value is too long to sit beside its label wraps under it. */
@@ -691,7 +738,7 @@ body {
 
 .shell {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   height: 100dvh;
 }
 
@@ -701,7 +748,14 @@ body {
   align-items: center;
   gap: var(--target-x);
   min-height: var(--target-h);
-  padding: 0 var(--row-x);
+  /*
+   * A hairline of vertical inset, because a bar full of levers is a bar of
+   * borders. At zero the lever's own 1px edge lands exactly on the bar's rule
+   * and the two fuse into one thicker line, so the control stops reading as a
+   * control and starts reading as part of the structure — and the topmost one
+   * has its upper border clipped by the window edge.
+   */
+  padding: var(--row-y) var(--row-x);
   border-bottom: var(--rule);
   background: var(--panel);
 }
@@ -713,17 +767,26 @@ body {
   background: var(--panel-deep);
 }
 
-.shell__title {
-  font-family: var(--data);
-  font-size: var(--fs-label);
-  font-weight: 600;
-  letter-spacing: var(--track-label);
-  text-transform: uppercase;
-  color: var(--lume);
-}
-
 .shell__spacer {
   margin-left: auto;
+}
+
+/* A bar's trailing group, held against the right edge. */
+.shell__end {
+  display: flex;
+  align-items: center;
+  gap: var(--lever-gap);
+  margin-left: auto;
+}
+
+/*
+ * A lever row in a bar takes the bar's own inset.
+ *
+ * Its panel padding would inset it a second time and stand its levers on a
+ * different left edge from everything else on the bar.
+ */
+.shell__bar .lever-row {
+  padding: 0;
 }
 
 .shell__meta {
@@ -765,57 +828,159 @@ body {
   border-right: 0;
 }
 
-.slot--rail {
-  flex: 0 0 15rem;
-}
-
-.slot--center {
-  flex: 1 1 auto;
-}
-
-.slot--aux {
-  flex: 0 0 21rem;
+/*
+ * A column's width is its registry `grow`, passed in as a custom property.
+ *
+ * Not a rule per section: a column's share of the leftover width is a registry
+ * fact, and a second copy of it here is how the two stop agreeing the first
+ * time a section moves. `flex-basis: 0` is what makes the share a share — a
+ * section left alone beside the sidebar grows into everything the hidden ones
+ * gave up, which is the "if a section is on its own it takes the rest"
+ * behaviour, expressed once.
+ */
+.shell__body > .slot {
+  flex: var(--grow, 1) 1 0;
 }
 
 /*
- * Within the aux column the slots stack, so their flex sizing is about height,
- * not width. Without this the instrument slot takes `slot--aux`'s 21rem as a
- * height and the developer tier claims everything below it.
+ * The vehicle column is fixed: identity and state read at a constant width, and
+ * letting them stretch would put a label and its value half a screen apart.
+ *
+ * Scoped to the same depth as the rule above it on purpose. `.slot--vehicle`
+ * alone is one class against that rule's two, so the generic share won and the
+ * column resolved to `flex: 0 1 0` — a sidebar exactly zero pixels wide, with
+ * no error anywhere and every panel in it still mounted.
  */
-.slot__stack > .slot--aux {
+.shell__body > .slot--vehicle {
+  flex: 0 0 15rem;
+}
+
+/*
+ * The floor under the derived column.
+ *
+ * At 3:1 the instruments would be squeezed under 300px on a 1000px window,
+ * where a two-column row stops being readable. Below this the map gives way
+ * first, because the map degrades gracefully and a row does not.
+ */
+.slot--instruments {
+  /* design-geometry: the floor under a two-column row, below which a label and
+     its value stop reading as a pair. */
+  min-width: 19rem;
+}
+
+/*
+ * Inside a stack the slots divide a height, not a width, so the column's own
+ * `--grow` must not reach them. Without this the instrument slot takes the
+ * column's share as a height and the developer tier claims everything below.
+ */
+.slot__stack > .slot {
   flex: 1 1 auto;
 }
 
 /* The developer tier: resident, tabbed, and bounded so it cannot crowd out the
    instruments above it. */
-.slot--dev {
+.slot__stack > .slot--dev {
   flex: 0 0 10rem;
   border-top: var(--rule);
   border-right: 0;
 }
 
 .slot__body {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   min-height: 0;
-  overflow: auto;
-}
-
-/* A slot whose content owns its own full bleed — the map. */
-.slot__body--bleed {
-  overflow: hidden;
-  padding: 0;
 }
 
 /*
- * The mount has to carry the height through.
+ * The panel that owns whatever its section's rows do not use — the map.
  *
  * MapLibre sizes itself from its container, and the container's `height: 100%`
  * resolves against this element. Leaving it auto collapses the map to zero
  * while the canvas keeps its own default 300px — a map that is present in the
  * DOM, reports no errors, and draws nothing.
  */
-.slot__body--bleed > .panel-mount {
+.slot__bleed {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.slot__bleed > .panel-mount {
+  flex: 1;
+  min-height: 0;
   height: 100%;
+}
+
+/* The rows of a section. In a section with no bleeding panel they are the
+   section, and they take its height. */
+.slot__rows {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/*
+ * Two columns, when a section's rows declare sides and both have something on
+ * them.
+ *
+ * The route is a long column and the readings that describe progress along it
+ * are four rows each; stacked under the map they push it off the screen, and
+ * side by side they fit in the band it leaves. The class is applied only while
+ * both sides are shown, so hiding one gives the other the full width instead of
+ * a gutter where the other used to be.
+ */
+.slot__rows--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  overflow: hidden;
+}
+
+/*
+ * Each side scrolls on its own. Sharing one scroller would mean running the
+ * waypoint list down past the readings beside it, which stop existing halfway
+ * through the scroll.
+ */
+.slot__side {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* In the stacked fallback the sides are just two runs of rows. */
+.slot__rows:not(.slot__rows--split) > .slot__side {
+  flex: 0 1 auto;
+  overflow-y: visible;
+}
+
+.slot__rows--split > .slot__side--lead {
+  border-right: var(--rule);
+}
+
+/*
+ * Under a bleeding panel the rows are the subordinate of the two: they take
+ * their content height up to a bound, and scroll past it. The bound is what
+ * keeps a six-item mission from pushing the map it belongs to off the column.
+ */
+.slot--bleeding > .slot__body > .slot__rows {
+  flex: 0 1 auto;
+  max-height: 45%;
+  border-top: var(--rule);
+}
+
+/*
+ * Split, the region is two columns of independent length, so it takes a fixed
+ * share rather than its content height — otherwise the band's depth would be
+ * whichever side happened to be longer, and it would jump every time the
+ * operator folded a waypoint open.
+ */
+.slot--bleeding > .slot__body > .slot__rows--split {
+  flex: 0 0 40%;
 }
 
 .slot__stack {
@@ -835,6 +1000,57 @@ body {
   font-size: var(--fs-body);
   line-height: var(--lh-body);
   color: var(--lume-dim);
+}
+
+/* --- glance strip --------------------------------------------------------- */
+
+/*
+ * A reading on a bar. The Row's grid forms a shared value edge down a column;
+ * a bar has no column, so the glance sets label and value tight against each
+ * other and lets the hairline do the separating instead.
+ */
+.glance {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--pad-chip);
+  padding: 0 var(--target-x);
+  border-left: var(--rule);
+  white-space: nowrap;
+}
+
+/* The first one sits against the bar's own inset, not against a rule with
+   nothing on the other side of it. */
+.glance:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.glance__label {
+  font-family: var(--label);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  line-height: var(--lh-label);
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+  color: var(--lume-dim);
+}
+
+.glance__value {
+  font-family: var(--data);
+  font-size: var(--fs-data);
+  line-height: var(--lh-data);
+  letter-spacing: var(--track-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--lume);
+}
+
+.glance--caution .glance__value {
+  color: var(--caution);
+}
+
+/* Absent, not disabled: a dash here is a value the operator has to read. */
+.glance--dead .glance__value {
+  color: var(--absent);
 }
 
 /* --- views popover ------------------------------------------------------- */
@@ -873,10 +1089,21 @@ body {
   background: var(--panel-raised);
 }
 
-.views__option input {
+.views__option input,
+.views__tier input {
   /* design-geometry: the drawn checkbox glyph; its 28px target is the label. */
   width: 0.875rem;
   height: 0.875rem;
+}
+
+/* A section every one of whose panels is hidden says so, rather than leaving
+   the operator to read four unchecked boxes and infer it. */
+.views__off {
+  margin-left: auto;
+  font-family: var(--data);
+  font-size: var(--fs-label);
+  letter-spacing: var(--track-data);
+  color: var(--absent);
 }
 
 /*
@@ -887,8 +1114,12 @@ body {
 .views__tier {
   display: flex;
   align-items: center;
-  min-height: var(--row-h);
+  gap: var(--target-x);
+  /* The heading is a control now, so it is sized on the target axis. Its bar
+     styling is unchanged: it is still the group header it always was. */
+  min-height: var(--target-h);
   padding: 0 var(--target-x);
+  cursor: pointer;
   background: color-mix(in srgb, var(--lume) 7%, transparent);
   border-bottom: var(--rule);
   font-family: var(--label);
@@ -924,7 +1155,7 @@ body {
    * scroll region inside a page that already scrolls. A clipped group reads as
    * a truncation bug, and nested scrolling is worse than a longer page.
    */
-  .slot--rail {
+  .slot--vehicle {
     max-height: none;
   }
 
@@ -933,14 +1164,39 @@ body {
    * the two are 700px apart. Capping the content keeps the pairing readable
    * without changing the row itself.
    */
-  .slot__body > * {
+  .slot__rows > *,
+  .slot__side > * {
     /* design-geometry: caps the label-to-value span when slots become one column. */
     max-width: 34rem;
   }
 
+  /* Stacked, there is no width to divide: the sides run one after the other. */
+  .slot__rows--split {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .slot__rows--split > .slot__side--lead {
+    border-right: 0;
+    border-bottom: var(--rule);
+  }
+
+  .slot__side {
+    overflow-y: visible;
+  }
+
   /* The map is not a row and gains nothing from the reading measure. */
-  .slot__body--bleed > * {
+  .slot__bleed > * {
     max-width: none;
+  }
+
+  /* Stacked, the map takes a viewport of its own and the rows follow it in
+     full rather than competing with it for a fraction of a column. */
+  .slot--bleeding > .slot__body > .slot__rows,
+  .slot--bleeding > .slot__body > .slot__rows--split {
+    max-height: none;
+    flex: 1 1 auto;
   }
 
   /*
@@ -953,43 +1209,44 @@ body {
   /*
    * Scoped to the outer row on purpose.
    *
-   * `.slot--aux` names two elements: the outer column wrapper and the
+   * `.slot--instruments` names two elements: the outer column wrapper and the
    * instrument slot nested inside `.slot__stack`. An unscoped `order` hits
    * both, so the nested instruments took order 1 while the developer tier kept
    * its default 0 — putting raw decoder state above the flight instruments on a
    * phone, which inverts the tier subordination outright.
    */
-  .shell__body > .slot--rail {
+  .shell__body > .slot {
+    flex: none;
+  }
+
+  .shell__body > .slot--vehicle {
     order: 0;
   }
 
-  .shell__body > .slot--aux {
+  .shell__body > .slot--instruments {
     order: 1;
+    /* design-geometry: the stacked instrument column, sized to its contents. */
+    min-height: 28rem;
+    min-width: 0;
   }
 
-  .shell__body > .slot--center {
+  .shell__body > .slot--map {
     order: 2;
-  }
-
-  .slot--center {
     /* design-geometry: the stacked map needs a usable viewport of its own. */
     min-height: 26rem;
   }
 
-  .slot--aux {
-    /* design-geometry: the stacked instrument column, sized to its contents. */
-    min-height: 28rem;
-  }
-
-  .slot--dev {
+  .slot__stack > .slot--dev {
     /* design-geometry: the stacked developer tier, bounded so it cannot dominate. */
     min-height: 13rem;
+    flex: none;
     border-top: 0;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .provenance__fill {
+  .provenance__fill,
+  .group__head--disclosure::before {
     transition: none;
   }
 }
@@ -1033,11 +1290,26 @@ body {
   color: var(--dead);
 }
 
-/* Fleet and vehicle share the shell; only the active view owns a map context. */
-.vehicle-workspace {
-  display: contents;
+/*
+ * A view fills the shell's body row: its own bar above, its slots below.
+ *
+ * The bar belongs to the view rather than to the shell because what it carries
+ * — which panels are on screen — is a property of the thing being looked at.
+ * The fleet view raises one only when the replay transport needs somewhere to
+ * stand, so an empty bar never costs it a row.
+ */
+.view {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
 }
 
+.view > .shell__body {
+  flex: 1;
+}
+
+/* Fleet and vehicle share the shell; only the active view owns a map context. */
 .vehicle-workspace[hidden] {
   display: none;
 }
@@ -1047,8 +1319,10 @@ body {
  * on a flex item leaves the layout identical to a slot that was never there.
  */
 .slot[hidden],
-.slot--aux[hidden],
 .panel-mount[hidden],
+.slot__bleed[hidden],
+.slot__rows[hidden],
+.slot__side[hidden],
 .slot__body > [hidden] {
   display: none;
 }

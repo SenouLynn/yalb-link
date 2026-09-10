@@ -1,10 +1,11 @@
 /**
- * The consulted tier: guidance, home, and radio link.
+ * The consulted families: guidance, home, and radio link.
  *
- * These three families are read before and after a flight rather than during
- * one, so they live in the rail beside the other key→value groups rather than
- * competing for height with the instruments. They are rows, not readouts: each
- * family is one source, so provenance is stated once on the group header.
+ * These are read before and after a flight rather than during one, so they live
+ * beside the other key→value groups rather than competing for height with the
+ * instruments. They are rows, not readouts: each family is one source, so
+ * provenance is stated once on the group header — except home, which has no
+ * group of its own any more and says so on its row.
  *
  * A family that has never been heard collapses to a sentence rather than to a
  * column of dashes. The two conditions are genuinely different: a dash means a
@@ -17,7 +18,7 @@
  * instrument on the display already takes.
  */
 
-import { bearing, num, signed, NO_VALUE } from './format';
+import { age, bearing, latLon, num, signed, NO_VALUE } from './format';
 import { Group, Row } from './primitives';
 import { hasDisplayValue, type FlightReadings, type Reading } from './readings';
 
@@ -46,14 +47,14 @@ export function GuidancePanel({ readings }: { readings: FlightReadings }) {
     >
       <Row
         label="Target bearing"
-        note="to waypoint"
+        hint="to waypoint"
         value={value === null ? NO_VALUE : bearing(value.targetBearingDeg)}
         unit="°"
         tone={tone(value)}
       />
       <Row
         label="Nav bearing"
-        note="commanded"
+        hint="commanded"
         value={value === null ? NO_VALUE : bearing(value.navBearingDeg)}
         unit="°"
         tone={tone(value)}
@@ -66,21 +67,21 @@ export function GuidancePanel({ readings }: { readings: FlightReadings }) {
       />
       <Row
         label="Crosstrack"
-        note="+ right of leg"
+        hint="positive is right of the leg"
         value={value === null ? NO_VALUE : signed(value.xtrackErrorM)}
         unit="m"
         tone={tone(value)}
       />
       <Row
         label="Altitude error"
-        note="+ below target"
+        hint="positive is below target"
         value={value === null ? NO_VALUE : signed(value.altErrorM)}
         unit="m"
         tone={tone(value)}
       />
       <Row
         label="Airspeed error"
-        note="+ below target"
+        hint="positive is below target"
         value={value === null ? NO_VALUE : signed(value.aspdErrorMps)}
         unit="m/s"
         tone={tone(value)}
@@ -89,35 +90,57 @@ export function GuidancePanel({ readings }: { readings: FlightReadings }) {
   );
 }
 
-export function HomePanel({ readings }: { readings: FlightReadings }) {
+/**
+ * Home, as rows inside the panel that carries the position they qualify.
+ *
+ * No header of its own. Home is the datum the position above it and the
+ * altitude tape across the screen are both measured against, and a section
+ * heading between them made it read as an unrelated fact that happened to be
+ * nearby.
+ *
+ * The source is named on the first row's note instead. That is not the per-row
+ * provenance the Once-Per-Group Rule forbids — what that rule is about is a
+ * second right-aligned value and a second drain track competing with the value
+ * edge. This is a left-hand line in the slot meant for what the operator cannot
+ * infer, and it is needed here precisely because these two rows do NOT come
+ * from the family the group header names: HOME_POSITION arrives when home is
+ * set and never again, so the header's five-second drain would otherwise be
+ * claiming a freshness these rows do not have.
+ */
+export function HomeRows({ readings }: { readings: FlightReadings }) {
   const { home } = readings;
   const value = hasDisplayValue(home) ? home.value : null;
 
-  return (
-    <Group
-      label="Home"
-      reading={home}
-      absent={absent(
-        home,
-        'Not received. ArduPilot sends home when home is set, not on an interval.',
-      )}
-    >
+  // Never received is a different fact from "stopped arriving", and on a datum
+  // it is the one that changes what the operator does: an unset home is why the
+  // altitude beside it cannot be trusted as height above the launch point.
+  if (home.state === 'unavailable') {
+    return (
       <Row
-        label="Home position"
-        value={
-          value === null ? NO_VALUE : `${value.latDeg.toFixed(6)}, ${value.lonDeg.toFixed(6)}`
-        }
+        label="Home"
+        hint="set by the vehicle, not sent on an interval"
+        value="NOT SET"
+        tone="dead"
+      />
+    );
+  }
+
+  return (
+    <>
+      <Row
+        label="Home"
+        hint={`${home.source ?? 'HOME_POSITION'} · ${age(home.ageMs)}`}
+        value={latLon(value?.latDeg, value?.lonDeg)}
         tone={tone(value)}
-        stacked
       />
       <Row
         label="Home elevation"
-        note="above sea level"
+        hint="above sea level"
         value={value === null ? NO_VALUE : num(value.altMslM)}
         unit="m"
         tone={tone(value)}
       />
-    </Group>
+    </>
   );
 }
 
@@ -131,40 +154,39 @@ export function RadioLinkPanel({ readings }: { readings: FlightReadings }) {
       reading={link}
       absent={absent(link, 'Not received. Radio telemetry may be unavailable on this link.')}
     >
+      {/* Local and remote belong in the label, not on the pointer: they are
+          the only thing telling two identically named rows apart, and a
+          difference the operator has to hover to find is not a difference. */}
       <Row
-        label="Signal"
-        note="local"
+        label="Signal · local"
         value={value === null ? NO_VALUE : num(value.rssi, 0)}
         tone={tone(value)}
       />
       <Row
-        label="Signal"
-        note="remote"
+        label="Signal · remote"
         value={value === null ? NO_VALUE : num(value.remrssi, 0)}
         tone={tone(value)}
       />
       <Row
-        label="Noise"
-        note="local"
+        label="Noise · local"
         value={value === null ? NO_VALUE : num(value.noise, 0)}
         tone={tone(value)}
       />
       <Row
-        label="Noise"
-        note="remote"
+        label="Noise · remote"
         value={value === null ? NO_VALUE : num(value.remnoise, 0)}
         tone={tone(value)}
       />
       <Row
         label="Buffer free"
-        note="back-pressure at 0"
+        hint="back-pressure at 0"
         value={value === null ? NO_VALUE : num(value.txbufPct, 0)}
         unit="%"
         tone={tone(value)}
       />
       <Row
         label="Receive errors"
-        note="cumulative"
+        hint="cumulative"
         value={value === null ? NO_VALUE : num(value.rxerrors, 0)}
         tone={tone(value)}
       />
@@ -173,16 +195,17 @@ export function RadioLinkPanel({ readings }: { readings: FlightReadings }) {
 }
 
 /**
- * All three consulted groups together.
+ * All three together.
  *
- * The rail registers them individually so the operator can hide one without
- * the others, but they are one tier and are tested and previewed as one.
+ * The registry mounts them separately so the operator can hide one without the
+ * others — and home is no longer separate at all, it is rows inside Position —
+ * but they are one tier and are previewed as one.
  */
 export function InspectionPanel({ readings }: { readings: FlightReadings }) {
   return (
     <>
       <GuidancePanel readings={readings} />
-      <HomePanel readings={readings} />
+      <Group label="Position"><HomeRows readings={readings} /></Group>
       <RadioLinkPanel readings={readings} />
     </>
   );

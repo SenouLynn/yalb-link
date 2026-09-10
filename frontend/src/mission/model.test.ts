@@ -22,7 +22,7 @@ describe('mission geometry', () => {
 describe('active mission sequence', () => {
   const view: VehicleView = {
     key: '1:1', sysId: 1, compId: 1, lifecycle: undefined, heartbeat: undefined,
-    lastFleetAtMs: undefined, lastSeenMs: 100, track: [],
+    lastFleetAtMs: undefined, lastSeenMs: 100, track: [], odometerM: 0, firstFixAtMs: undefined,
     sample: { sourceMessage: 'MISSION_CURRENT', receivedAtMs: 100, missionCurrentSeq: 3 },
     familySeenMs: { MISSION_CURRENT: 100 },
   };

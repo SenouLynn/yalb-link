@@ -54,6 +54,43 @@ export function age(ms: number | null): string {
   return `${String(Math.round(ms / 60_000))}m`;
 }
 
+/**
+ * A geodetic pair on one line: `37.774908, -122.419394`.
+ *
+ * One row, not two. Latitude and longitude are never read apart — a latitude
+ * alone locates nothing — so splitting them cost two row units and two labels
+ * to say one thing, and put the two halves of a coordinate at different heights
+ * on the shared value edge.
+ */
+export function latLon(
+  latDeg: number | null | undefined,
+  lonDeg: number | null | undefined,
+  digits = 6,
+): string {
+  if (
+    latDeg === null || latDeg === undefined || !Number.isFinite(latDeg) ||
+    lonDeg === null || lonDeg === undefined || !Number.isFinite(lonDeg)
+  ) {
+    return NO_VALUE;
+  }
+
+  return `${latDeg.toFixed(digits)}, ${lonDeg.toFixed(digits)}`;
+}
+
+/**
+ * A wire float, without its binary noise.
+ *
+ * `MISSION_ITEM.x` arrives as a float32 widened to double, so a waypoint
+ * entered as 37.7769 comes back as 37.776900000000005 and renders eighteen
+ * digits wide. Rounding to seven decimals and letting `Number` drop the
+ * trailing zeros keeps every digit the autopilot actually holds — float32
+ * carries about seven significant figures — while spending no width on the
+ * ones it does not.
+ */
+export function tidy(value: number): string {
+  return Number.isFinite(value) ? String(Number(value.toFixed(7))) : NO_VALUE;
+}
+
 /** Cardinal point for a bearing, for the heading card's letters. */
 export function cardinal(deg: number): string | null {
   const points: Record<number, string> = { 0: 'N', 90: 'E', 180: 'S', 270: 'W' };
