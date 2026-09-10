@@ -8,6 +8,10 @@ The Markdown cards in `cards/` are the source of truth. There is deliberately no
 hand-maintained column index: `make tasks` derives the kanban view from card
 metadata, so claiming two unrelated tasks changes two unrelated files.
 
+The [operator usage plan](operator-usage-plan.md) records the intended hardware
+workflows, capability ordering and unexecuted end-to-end acceptance scenarios.
+It is planning context, not a second column index or a claim of validation.
+
 ## Workflow
 
 The columns are:

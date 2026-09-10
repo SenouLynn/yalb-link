@@ -78,21 +78,23 @@ No project license has been selected or committed.
 
 ### Next demonstrable outcome
 
-Decoded telemetry inspection (T-015) is done: guidance, home and link render
-below the instruments' primary readings, exercised against live SITL, mock
-fixtures and recording replay — see
-[T-015 evidence](docs/runbooks/validation/t015.md). Status messages
-(T-016) remain, in a dedicated main pane. The reference-informed shell is
-implemented and exercised the same way; see
-[T-017 evidence](docs/runbooks/validation/t017.md) and the
-[reference review](docs/reference/ui-reference-review.md). Mission framing and
-styling remain T-012 and T-014, with full HUD parity in T-013.
+The intended first hardware milestone is trustworthy **read-only observation**
+of the operator's MicoAir H743 v1 Plane 4.6.x tricopter QuadPlane: first USB
+without a flight battery, then powered LR900 radio telemetry at an offline
+field site with the RC pilot in control and missions prepared in MissionPlanner.
+These hardware workflows are planned, not yet accepted.
 
-T-015 acceptance surfaced one backend defect that predates it: after a vehicle
-restarts and returns on a new UDP source port, the backend logs
-`SOURCE_CONFLICT`, never marks it lost, and never re-issues its rate requests,
-so every requested family goes silent until the backend restarts. That is
-T-023.
+The [operator usage and end-to-end acceptance plan](docs/tasks/operator-usage-plan.md)
+records scenarios, evidence requirements and capability gates. Next are T-023
+link recovery, T-027 exact target identification and T-030 offline observer
+behavior, followed by USB and radio acceptance. Existing SITL display and mission
+results remain useful evidence within their recorded scope.
+
+Parameter inspection precedes a separately isolated Bench configuration writer.
+Offline mission drafting/upload follows field read validation; flight navigation
+commands and two-person PID tuning require their own later contracts and tests.
+A separate Bench application is under consideration. MissionPlanner remains a
+usable fallback, so these write capabilities do not block the field observer.
 
 Visual review with fixtures is only part of acceptance. Exercise applicable
 workflows with live SITL and recording replay, including disconnect/reconnect,

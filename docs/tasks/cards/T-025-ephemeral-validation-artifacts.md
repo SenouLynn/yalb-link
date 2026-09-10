@@ -1,9 +1,9 @@
 ---
 id: T-025
 title: Separate ephemeral validation artifacts from durable documentation
-status: in_progress
+status: done
 priority: 2
-owner: codex-docs
+owner: unassigned
 depends_on: none
 ---
 
@@ -19,9 +19,9 @@ Readers can distinguish temporary run output from maintained validation guidance
 
 ## Acceptance criteria
 
-- [ ] Existing evidence is preserved under docs/temp/evidence.
-- [ ] Documentation explains capture, summary, promotion, and cleanup expectations.
-- [ ] References use the new location; builds and tests do not require temp artifacts.
+- [x] Existing evidence is preserved under docs/temp/evidence.
+- [x] Documentation explains capture, summary, promotion, and cleanup expectations.
+- [x] References use the new location; builds and tests do not require temp artifacts.
 
 ## Verification
 
@@ -32,3 +32,10 @@ compare moved file contents, and search for obsolete paths and build dependencie
 
 Documentation-only work; existing fleet implementation and staged changes are
 outside this card. Existing captures are retained for this organizational step.
+
+Verification passed: all local Markdown links resolve, moved files matched
+SHA-256 before documentation updates, reusable Python helpers parse, no old
+evidence paths remain, and board/whitespace checks pass. Build and test entry
+points do not reference the temporary directory. Historical run READMEs were
+also preserved as maintained runbooks; reusable mission helpers were promoted
+to scripts/validation. No runtime changes or live SITL runs were needed.
