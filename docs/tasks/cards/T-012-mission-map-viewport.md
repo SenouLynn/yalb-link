@@ -75,4 +75,4 @@ also available explicitly. Empty missions do not move the camera, single points
 use zoom <=16, and date-line bounds use the shortest longitude arc.
 Typecheck/lint and 91 map/UI tests pass. Browser at 1440×900 confirmed all four
 mock mission markers are inside the viewport after download, with following off.
-Evidence: `docs/runbooks/evidence/t012/framing.json` and `mission.png`.
+Evidence: `docs/temp/evidence/t012/framing.json` and `mission.png`.

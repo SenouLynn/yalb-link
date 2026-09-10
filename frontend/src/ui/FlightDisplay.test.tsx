@@ -96,6 +96,7 @@ function build(...events: StreamEvent[]): FleetState {
 function render(fleet: FleetState, nowMs = T0, source: StreamSource = 'live'): string {
   return renderToStaticMarkup(
     <FlightDisplay
+        initialSection="vehicle"
       fleet={fleet}
       nowMs={nowMs}
       source={source}

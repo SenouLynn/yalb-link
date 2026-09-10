@@ -31,7 +31,7 @@ Repeat the replay assertion from the repository root:
 python3 - <<'PYTHON'
 import json
 from pathlib import Path
-root = Path('docs/runbooks/evidence/t021')
+root = Path('docs/temp/evidence/t021')
 before = json.loads((root / 'before.json').read_text())
 after = json.loads((root / 'after.json').read_text())
 assert before == after

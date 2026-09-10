@@ -1,0 +1,114 @@
+{
+  "before": {
+    "at": "2026-09-10T12:22:59.324Z",
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440
+    },
+    "section": "fleet",
+    "sourceChip": "LIVE",
+    "navButton": "Open selected vehicle",
+    "backendLabel": "Backend connected",
+    "fleetHeading": "Fleet 2 vehicles",
+    "fitDisabled": false,
+    "canvasCount": 1,
+    "fleetMap": true,
+    "vehicleMap": false,
+    "emptyMap": null,
+    "markers": [
+      {
+        "key": "1:1",
+        "x": 607,
+        "y": 755,
+        "width": 48,
+        "height": 32,
+        "bottom": 787,
+        "scrollHeight": 28,
+        "clientHeight": 28
+      },
+      {
+        "key": "2:1",
+        "x": 1073,
+        "y": 165,
+        "width": 48,
+        "height": 32,
+        "bottom": 197,
+        "scrollHeight": 28,
+        "clientHeight": 28
+      }
+    ],
+    "cards": [
+      {
+        "key": "1:1",
+        "chip": "HEARD",
+        "position": "37.774900, -122.419400",
+        "readings": [
+          "Altitude-0.0 m · above home",
+          "Ground speed0.0 m/s",
+          "Position age0.0s · live"
+        ],
+        "centerDisabled": false
+      },
+      {
+        "key": "2:1",
+        "chip": "HEARD",
+        "position": "37.779900, -122.414400",
+        "readings": [
+          "Altitude-0.0 m · above home",
+          "Ground speed0.0 m/s",
+          "Position age0.0s · live"
+        ],
+        "centerDisabled": false
+      }
+    ],
+    "roster": {
+      "x": 0,
+      "y": 52,
+      "width": 288,
+      "height": 848,
+      "bottom": 900,
+      "scrollHeight": 848,
+      "clientHeight": 848
+    },
+    "map": {
+      "x": 288,
+      "y": 52,
+      "width": 1152,
+      "height": 848,
+      "bottom": 900,
+      "scrollHeight": 848,
+      "clientHeight": 848
+    },
+    "activeElement": "\n    YALB Vehicle workspaceLIVEOpen sele",
+    "replayTransport": false
+  },
+  "markerClicked": "2:1",
+  "after": {
+    "at": "2026-09-10T12:23:00.865Z",
+    "viewport": {
+      "width": 1440,
+      "height": 900,
+      "documentWidth": 1440
+    },
+    "section": "vehicle",
+    "sourceChip": "LIVE",
+    "navButton": "Back to fleet",
+    "backendLabel": null,
+    "fleetHeading": null,
+    "fitDisabled": null,
+    "canvasCount": 1,
+    "fleetMap": false,
+    "vehicleMap": true,
+    "emptyMap": null,
+    "markers": [],
+    "cards": [],
+    "roster": null,
+    "map": null,
+    "activeElement": "Back to fleet",
+    "replayTransport": false
+  },
+  "selectedAfterMarkerClick": "2:1",
+  "consoleErrors": [],
+  "pageExceptions": []
+}

@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { initialFleetState, type FleetState, type VehicleView } from '@/fleet/state';
 
 const maps = vi.hoisted(() => ({ mounts: 0, missions: [] as unknown[] }));
+vi.mock('@/map/FleetMap', () => ({ FleetMap: () => <div aria-label="Fleet position map" /> }));
 vi.mock('@/map/MapPanel', () => ({
   MapPanel: ({ mission }: { mission: unknown }) => { maps.missions.push(mission); useEffect(() => { maps.mounts += 1; }, []); return <div aria-label="Vehicle position map" />; },
 }));
@@ -40,7 +41,7 @@ function fleet(...views: VehicleView[]): FleetState {
 }
 
 function display(state: FleetState) {
-  return <FlightDisplay fleet={state} nowMs={0} source="live" onSelect={() => undefined} />;
+  return <FlightDisplay initialSection="vehicle" fleet={state} nowMs={0} source="live" onSelect={() => undefined} />;
 }
 
 afterEach(() => vi.unstubAllGlobals());
@@ -263,7 +264,7 @@ it('retains geometry across clock ticks, replaces it on refresh, and isolates se
   const geometry = maps.missions[maps.missions.length - 1];
   const mounts = maps.mounts;
   for (let nowMs = 250; nowMs <= 2000; nowMs += 250) {
-    act(() => { root.render(<FlightDisplay fleet={{ ...a }} nowMs={nowMs} source="live" onSelect={() => undefined} />); });
+    act(() => { root.render(<FlightDisplay initialSection="vehicle" fleet={{ ...a }} nowMs={nowMs} source="live" onSelect={() => undefined} />); });
     expect(maps.missions[maps.missions.length - 1]).toBe(geometry);
     expect(maps.mounts).toBe(mounts);
   }
@@ -273,5 +274,37 @@ it('retains geometry across clock ticks, replaces it on refresh, and isolates se
   expect(container.textContent).toContain('Not downloaded');
   act(() => { root.render(display(a)); });
   expect(container.textContent).toContain('Not downloaded');
+  act(() => { root.unmount(); });
+});
+
+
+it('retains a pending mission through Fleet, clears arm confirmation, and remounts only the active map', async () => {
+  let signal: AbortSignal | undefined;
+  let resolve: ((response: Response) => void) | undefined;
+  vi.stubGlobal('fetch', vi.fn((_url: unknown, init?: RequestInit) => {
+    signal = init?.signal instanceof AbortSignal ? init.signal : undefined;
+    return new Promise<Response>(done => { resolve = done; });
+  }));
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  act(() => { root.render(display({ ...fleet(view(1)), connected: true })); });
+  const click = (text: string) => { Array.from(container.querySelectorAll('button')).find(b => b.textContent === text)?.click(); };
+  act(() => { click('Download mission'); click('ARM'); });
+  expect(container.textContent).toContain('CONFIRM ARM');
+  act(() => { click('Back to fleet'); });
+  expect(signal?.aborted).toBe(false);
+  expect(container.querySelector('.vehicle-workspace')?.hasAttribute('hidden')).toBe(true);
+  expect(container.querySelector('[aria-label="Vehicle position map"]')).toBeNull();
+  expect(container.querySelector('[aria-label="Fleet position map"]')).not.toBeNull();
+  await act(async () => {
+    resolve?.(new Response(JSON.stringify(toJson(MissionSnapshotSchema, create(MissionSnapshotSchema, {})))));
+    await Promise.resolve();
+  });
+  act(() => { click('Open selected vehicle'); });
+  expect(container.textContent).toContain('Complete');
+  expect(container.textContent).not.toContain('CONFIRM ARM');
+  expect(container.querySelector('[aria-label="Fleet position map"]')).toBeNull();
+  expect(container.querySelector('[aria-label="Vehicle position map"]')).not.toBeNull();
+  expect(fetch).toHaveBeenCalledTimes(1);
   act(() => { root.unmount(); });
 });

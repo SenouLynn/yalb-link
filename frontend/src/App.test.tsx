@@ -8,6 +8,7 @@ import type { StreamEvent } from '@/stream/events';
 
 const harness = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn() }));
 vi.mock('@/stream/select', () => ({ selectStream: () => ({ stream: { start: harness.start }, source: 'live' }) }));
+vi.mock('@/map/FleetMap', () => ({ FleetMap: () => <div aria-label="Fleet position map" /> }));
 vi.mock('@/map/MapPanel', () => ({ MapPanel: () => <div /> }));
 import App from './App';
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
@@ -26,6 +27,8 @@ it('keeps one active stream and selection across pane toggles and rerenders in S
       type: FleetEventType.VEHICLE_DISCOVERED, vehicleId: { systemId, componentId: 1 },
     }) });
   });
+  expect(container.querySelector('[aria-label="Fleet roster"]')).not.toBeNull();
+  act(() => { container.querySelector<HTMLButtonElement>('[aria-label="Open vehicle 2:1"]')?.click(); });
   const selector = Array.from(container.querySelectorAll<HTMLButtonElement>('.selector button'));
   act(() => { selector[1]?.click(); });
   const selectedText = container.querySelector('.selector [aria-pressed="true"]')?.textContent;
@@ -34,6 +37,9 @@ it('keeps one active stream and selection across pane toggles and rerenders in S
     act(() => { button.click(); });
   }
   act(() => { vi.advanceTimersByTime(1000); root.render(<StrictMode><App /></StrictMode>); });
+  act(() => { Array.from(container.querySelectorAll('button')).find(b => b.textContent === 'Back to fleet')?.click(); });
+  expect(container.querySelector('[aria-label="Fleet roster"]')).not.toBeNull();
+  act(() => { container.querySelector<HTMLButtonElement>('[aria-label="Open vehicle 2:1"]')?.click(); });
   expect(harness.start).toHaveBeenCalledTimes(starts);
   expect(container.querySelector('.selector [aria-pressed="true"]')?.textContent).toBe(selectedText);
   act(() => { root.unmount(); });

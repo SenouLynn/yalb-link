@@ -24,7 +24,8 @@ export function quarantineDurationMs(resolution: CommandResolution | undefined):
   return Math.max(0, seconds * 1000 + Math.round((until.nanos - attested.nanos) / 1e6));
 }
 
-export function ArmControl({ view, connected, source, latest, staleLatest = false, nowMs }: {
+export function ArmControl({ view, connected, source, latest, staleLatest = false, active = true, nowMs }: {
+  active?: boolean;
   view: VehicleView;
   connected: boolean;
   source: StreamSource;
@@ -43,6 +44,8 @@ export function ArmControl({ view, connected, source, latest, staleLatest = fals
   const [unresolved, setUnresolved] = useState<CommandTransaction | null>(null);
   const [quarantineMs, setQuarantineMs] = useState<number | null>(null);
   const arm = !(view.heartbeat?.armed ?? false);
+
+  useEffect(() => { if (!active) setConfirming(false); }, [active]);
 
   useEffect(() => {
     setResult(latest);

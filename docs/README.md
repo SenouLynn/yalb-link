@@ -3,7 +3,7 @@
 Documentation describes the repository as it exists. Git history preserves how
 it got there.
 
-Keep only these document classes:
+Use these locations to distinguish maintained documentation from temporary output:
 
 | Location | Purpose |
 |---|---|
@@ -13,6 +13,7 @@ Keep only these document classes:
 | `docs/adr/` | Small records for accepted decisions that are costly to reverse |
 | `docs/changelog/` | User-visible changes once releases exist |
 | `docs/tasks/` | Planned outcomes, sequencing, ownership, and execution context |
+| `docs/temp/` | Ephemeral validation output; optional review material, off the build and test path |
 
 Rules:
 
@@ -33,3 +34,7 @@ Rules:
 
 Before merging a documentation change, run the commands it mentions and search
 for broken local links and references to deleted files.
+
+Validation captures follow the [temporary artifact workflow](temp/README.md).
+Keep results and repeatable procedures in maintained documentation so they remain
+useful after raw captures are pruned.

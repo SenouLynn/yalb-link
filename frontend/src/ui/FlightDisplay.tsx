@@ -7,6 +7,8 @@ import {
   resolvePredictiveTrajectory,
   type GeoCoordinate,
 } from '@/logic/trajectory';
+import { FleetOverview } from '@/fleet/FleetOverview';
+import type { SavedCamera } from '@/map/FleetMap';
 import { MapPanel } from '@/map/MapPanel';
 import { missionLoaderFor } from '@/mission/source';
 import { MissionPanel } from '@/mission/MissionPanel';
@@ -26,6 +28,7 @@ import { WorkspaceShell, WorkspacePanes, PaneControls, DEFAULT_VISIBILITY, type 
 
 export interface FlightDisplayProps {
   fleet: FleetState;
+  initialSection?: 'fleet' | 'vehicle';
   /** Injected clock; freshness is measured against it. */
   nowMs: number;
   /** Where the data comes from. Drives what the display claims it is showing. */
@@ -41,7 +44,13 @@ export function FlightDisplay({
   source,
   replay = null,
   onSelect,
+  initialSection,
 }: FlightDisplayProps) {
+  const [section, setSection] = useState<'fleet' | 'vehicle'>(initialSection ?? (source === 'replay' ? 'vehicle' : 'fleet'));
+  const fleetCamera = useRef<SavedCamera | null>(null);
+  const navigation = useRef<HTMLButtonElement>(null);
+  const openVehicle = (key: VehicleKey) => { onSelect(key); setSection('vehicle'); };
+  useEffect(() => { navigation.current?.focus(); }, [section]);
   const view = fleet.selected === null ? undefined : fleet.vehicles[fleet.selected];
   const controls = source === 'replay' ? <ReplayControls source={replay} /> : null;
 
@@ -56,15 +65,21 @@ export function FlightDisplay({
   const sourceLabel = source === 'live' ? (fleet.connected ? 'LIVE' : 'DISCONNECTED') : source.toUpperCase();
   return <WorkspaceShell topbar={<>
     <span className={`chip chip--${sourceLabel === 'LIVE' ? 'active' : 'caution'}`}>{sourceLabel}</span>
-    <VehicleSelector fleet={fleet} onSelect={onSelect} />
-    <PaneControls visible={visible} onToggle={toggle} />
+    <button ref={navigation} type="button" onClick={() => { if (section === 'fleet' && view) openVehicle(view.key); else setSection('fleet'); }} disabled={section === 'fleet' && !view}>
+      {section === 'fleet' ? 'Open selected vehicle' : 'Back to fleet'}
+    </button>
+    {section === 'vehicle' && <><VehicleSelector fleet={fleet} onSelect={onSelect} />
+    <PaneControls visible={visible} onToggle={toggle} /></>}
     {controls}
   </>}>
+    {section === 'fleet' && <FleetOverview fleet={fleet} nowMs={nowMs} source={source} onOpen={openVehicle} camera={fleetCamera} />}
+    <div className="vehicle-workspace" hidden={section !== 'vehicle'}>
     {view === undefined ? <>
       <aside className="workspace__sidebar" aria-label="Vehicle context"><div className="label">No vehicle selected</div></aside>
       <main className="workspace__main"><div className="panel empty"><div className="label">No vehicle</div>
         <p className="empty__hint">{emptyHint(source, fleet.connected)}</p></div></main>
-    </> : <SelectedFlightDisplay fleet={fleet} view={view} nowMs={nowMs} source={source} visible={visible} />}
+    </> : <SelectedFlightDisplay fleet={fleet} view={view} nowMs={nowMs} source={source} visible={visible} active={section === 'vehicle'} />}
+    </div>
   </WorkspaceShell>;
 }
 
@@ -75,12 +90,14 @@ function SelectedFlightDisplay({
   nowMs,
   source,
   visible,
+  active,
 }: {
   fleet: FleetState;
   view: VehicleView;
   nowMs: number;
   source: StreamSource;
   visible: PaneVisibility;
+  active: boolean;
 }) {
   const readings = readFlight(view, nowMs);
   const mission = useMission(view.key, view.sysId, view.compId, source);
@@ -89,7 +106,7 @@ function SelectedFlightDisplay({
   return <>
     <aside className="workspace__sidebar" aria-label="Vehicle context">
       <StatusBar view={view} nowMs={nowMs} connected={fleet.connected} source={source} />
-      <ArmControl key={view.key} view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} staleLatest={fleet.commandsStale[view.key] === true} nowMs={nowMs} />
+      <ArmControl active={active} key={view.key} view={view} connected={fleet.connected} source={source} latest={fleet.commands[view.key]} staleLatest={fleet.commandsStale[view.key] === true} nowMs={nowMs} />
       <div className="workspace__position"><span className="label">Position · track</span>
         <p>{hasDisplayValue(readings.position)
           ? `${readings.position.value.latDeg.toFixed(6)}, ${readings.position.value.lonDeg.toFixed(6)}`
@@ -99,14 +116,14 @@ function SelectedFlightDisplay({
     <WorkspacePanes visible={visible} panes={{
       instruments: <InstrumentPanel readings={readings} />,
       map:
-      <MapPanel
+      active ? <MapPanel
         position={hasDisplayValue(readings.position) ? readings.position.value : null}
         track={view.track}
         trajectory={displayTrajectory(readings, view.sample)}
         mission={geometry}
         missionRevision={mission.snapshot}
         vehicleKey={view.key}
-      />,
+      /> : null,
       mission: <MissionPanel
         status={mission.status}
         snapshot={mission.snapshot}

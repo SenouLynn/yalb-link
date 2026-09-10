@@ -1,0 +1,97 @@
+{
+  "fit": {
+    "at": "2026-09-10T12:21:00.013Z",
+    "viewport": {
+      "width": 768,
+      "height": 1024,
+      "documentWidth": 768
+    },
+    "section": "fleet",
+    "sourceChip": "LIVE",
+    "navButton": "Open selected vehicle",
+    "backendLabel": "Backend connected",
+    "fleetHeading": "Fleet 2 vehicles",
+    "fitDisabled": false,
+    "canvasCount": 1,
+    "fleetMap": true,
+    "vehicleMap": false,
+    "emptyMap": null,
+    "markers": [
+      {
+        "key": "1:1",
+        "x": 144,
+        "y": 947,
+        "width": 48,
+        "height": 32,
+        "bottom": 979,
+        "scrollHeight": 28,
+        "clientHeight": 28
+      },
+      {
+        "key": "2:1",
+        "x": 576,
+        "y": 401,
+        "width": 48,
+        "height": 32,
+        "bottom": 433,
+        "scrollHeight": 28,
+        "clientHeight": 28
+      }
+    ],
+    "cards": [
+      {
+        "key": "1:1",
+        "chip": "HEARD",
+        "position": "37.774900, -122.419400",
+        "readings": [
+          "Altitude-0.0 m · above home",
+          "Ground speed0.0 m/s",
+          "Position age0.0s · live"
+        ],
+        "centerDisabled": false
+      },
+      {
+        "key": "2:1",
+        "chip": "HEARD",
+        "position": "37.779900, -122.414400",
+        "readings": [
+          "Altitude0.0 m · above home",
+          "Ground speed0.0 m/s",
+          "Position age0.0s · live"
+        ],
+        "centerDisabled": false
+      }
+    ],
+    "roster": {
+      "x": 0,
+      "y": 52,
+      "width": 768,
+      "height": 304,
+      "bottom": 356,
+      "scrollHeight": 468,
+      "clientHeight": 303
+    },
+    "map": {
+      "x": 0,
+      "y": 356,
+      "width": 768,
+      "height": 668,
+      "bottom": 1024,
+      "scrollHeight": 668,
+      "clientHeight": 668
+    },
+    "activeElement": "\n    YALB Vehicle workspaceLIVEOpen sele",
+    "replayTransport": false
+  },
+  "reach": {
+    "scrollTop": 165,
+    "scrollHeight": 468,
+    "clientHeight": 303,
+    "lastOpenBottom": 326,
+    "rosterBottom": 356,
+    "documentWidth": 768,
+    "viewportWidth": 768
+  },
+  "consoleErrors": [],
+  "pageExceptions": []
+}

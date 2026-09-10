@@ -34,7 +34,7 @@ The documented Compose recording command starts with a writable durable store.
 docker compose config --quiet
 ./scripts/check-containers.sh
 GCS_RECORDING_ENABLED=true docker compose up -d --build --wait gcs-backend
-# Follow docs/runbooks/evidence/t021/README.md for the SITL recording,
+# Follow docs/runbooks/validation/t021.md for the SITL recording,
 # recreation, replay comparison and recording-disabled acceptance.
 ./scripts/kanban check
 ```
@@ -58,7 +58,7 @@ recreated only the backend, and compared all replay events and metadata for exac
 JSON equality. Recording-disabled recreation was healthy and recording routes
 returned 404. Compose config, container checks and diff checks passed.
 
-[Acceptance evidence](../../runbooks/evidence/t021/README.md) includes full replay
+[Acceptance evidence](../../runbooks/validation/t021.md) includes full replay
 before/after and the comparison result. The stack was shut down without deleting
 `yalb-gcs_recordings`; recording 1 remains available. Runbook documents ordinary
 shutdown, recreation, disabling recording, single-session deletion and full reset.

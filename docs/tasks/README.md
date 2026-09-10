@@ -107,3 +107,11 @@ Do not make real hardware a default prerequisite. A hardware transition must
 name the validation gap SITL cannot answer and the relevant SITL evidence
 already obtained. Simulation success supports structural and workflow
 confidence; it does not establish physical hardware equivalence.
+
+## Validation artifact lifecycle
+
+Follow the [temporary artifact workflow](../temp/README.md). Put screenshots,
+JSON observations, and logs under `docs/temp/evidence/<task-id>/<run-id>/`.
+Keep expectations, actual results, limitations, and repeatable verification in
+the card or a runbook. Captures are optional review material and may be pruned;
+required verification must generate fresh output rather than require old dumps.

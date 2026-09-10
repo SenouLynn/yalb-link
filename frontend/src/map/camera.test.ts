@@ -23,3 +23,21 @@ it('does not undo mission framing or a pan until following is explicitly restore
   expect(shouldFollow('follow', true)).toBe(false);
   expect(nextFollowMode('manual', 'mission', false)).toBe('manual');
 });
+it('keeps one position at a bounded zoom when its longitude wrap does not round-trip', () => {
+  // (lon + 360) % 360 rarely returns the input exactly, so a single vehicle used to
+  // frame as a whole-globe span at its antipode instead of a bounded zoom.
+  for (const lonDeg of [-122.4194001, -122.42, -64.11632079318275]) {
+    const frame = framePoints([{ latDeg: 37.7748999, lonDeg }]);
+    expect(frame).toMatchObject({ zoom: 16 });
+    expect((frame as { center: [number, number] }).center[0]).toBeCloseTo(lonDeg, 9);
+  }
+});
+it('never places a frame west edge east of its east edge', () => {
+  for (let step = 0; step < 2000; step += 1) {
+    const lonDeg = -180 + step * 0.1801;
+    for (const points of [[{ latDeg: 10, lonDeg }], [{ latDeg: 10, lonDeg }, { latDeg: 11, lonDeg }]]) {
+      const frame = framePoints(points);
+      if (frame && 'bounds' in frame) expect(frame.bounds[0][0]).toBeLessThanOrEqual(frame.bounds[1][0]);
+    }
+  }
+});

@@ -1,0 +1,151 @@
+# T-022 fleet overview acceptance — 2026-09-09/10
+
+Live acceptance of the fleet overview and its navigation into the existing
+vehicle workspace, on the normal binary MAVLink → backend → SSE → browser path.
+Two disarmed ArduPilot SITL vehicles ran in Compose with **distinct** home
+locations, because their defaults coincide and would not prove separate markers:
+
+| Identity | Container | Home (lat, lon, alt m, yaw) | Reported position |
+| --- | --- | --- | --- |
+| `1:1` Copter | `yalb-sitl-copter-1` | 37.7749, -122.4194, 10, 0 | 37.7748999, -122.4194001 |
+| `2:1` Plane | `yalb-sitl-plane-2` | 37.7799, -122.4144, 10, 0 | 37.7798997, -122.4143999 |
+
+No vehicle position was ever injected: every marker below came from that
+vehicle's own `GLOBAL_POSITION_INT`.
+
+## Executed setup
+
+```sh
+cat > /private/tmp/t022-compose.yml <<'YAML'
+services:
+  ardupilot-sitl-plane-2:
+    environment:
+      HOME_LOCATION: 37.7799,-122.4144,10,0
+YAML
+docker compose -f docker-compose.yml -f /private/tmp/t022-compose.yml \
+  --profile multi-sitl up -d gcs-backend ardupilot-sitl-copter-1 ardupilot-sitl-plane-2
+cd frontend && pnpm dev --port 3001          # host source, not the baked image
+curl -s -X POST -d '{"name":"T-022 fleet acceptance"}' \
+  http://localhost:8080/api/recordings/start
+```
+
+The backend ran with `GCS_RECORDING_ENABLED=true` and its **default**
+`GCS_RECORDING_DB_PATH=/var/lib/gcs/recordings.db`: T-021 closed, so T-017's
+writable `/tmp` override was no longer needed. `GCS_COMMANDS_ENABLED=false`, so
+no vehicle was ever armed and no command was submitted — see Limitations.
+
+Chrome 153.0.8010.36, `--headless=new`, `--use-gl=angle --use-angle=swiftshader
+--enable-unsafe-swiftshader`, a fresh `--user-data-dir`, driven over CDP on port
+9222. `Emulation.setDeviceMetricsOverride` set exact 1440×900 and 768×1024
+viewports. Readiness used wall-clock waits, never a virtual time budget, and
+every observation subscribed to `Runtime.exceptionThrown` and console errors.
+Interruption evidence used `docker pause` / `unpause` and `docker stop` /
+`start` on one page load, with no reload and no navigation, because recovery
+without either is the claim being made.
+
+## Defect found and fixed during acceptance
+
+`Center vehicle` framed the **whole globe at the vehicle's antipode**, measured
+live as centre lng 57.5806 (= -122.4194 + 180), zoom 1.008, instead of that
+vehicle at a bounded zoom. `framePoints` in `frontend/src/map/camera.ts`
+detected a single-point extent with `west === east`, but the wrap through
+`(lon + 360) % 360` does not round-trip exactly: for roughly a sixth of
+longitudes the recovered east edge lands a few 1e-14° **west** of the west edge,
+and MapLibre fits that inverted box the long way around the world. Copter `1:1`
+was such a longitude; plane `2:1` was not, which is why only one of two
+identical actions misbehaved. The arc is now clamped to `[0, 360]` and an extent
+below 1e-9° (a tenth of a millimetre) is framed as a point, with regression
+coverage in `camera.test.ts` for the rounding case and for the invariant that a
+west edge never sits east of its east edge. `camera.ts` is shared with T-012's
+mission framing, so single-item missions had the same defect.
+
+`fleet-center-1440.png` was captured after the fix; measurements below come from
+the post-fix build. Camera centre/zoom values were read through a temporary
+`window.__fleetMap` instrumentation, which was **removed** before the final
+captures — all checked-in evidence measures the camera through marker screen
+geometry instead.
+
+## Expectations and results
+
+Before judging: no document horizontal overflow at either size; the roster's
+last action reachable inside the roster's own scroll; markers keyed per full
+`system:component` identity; a paused vehicle loses only its own marker at the
+existing 5 s position TTL plus one 250 ms clock tick; recovery without reload;
+one MapLibre context at all times; no console error or page exception.
+
+- `narrow.json`, `nav-camera.json` — layout. 1440×900: roster 288×848 at x=0,
+  map 1152 wide filling the rest, `documentWidth` 1440. 768×1024: bounded roster
+  band 768×304 over a 768×668 map, `documentWidth` 768. Scrolled to the end
+  (`scrollTop` 165 = 468 − 303) the last roster `Open` button's bottom is 326 px,
+  inside the band's 356 px bottom: reachable, and the document never scrolls
+  sideways.
+- `nav-camera.json` — camera. Initial fit framed both identities once
+  (markers at 607,755 and 1073,165). Five further seconds of telemetry moved
+  neither marker. A user pan moved both by the same −330,−198 (drag plus
+  MapLibre inertia) and the next five seconds of telemetry did **not** undo it.
+  `Fit fleet` restored the framing exactly; `Center vehicle 1:1` put that
+  marker's centre on 864,476, the map's exact centre.
+- `nav-camera.json` — navigation. Fleet → vehicle → fleet kept `canvasCount`
+  at 1 the whole way; the fleet map is absent in the vehicle workspace and the
+  vehicle map absent in the fleet view. Focus moved to the navigation button
+  each way (`Back to fleet`, then `Open selected vehicle`). Returning restored
+  the fleet camera exactly: the marker sat at 840,460 before leaving and after
+  coming back.
+- `freshness.json` — per-vehicle interruption. Pausing the plane removed its
+  marker after **5049 ms** (the 5 s TTL inside the allowed 250 ms tick) and left
+  the copter's marker untouched. `2:1` kept its roster entry reading
+  `Position unavailable`, `Position age 5s · stale`, with `Center` disabled and
+  `Open` still working. Unpausing restored the marker in **255 ms**, on the same
+  page load. Pausing both vehicles emptied the map after **5044 ms**, showed
+  `No fresh vehicle positions` and disabled `Fit fleet`; both returned in 255 ms.
+  Absence was never drawn at 0,0.
+- `lost-posture.json` — explicit lost posture. The backend declares a vehicle
+  lost after `codec.HeartbeatTTL` = 60 s of silence, longer than the position
+  TTL, so this needed its own pause: after **61 153 ms** `2:1` showed the `LOST`
+  chip and `Position age 1m · lost`, kept its roster entry with `Center`
+  disabled and no marker, and remained inspectable in its own workspace
+  (`vehicle-lost-posture-1440.png`). Resuming returned it to `HEARD` with a
+  marker in 1003 ms.
+- `freshness.json` — backend loss. `docker stop yalb-backend` showed
+  `DISCONNECTED` and `Backend disconnected` by the first observation after the
+  command returned; the markers then cleared at the position TTL, 5055 ms later,
+  with the roster entries retained. `docker start` returned `LIVE` with both
+  markers **3529 ms** later, without reloading the page.
+- `navigation.json` — mission and selection isolation. On the live path a
+  download for `1:1` completed as `Complete · empty` (this SITL carries no
+  mission; T-008 established that empty is a real answer), survived a trip to
+  Fleet and back to the same vehicle unchanged, and switching to `2:1` showed
+  `Not downloaded`. In the fleet view **no** focusable element remains inside
+  the hidden vehicle workspace, so hidden controls leave the focus order; the
+  roster's `Open`/`Center` are ordinary buttons and are always available.
+- `replay.json` — recorded path. Recording 2, `T-022 fleet acceptance`, 827
+  events over 27.9 s, stopped with reason `shutdown` when the backend was
+  stopped above. `?source=replay&recording=2` opened the **vehicle** workspace
+  with the `REPLAY` chip, and `Back to fleet` reached the overview during
+  replay with the transport staying in its one topbar home. `Play` advanced the
+  clock 0:00 → 0:10 and both identities appeared as separate markers with
+  `Recorded fleet` in the roster. Seeking back to 0 restarted from the recorded
+  discovery and re-derived both entries. At 768×1024 the transport, roster band
+  and map fit with `documentWidth` 768, one canvas throughout.
+- No console errors and no page exceptions in any of the six runs.
+
+## Limitations
+
+- `GCS_COMMANDS_ENABLED=false` in this Compose stack, so nothing was armed and
+  no command was submitted. Clearing an unsubmitted arm confirmation on leaving
+  a vehicle view, and retaining submitted transaction evidence, are covered by
+  `FlightDisplay.lifecycle.test.tsx`, not by this live run.
+- `docker pause` stops all traffic from a container. It models a lost link, not
+  a simulator fault, and it is not an in-flight failure: both vehicles were
+  disarmed and stationary at their homes for every observation here.
+- The instant between a replay reset and its re-population was not sampled;
+  `fleet/overview.test.ts` covers reset clearing positions and order.
+- Bazel and golangci-lint remain unrunnable on this machine (repo pins Bazel
+  8.7.0, Homebrew provides 8.3.1; golangci-lint absent). Do not count them.
+
+## Verification
+
+`pnpm typecheck`, `pnpm lint`, `pnpm vitest run` and `pnpm build` all exit 0
+after the camera fix; `go test -race ./...` exits 0 with no Go change in this
+card. `./scripts/kanban check` and `git diff --check` exit 0. The build keeps
+its pre-existing large-bundle warning.

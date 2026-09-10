@@ -81,10 +81,10 @@ No project license has been selected or committed.
 Decoded telemetry inspection (T-015) is done: guidance, home and link render
 below the instruments' primary readings, exercised against live SITL, mock
 fixtures and recording replay — see
-[T-015 evidence](docs/runbooks/evidence/t015/README.md). Status messages
+[T-015 evidence](docs/runbooks/validation/t015.md). Status messages
 (T-016) remain, in a dedicated main pane. The reference-informed shell is
 implemented and exercised the same way; see
-[T-017 evidence](docs/runbooks/evidence/t017/README.md) and the
+[T-017 evidence](docs/runbooks/validation/t017.md) and the
 [reference review](docs/reference/ui-reference-review.md). Mission framing and
 styling remain T-012 and T-014, with full HUD parity in T-013.
 

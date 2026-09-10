@@ -584,3 +584,27 @@ html, body, #root { height: 100%; overflow: hidden; }
 .map-actions { position: absolute; top: 0.6rem; left: 0.6rem; z-index: 2; display: flex; gap: 0.4rem; }
 .map-actions button { background: var(--panel); color: var(--lume); border: 1px solid var(--bezel); padding: 0.4rem 0.6rem; font: 0.7rem var(--data); cursor: pointer; }
 .map-actions button:disabled { opacity: 0.5; cursor: default; }
+
+/* Fleet and vehicle share a shell; only the active view owns a map context. */
+.vehicle-workspace { display: contents; }
+.vehicle-workspace[hidden] { display: none; }
+.fleet-main { position: relative; }
+.fleet-map { height: 100%; width: 100%; }
+.fleet-map__empty { position: absolute; top: 1rem; left: 1rem; padding: 0.6rem; background: var(--panel); color: var(--lume-dim); pointer-events: none; }
+.fleet-roster__heading, .fleet-card__title, .fleet-card__actions { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.fleet-roster h2 { margin: 0; font: 600 0.9rem var(--data); }
+.fleet-card { padding: 1rem 0; border-bottom: 1px solid var(--bezel); font: 0.75rem var(--data); }
+.fleet-card[data-selected="true"] { border-left: 2px solid var(--lume); padding-left: 0.6rem; }
+.fleet-card__position { overflow-wrap: anywhere; color: var(--lume-dim); }
+.fleet-card dl { display: grid; gap: 0.5rem; }
+.fleet-card dl > div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.3rem; }
+.fleet-card dt { color: var(--lume-dim); }
+.fleet-card dd { margin: 0; }
+.fleet-card__actions { justify-content: flex-start; }
+.fleet-marker, .fleet-roster button, .workspace__topbar > button { border: 1px solid var(--bezel); background: var(--panel); color: var(--lume); padding: 0.45rem 0.7rem; font: 0.75rem var(--data); cursor: pointer; }
+.fleet-marker { border: 2px solid var(--lume); border-radius: 1rem; box-shadow: 0 2px 8px var(--panel-deep); }
+.fleet-roster button:disabled, .workspace__topbar > button:disabled { opacity: 0.45; cursor: default; }
+@media (max-width: 900px) {
+  .workspace__sidebar.fleet-roster { max-height: 19rem; }
+  .workspace__main.fleet-main { display: block; overflow: hidden; }
+}

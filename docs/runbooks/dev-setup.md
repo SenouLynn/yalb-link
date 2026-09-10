@@ -364,7 +364,7 @@ untrusted network.
 ## Accept the vehicle workspace (T-017)
 
 Executed 2026-09-09 against current host Vite on port 3001 and rebuilt backend,
-Copter 4.7.0 and Plane 4.6.3. See [procedures, screenshots and observations](evidence/t017/README.md).
+Copter 4.7.0 and Plane 4.6.3. See [procedures, screenshots and observations](validation/t017.md).
 All eight pane combinations at 1440×900 and 768×1024 preserved viewport bounds.
 Mission scrolling, pane lifecycle, selected-vehicle isolation, live timeout and
 recovery, stale posture and persisted replay passed. Backend restart exposed a

@@ -33,7 +33,7 @@ This is not specific to the family T-015 added. Attitude, position, VFR_HUD,
 GPS, battery, EKF and MISSION_CURRENT all stop. The display shows a vehicle that
 is present and heard, with every instrument dashed. Restarting the backend
 restores everything, which is the workaround used to finish T-015 acceptance —
-see the [T-015 evidence](../../runbooks/evidence/t015/README.md).
+see the [T-015 evidence](../../runbooks/validation/t015.md).
 
 `SOURCE_CONFLICT` is already detected and logged; nothing acts on it.
 

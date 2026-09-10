@@ -92,7 +92,7 @@ when verification occurs. The checks above are planned acceptance, not evidence
 that those scenarios have already passed.
 
 
-Completed execution evidence: [T-017 run](../../runbooks/evidence/t017/README.md).
+Completed execution evidence: [T-017 run](../../runbooks/validation/t017.md).
 Frontend 287 tests, typecheck/lint/build and backend race baseline passed.
 Fixed terminal SSE reconnect after real proxy failure, plus arm confirmation
 isolation on vehicle switch. Follow-ups: T-020 marker churn and T-021 Compose

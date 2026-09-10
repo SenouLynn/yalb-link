@@ -17,12 +17,17 @@ export function framePoints(points: readonly GeoCoordinate[], maxZoom = 16): Fra
     const next = (longitudes[(i + 1) % longitudes.length] ?? 0) + (i === longitudes.length - 1 ? 360 : 0);
     if (next - current > gap) { gap = next - current; start = next % 360; }
   }
+  // Wrapping through (lon + 360) % 360 does not round-trip exactly, so the arc is
+  // clamped: an unclamped span can come back negative and frame the whole globe.
+  const span = Math.min(360, Math.max(0, 360 - gap));
   let west = start;
-  let east = start + 360 - gap;
+  let east = start + span;
   if (west > 180) { west -= 360; east -= 360; }
   const south = Math.max(-85, Math.min(85, Math.min(...valid.map(p => p.latDeg))));
   const north = Math.max(-85, Math.min(85, Math.max(...valid.map(p => p.latDeg))));
-  if (west === east && south === north) return { center: [west, south], zoom: maxZoom };
+  /** Below a tenth of a millimetre an extent is one point, not a box to fit. */
+  const POINT_DEG = 1e-9;
+  if (span < POINT_DEG && north - south < POINT_DEG) return { center: [west, south], zoom: maxZoom };
   return { bounds: [[west, south], [east, north]], maxZoom };
 }
 
