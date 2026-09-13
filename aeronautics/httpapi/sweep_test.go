@@ -105,3 +105,73 @@ func TestTheSweepRouteRefusesTheWrongMethod(t *testing.T) {
 		t.Errorf("Allow = %q, want %q", allow, http.MethodPost)
 	}
 }
+
+// The power-search route is reachable, echoes the request identity in its
+// headers like every other evaluation route, and returns the search's own
+// framing rather than a bare list of numbers.
+func TestPowerSearchRouteEchoesTheIdentity(t *testing.T) {
+	server := newServer(t)
+	response := post(t, server, "/power-search", api.PowerSearchRequest{
+		Request: identity(),
+		Design:  powerWireDesign(),
+		Settings: api.PowerSearchSettings{
+			Driver:  "wing.area.reference",
+			From:    api.Quantity{Value: 0.15, Unit: "m^2"},
+			To:      api.Quantity{Value: 0.30, Unit: "m^2"},
+			Ceiling: api.Quantity{Value: 66.5, Unit: "W"},
+			Samples: 31,
+		},
+	})
+	wantStatus(t, response, http.StatusOK)
+
+	if got := response.Header.Get(httpapi.RequestHeader); got != identity().Session {
+		t.Errorf("%s = %q, want %q", httpapi.RequestHeader, got, identity().Session)
+	}
+	body := decode[api.PowerSearchResponse](t, response)
+	if body.Request != identity() {
+		t.Errorf("identity in the body = %+v, want %+v", body.Request, identity())
+	}
+	if !body.Found || len(body.Intervals) == 0 {
+		t.Fatalf("the route returned no feasible interval: %s", body.Detail)
+	}
+	if len(body.Candidates) != 31 {
+		t.Errorf("%d candidates, want 31", len(body.Candidates))
+	}
+	if body.Snapshot == "" || body.SettingsFingerprint == "" {
+		t.Error("the answer carries neither its input snapshot nor its settings fingerprint")
+	}
+	if body.Detail == "" || body.Intervals[0].Detail == "" {
+		t.Error("the search crossed the transport without saying what it means")
+	}
+}
+
+// A refused search comes back in the same failure shape every other refusal
+// uses, with the field issue that explains it.
+func TestARefusedPowerSearchUsesTheBoundaryFailureShape(t *testing.T) {
+	server := newServer(t)
+	response := post(t, server, "/power-search", api.PowerSearchRequest{
+		Request: identity(),
+		Design:  powerWireDesign(),
+		Settings: api.PowerSearchSettings{
+			Driver:  "wing.area.reference",
+			From:    api.Quantity{Value: 0.15, Unit: "m^2"},
+			To:      api.Quantity{Value: 0.30, Unit: "m^2"},
+			Samples: 31,
+		},
+	})
+	wantStatus(t, response, http.StatusBadRequest)
+
+	failure := decode[failureBody](t, response)
+	if failure.Error != "invalid" || failure.Message == "" {
+		t.Fatalf("failure = %+v", failure)
+	}
+	found := false
+	for _, issue := range failure.Issues {
+		if issue.Field == "settings.ceiling" {
+			found = true
+		}
+	}
+	if !found {
+		t.Errorf("no issue on the missing ceiling: %+v", failure.Issues)
+	}
+}

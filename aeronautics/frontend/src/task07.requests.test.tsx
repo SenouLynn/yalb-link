@@ -16,6 +16,7 @@ import type {
 } from './api/contract.ts'
 import type { ApplyResult, Discovered, Transport } from './api/client.ts'
 import { startingDesign } from './state/design.ts'
+import { noPowerSearch, unpowered } from './testing/fixtures.ts'
 import { memoryStorage } from './testing/storage.ts'
 import { Worksheet } from './Worksheet.tsx'
 
@@ -139,6 +140,7 @@ function evaluationFor(identity: RequestIdentity, cg: number): Evaluation {
     definitionIssues: [],
     geometryIssues: [],
     configurationIssues: [],
+    ...unpowered(),
   }
 }
 
@@ -231,6 +233,7 @@ function fakeService(design: Design): Fake {
           settle: (value) => { if (value !== null) resolve(value) },
         })
       }),
+    powerSearch: noPowerSearch,
     sweep: (request: SweepRequest) =>
       new Promise<SweepResponse>((resolve) => {
         sweeps.push({ request, settle: resolve })
@@ -262,7 +265,7 @@ async function setUp(): Promise<{ fake: Fake; user: ReturnType<typeof userEvent.
   await waitFor(() => { expect(screen.getByText('Current')).toBeInTheDocument() })
 
   await user.type(screen.getByLabelText('Add a component'), 'seed')
-  await user.click(screen.getByRole('button', { name: 'Add' }))
+  await user.click(screen.getByRole('button', { name: 'Add component' }))
   await waitFor(() => {
     expect(screen.getByText('battery', { selector: '.component-name' })).toBeInTheDocument()
   })

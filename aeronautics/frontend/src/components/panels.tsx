@@ -5,25 +5,7 @@ import { DRIVER_KEYS, JOURNEYS, maximumArea, maximumSpan, requirementNamed } fro
 import { displayNumber } from '../state/fields.ts'
 import type { WorksheetApi } from '../useWorksheet.ts'
 import { QuantityField, Section, TextField, inUnit } from './fields.tsx'
-
-/** issueFor finds the service's complaint about one field, if there is one. */
-function issueFor(api: WorksheetApi, field: string): string | undefined {
-  const failure = api.worksheet.failure
-  if (failure === null) return undefined
-  const issue = failure.issues.find((entry) => entry.field === field || entry.field.endsWith(`.${field}`))
-  return issue?.detail
-}
-
-/** definitionIssue finds a structural complaint the evaluation reported. */
-function definitionIssue(api: WorksheetApi, field: string): string | undefined {
-  const current = api.worksheet.current
-  if (current === null) return undefined
-  const all = [
-    ...current.evaluation.definitionIssues,
-    ...current.evaluation.geometryIssues,
-  ]
-  return all.find((issue) => issue.field === field)?.detail
-}
+import { definitionIssue, issueFor } from './issues.ts'
 
 export function JourneyPanel(props: { api: WorksheetApi }): ReactNode {
   const { api } = props

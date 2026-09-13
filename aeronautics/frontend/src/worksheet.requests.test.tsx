@@ -5,6 +5,7 @@ import type { ApplyRequest, Design, EvaluateRequest, Evaluation, Request as Requ
 import type { ApplyResult, Discovered, Transport } from './api/client.ts'
 import { TransportError } from './api/client.ts'
 import { startingDesign } from './state/design.ts'
+import { noPowerSearch, unpowered } from './testing/fixtures.ts'
 import { memoryStorage } from './testing/storage.ts'
 import { Worksheet } from './Worksheet.tsx'
 
@@ -76,6 +77,7 @@ function deferredTransport(): { transport: Transport; queue: Deferred[] } {
     },
     preview: () => Promise.reject(new TransportError('previews are not used here')),
     sweep: () => Promise.reject(new TransportError('sweeps are not used here')),
+    powerSearch: noPowerSearch,
   }
   return { transport, queue }
 }
@@ -111,6 +113,7 @@ function answerFor(identity: RequestIdentity): Evaluation {
     definitionIssues: [],
     geometryIssues: [],
     configurationIssues: [],
+    ...unpowered(),
   }
 }
 

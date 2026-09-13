@@ -11,23 +11,36 @@
 // is worse than an honest one; adding a read means adding its check.
 
 import type {
+  AuxiliaryContribution,
   Bound,
   CaseLoad,
   Check,
   SketchCurve,
   SketchDimension,
   Discovery,
+  ElectricalBudget,
   Evaluation,
   Explanation,
   Issue,
   MassContribution,
   MassProperties,
+  MissionResult,
   Point,
   Position,
+  PowerFeasibility,
+  PowerSearchResponse,
+  PowerSearchCandidate,
+  PowerSearchInterval,
   Quantity,
+  SegmentAvailability,
+  SegmentPower,
+  SegmentResult,
   SolvedWing,
+  SupplyCheck,
   SweepResponse,
   SweepSample,
+  ThrustCheck,
+  Trace,
   UnitInfo,
   SketchView,
 } from './contract.ts'
@@ -362,6 +375,279 @@ export function sweep(value: unknown, path = 'sweep'): SweepResponse {
   }
 }
 
+// The Task 09 answers: the electrical budget, the mission, the supply and
+// thrust checks, and the bounded power search.
+//
+// These carry more optional quantities than anything before them, because a
+// power answer is routinely partial: a segment with no capability named still
+// reports its drag, and a budget missing one avionics figure still lists the
+// loads it does know. `text` reads the strings the service omits when empty,
+// and `optional` reads the quantities it omits when unknown; neither is ever
+// turned into a zero.
+
+/** text reads a string the service omits rather than sends empty. */
+function text(value: unknown, path: string): string {
+  return value === undefined || value === null ? '' : str(value, path)
+}
+
+function trace(value: unknown, path: string): Trace {
+  const raw = record(value, path)
+  return {
+    equationId: str(raw['equationId'], `${path}.equationId`),
+    revision: str(raw['revision'], `${path}.revision`),
+    expression: str(raw['expression'], `${path}.expression`),
+    substitutions: substitutions(raw['substitutions'], `${path}.substitutions`),
+    result: quantity(raw['result'], `${path}.result`),
+  }
+}
+
+function traces(value: unknown, path: string): Trace[] {
+  if (value === undefined || value === null) return []
+  return array(value, path).map((entry, n) => trace(entry, `${path}[${String(n)}]`))
+}
+
+function auxiliaryContributions(value: unknown, path: string): AuxiliaryContribution[] {
+  if (value === undefined || value === null) return []
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      name: str(raw['name'], `${at}.name`),
+      component: text(raw['component'], `${at}.component`),
+      side: str(raw['side'], `${at}.side`),
+      evidence: text(raw['evidence'], `${at}.evidence`),
+      detail: text(raw['detail'], `${at}.detail`),
+      continuous: optional(raw['continuous'], `${at}.continuous`, quantity),
+      peak: optional(raw['peak'], `${at}.peak`, quantity),
+      known: bool(raw['known'], `${at}.known`),
+    }
+  })
+}
+
+/**
+ * electricalBudget validates the auxiliary demand. `complete` is read as the
+ * boolean it is rather than inferred from the totals: a budget can carry a
+ * continuous figure and still be incomplete, which is exactly the case a
+ * missing servo draw produces, and inferring it here would present that as a
+ * whole answer.
+ */
+export function electricalBudget(value: unknown, path: string): ElectricalBudget {
+  const raw = record(value, path)
+  return {
+    status: str(raw['status'], `${path}.status`),
+    detail: text(raw['detail'], `${path}.detail`),
+    evidence: text(raw['evidence'], `${path}.evidence`),
+    loads: auxiliaryContributions(raw['loads'], `${path}.loads`),
+    continuous: optional(raw['continuous'], `${path}.continuous`, quantity),
+    peak: optional(raw['peak'], `${path}.peak`, quantity),
+    complete: bool(raw['complete'], `${path}.complete`),
+  }
+}
+
+function segmentPower(value: unknown, path: string): SegmentPower {
+  const raw = record(value, path)
+  return {
+    model: str(raw['model'], `${path}.model`),
+    status: str(raw['status'], `${path}.status`),
+    detail: text(raw['detail'], `${path}.detail`),
+    evidence: text(raw['evidence'], `${path}.evidence`),
+    traces: traces(raw['traces'], `${path}.traces`),
+    dynamicPressure: optional(raw['dynamicPressure'], `${path}.dynamicPressure`, quantity),
+    lift: optional(raw['lift'], `${path}.lift`, quantity),
+    drag: optional(raw['drag'], `${path}.drag`, quantity),
+    thrust: optional(raw['thrust'], `${path}.thrust`, quantity),
+    propulsive: optional(raw['propulsive'], `${path}.propulsive`, quantity),
+    propulsiveElectrical: optional(raw['propulsiveElectrical'], `${path}.propulsiveElectrical`, quantity),
+    electrical: optional(raw['electrical'], `${path}.electrical`, quantity),
+    liftCoefficient: num(raw['liftCoefficient'], `${path}.liftCoefficient`),
+    dragCoefficient: num(raw['dragCoefficient'], `${path}.dragCoefficient`),
+    liftToDrag: num(raw['liftToDrag'], `${path}.liftToDrag`),
+    chainEfficiency: num(raw['chainEfficiency'], `${path}.chainEfficiency`),
+  }
+}
+
+function segmentAvailability(value: unknown, path: string): SegmentAvailability {
+  const raw = record(value, path)
+  return {
+    status: str(raw['status'], `${path}.status`),
+    capability: text(raw['capability'], `${path}.capability`),
+    detail: text(raw['detail'], `${path}.detail`),
+    evidence: text(raw['evidence'], `${path}.evidence`),
+    availableThrust: optional(raw['availableThrust'], `${path}.availableThrust`, quantity),
+    trace: raw['trace'] === undefined || raw['trace'] === null ? null : trace(raw['trace'], `${path}.trace`),
+    margin: num(raw['margin'], `${path}.margin`),
+  }
+}
+
+function segmentResults(value: unknown, path: string): SegmentResult[] {
+  if (value === undefined || value === null) return []
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      name: str(raw['name'], `${at}.name`),
+      case: text(raw['case'], `${at}.case`),
+      kind: str(raw['kind'], `${at}.kind`),
+      status: str(raw['status'], `${at}.status`),
+      detail: text(raw['detail'], `${at}.detail`),
+      traces: traces(raw['traces'], `${at}.traces`),
+      groundSpeed: optional(raw['groundSpeed'], `${at}.groundSpeed`, quantity),
+      duration: optional(raw['duration'], `${at}.duration`, quantity),
+      distance: optional(raw['distance'], `${at}.distance`, quantity),
+      energy: optional(raw['energy'], `${at}.energy`, quantity),
+      availability: segmentAvailability(raw['availability'], `${at}.availability`),
+      power: segmentPower(raw['power'], `${at}.power`),
+    }
+  })
+}
+
+/**
+ * missionResult validates the energy budget. Energy sufficiency and the
+ * segments' own status are separate fields and are validated separately,
+ * because they are separate answers: a mission whose energy fits is not
+ * thereby flyable.
+ */
+export function missionResult(value: unknown, path: string): MissionResult {
+  const raw = record(value, path)
+  return {
+    status: str(raw['status'], `${path}.status`),
+    energyStatus: str(raw['energyStatus'], `${path}.energyStatus`),
+    detail: text(raw['detail'], `${path}.detail`),
+    segments: segmentResults(raw['segments'], `${path}.segments`),
+    traces: traces(raw['traces'], `${path}.traces`),
+    requiredEnergy: optional(raw['requiredEnergy'], `${path}.requiredEnergy`, quantity),
+    usableEnergy: optional(raw['usableEnergy'], `${path}.usableEnergy`, quantity),
+    budget: optional(raw['budget'], `${path}.budget`, quantity),
+    totalDuration: optional(raw['totalDuration'], `${path}.totalDuration`, quantity),
+    totalDistance: optional(raw['totalDistance'], `${path}.totalDistance`, quantity),
+    peakContinuousPower: optional(raw['peakContinuousPower'], `${path}.peakContinuousPower`, quantity),
+    reserveFraction: num(raw['reserveFraction'], `${path}.reserveFraction`),
+    complete: bool(raw['complete'], `${path}.complete`),
+  }
+}
+
+function supplyChecks(value: unknown, path: string): SupplyCheck[] {
+  if (value === undefined || value === null) return []
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      name: str(raw['name'], `${at}.name`),
+      status: str(raw['status'], `${at}.status`),
+      detail: text(raw['detail'], `${at}.detail`),
+      limit: optional(raw['limit'], `${at}.limit`, quantity),
+      actual: optional(raw['actual'], `${at}.actual`, quantity),
+      margin: num(raw['margin'], `${at}.margin`),
+    }
+  })
+}
+
+/** powerFeasibility validates the demand against the component ratings. */
+export function powerFeasibility(value: unknown, path: string): PowerFeasibility {
+  const raw = record(value, path)
+  return {
+    status: str(raw['status'], `${path}.status`),
+    detail: text(raw['detail'], `${path}.detail`),
+    peakDetail: text(raw['peakDetail'], `${path}.peakDetail`),
+    checks: supplyChecks(raw['checks'], `${path}.checks`),
+    continuousDemand: optional(raw['continuousDemand'], `${path}.continuousDemand`, quantity),
+    peakDemand: optional(raw['peakDemand'], `${path}.peakDemand`, quantity),
+  }
+}
+
+/** thrustChecks validates the thrust-to-weight targets against capability. */
+export function thrustChecks(value: unknown, path: string): ThrustCheck[] {
+  if (value === undefined || value === null) return []
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      name: str(raw['name'], `${at}.name`),
+      capability: text(raw['capability'], `${at}.capability`),
+      condition: text(raw['condition'], `${at}.condition`),
+      detail: text(raw['detail'], `${at}.detail`),
+      priority: str(raw['priority'], `${at}.priority`),
+      evidence: text(raw['evidence'], `${at}.evidence`),
+      status: str(raw['status'], `${at}.status`),
+      trace: raw['trace'] === undefined || raw['trace'] === null ? null : trace(raw['trace'], `${at}.trace`),
+      available: num(raw['available'], `${at}.available`),
+      target: num(raw['target'], `${at}.target`),
+      margin: num(raw['margin'], `${at}.margin`),
+    }
+  })
+}
+
+function powerSearchCandidates(value: unknown, path: string): PowerSearchCandidate[] {
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      driver: quantity(raw['driver'], `${at}.driver`),
+      demand: optional(raw['demand'], `${at}.demand`, quantity),
+      status: str(raw['status'], `${at}.status`),
+      feasibility: str(raw['feasibility'], `${at}.feasibility`),
+      detail: text(raw['detail'], `${at}.detail`),
+      margin: num(raw['margin'], `${at}.margin`),
+      hasRequired: bool(raw['hasRequired'], `${at}.hasRequired`),
+      withinCeiling: bool(raw['withinCeiling'], `${at}.withinCeiling`),
+      feasible: bool(raw['feasible'], `${at}.feasible`),
+    }
+  })
+}
+
+function powerSearchIntervals(value: unknown, path: string): PowerSearchInterval[] {
+  return array(value, path).map((entry, n) => {
+    const at = `${path}[${String(n)}]`
+    const raw = record(entry, at)
+    return {
+      first: quantity(raw['first'], `${at}.first`),
+      last: quantity(raw['last'], `${at}.last`),
+      belowFirst: optional(raw['belowFirst'], `${at}.belowFirst`, quantity),
+      aboveLast: optional(raw['aboveLast'], `${at}.aboveLast`, quantity),
+      detail: str(raw['detail'], `${at}.detail`),
+      openLow: bool(raw['openLow'], `${at}.openLow`),
+      openHigh: bool(raw['openHigh'], `${at}.openHigh`),
+    }
+  })
+}
+
+/**
+ * powerSearch validates a bounded search answer. Like a sweep it carries the
+ * snapshot and the settings fingerprint, because a search answers one question
+ * over one design and an answer to a different range is not an answer to this
+ * one. `found` and `unique` are read rather than derived from the candidate
+ * list: they are the service's own statement about whether it found anything
+ * and whether the answer is one interval, and recomputing them here would be a
+ * second opinion about a question only the core has the standing to settle.
+ */
+export function powerSearch(value: unknown, path = 'powerSearch'): PowerSearchResponse {
+  const raw = record(value, path)
+  const request = record(raw['request'], `${path}.request`)
+  const settings = record(raw['settings'], `${path}.settings`)
+  return {
+    request: {
+      session: str(request['session'], `${path}.request.session`),
+      sequence: num(request['sequence'], `${path}.request.sequence`),
+    },
+    settings: {
+      driver: str(settings['driver'], `${path}.settings.driver`),
+      from: quantity(settings['from'], `${path}.settings.from`),
+      to: quantity(settings['to'], `${path}.settings.to`),
+      ceiling: quantity(settings['ceiling'], `${path}.settings.ceiling`),
+      samples: num(settings['samples'], `${path}.settings.samples`),
+    },
+    settingsFingerprint: str(raw['settingsFingerprint'], `${path}.settingsFingerprint`),
+    snapshot: str(raw['snapshot'], `${path}.snapshot`),
+    solveMode: str(raw['solveMode'], `${path}.solveMode`),
+    detail: str(raw['detail'], `${path}.detail`),
+    heldFixed: strings(raw['heldFixed'], `${path}.heldFixed`),
+    candidates: powerSearchCandidates(raw['candidates'], `${path}.candidates`),
+    intervals: powerSearchIntervals(raw['intervals'], `${path}.intervals`),
+    unique: bool(raw['unique'], `${path}.unique`),
+    found: bool(raw['found'], `${path}.found`),
+  }
+}
+
 export function evaluation(value: unknown, path = 'evaluation'): Evaluation {
   const raw = record(value, path)
   const request = record(raw['request'], `${path}.request`)
@@ -414,6 +700,10 @@ export function evaluation(value: unknown, path = 'evaluation'): Evaluation {
     definitionIssues: issues(raw['definitionIssues'], `${path}.definitionIssues`),
     geometryIssues: issues(raw['geometryIssues'], `${path}.geometryIssues`),
     configurationIssues: issues(raw['configurationIssues'], `${path}.configurationIssues`),
+    electrical: electricalBudget(raw['electrical'], `${path}.electrical`),
+    mission: missionResult(raw['mission'], `${path}.mission`),
+    powerFeasibility: powerFeasibility(raw['powerFeasibility'], `${path}.powerFeasibility`),
+    thrustChecks: thrustChecks(raw['thrustChecks'], `${path}.thrustChecks`),
   }
 }
 

@@ -62,6 +62,19 @@ type Evaluation struct {
 	// still place components and read where their combined centre of gravity
 	// sits, and the two answers stay separately labelled.
 	MassProperties MassProperties
+	// Electrical is the auxiliary electrical demand: the avionics, servos,
+	// sensors and payload, summed on the pack side of every regulator.
+	Electrical ElectricalBudget
+	// Mission is the energy budget: what each segment costs and whether the
+	// pack can pay for it after its reserve.
+	Mission MissionResult
+	// PowerFeasibility compares the electrical demand with the component
+	// ratings. It is a separate answer from the energy budget: a mission whose
+	// energy fits can still exceed what the pack and the controller may deliver.
+	PowerFeasibility PowerFeasibility
+	// ThrustChecks are the thrust-to-weight targets against the capability
+	// points they are stated at.
+	ThrustChecks []ThrustCheck
 	// Design is the definition evaluated.
 	Design Design
 	// Wing is the solved geometry. It is the zero Wing when Geometry is not
@@ -89,18 +102,56 @@ func (e Evaluation) Stale() Evaluation {
 		out.Checks[n].Result = ResultStale
 		out.Checks[n].Status = LimitUnknown
 		out.Checks[n].Margin = 0
-		out.Checks[n].Detail = "computed from an earlier revision of the design and not recomputed"
+		out.Checks[n].Detail = staleDetail
 	}
 	out.Geometry = ResultStale
 	out.Loads = make([]CaseLoad, len(e.Loads))
 	copy(out.Loads, e.Loads)
 	for n := range out.Loads {
 		out.Loads[n].Status = ResultStale
-		out.Loads[n].Detail = "computed from an earlier revision of the design and not recomputed"
+		out.Loads[n].Detail = staleDetail
 	}
 	out.MassProperties.Status = ResultStale
-	out.MassProperties.Detail = "computed from an earlier revision of the design and not recomputed"
+	out.MassProperties.Detail = staleDetail
+	out.Electrical.Status = ResultStale
+	out.Electrical.Detail = staleDetail
+	out.Mission = e.Mission.stale()
+	out.PowerFeasibility.Status = ResultStale
+	out.PowerFeasibility.Detail = staleDetail
+	out.ThrustChecks = make([]ThrustCheck, len(e.ThrustChecks))
+	copy(out.ThrustChecks, e.ThrustChecks)
+	for n := range out.ThrustChecks {
+		out.ThrustChecks[n].Status = LimitUnknown
+		out.ThrustChecks[n].Margin = 0
+		out.ThrustChecks[n].Detail = staleDetail
+	}
 	out.Aggregate, out.HasRequired = out.Checks.Aggregate()
+	return out
+}
+
+// staleDetail is what every stale result says, so a caller matching on it does
+// not have to know which subsystem produced it.
+const staleDetail = "computed from an earlier revision of the design and not recomputed"
+
+// stale returns a copy of the mission result marked as no longer describing the
+// current design. Every segment goes stale with it: a segment energy shown
+// against edited inputs would be a stale output presented as a current one.
+func (m MissionResult) stale() MissionResult {
+	out := m
+	out.Status = ResultStale
+	out.Detail = staleDetail
+	out.EnergyStatus = LimitUnknown
+	out.Segments = make([]SegmentResult, len(m.Segments))
+	copy(out.Segments, m.Segments)
+	for n := range out.Segments {
+		out.Segments[n].Status = ResultStale
+		out.Segments[n].Detail = staleDetail
+		out.Segments[n].Power.Status = ResultStale
+		out.Segments[n].Power.Detail = staleDetail
+		out.Segments[n].Availability.Status = LimitUnknown
+		out.Segments[n].Availability.Margin = 0
+		out.Segments[n].Availability.Detail = staleDetail
+	}
 	return out
 }
 
@@ -129,6 +180,10 @@ func (d Design) Evaluate() Evaluation {
 	e.Mass, _ = d.MassInterval(AllRequiredCases())
 	e.MassProperties = d.MassProperties()
 	e.Loads = d.CaseLoads()
+	e.Electrical = d.ElectricalBudget()
+	e.Mission = d.MissionAnalysis()
+	e.PowerFeasibility = d.PowerFeasibility(e.Mission, e.Electrical)
+	e.ThrustChecks = d.ThrustChecks()
 	e.Conflicts = d.Conflicts()
 	return e
 }

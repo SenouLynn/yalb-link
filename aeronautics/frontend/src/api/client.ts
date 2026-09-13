@@ -12,6 +12,8 @@ import type {
   Evaluation,
   EvaluateRequest,
   Issue,
+  PowerSearchRequest,
+  PowerSearchResponse,
   PreviewRequest,
   Request as RequestIdentity,
   SweepRequest,
@@ -59,6 +61,7 @@ export interface Transport {
   apply(request: ApplyRequest, signal?: AbortSignal): Promise<ApplyResult>
   preview(request: PreviewRequest, signal?: AbortSignal): Promise<Evaluation>
   sweep(request: SweepRequest, signal?: AbortSignal): Promise<SweepResponse>
+  powerSearch(request: PowerSearchRequest, signal?: AbortSignal): Promise<PowerSearchResponse>
 }
 
 /** The versioned path prefix the Go service serves, matching its own. */
@@ -122,6 +125,9 @@ export function httpTransport(base = ''): Transport {
     },
     async sweep(request, signal) {
       return validate.sweep(await call(base, '/sweep', request, signal))
+    },
+    async powerSearch(request, signal) {
+      return validate.powerSearch(await call(base, '/power-search', request, signal))
     },
   }
 }

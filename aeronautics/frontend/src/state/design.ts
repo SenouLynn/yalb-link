@@ -22,6 +22,8 @@ export type JourneyId =
   | 'mass-and-performance-first'
   | 'mass-and-size-first'
   | 'existing-design'
+  | 'power-first'
+  | 'mission-and-energy'
 
 export interface JourneyDescription {
   readonly id: JourneyId
@@ -64,6 +66,23 @@ export const JOURNEYS: readonly JourneyDescription[] = [
     startsFrom: 'An aircraft that already exists on paper or in the air.',
     next: 'Enter the whole definition, add the requirements it is judged against, '
       + 'and change one driver at a time to see what moves.',
+  },
+  {
+    id: 'power-first',
+    title: 'Power ceiling first',
+    startsFrom: 'A mass you have to carry and an electrical power you must not exceed.',
+    next: 'Enter the mass, the drag polar, the chain efficiency and the avionics draw, '
+      + 'write the mission, then search a range of wings against the ceiling. A mass and '
+      + 'a ceiling do not determine a wing: the answer is an interval, and choosing from '
+      + 'it is your edit.',
+  },
+  {
+    id: 'mission-and-energy',
+    title: 'Mission and energy',
+    startsFrom: 'An aircraft that exists, and the question of what it can do on one pack.',
+    next: 'Enter the polar, the pack and the auxiliary draw, then write the mission leg '
+      + 'by leg, return included. Energy sufficiency and flight feasibility are reported '
+      + 'separately, because they are separate answers.',
   },
 ]
 

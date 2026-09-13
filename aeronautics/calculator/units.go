@@ -53,6 +53,23 @@ const (
 	// and a distance from a datum, which is what a centre-of-gravity sum is
 	// formed of; it is not a torque, and nothing here treats it as one.
 	DimMassMoment
+	// DimTime is stored in seconds. It measures a mission segment's duration
+	// and the endurance an energy budget supports; it is never a clock reading,
+	// which this package has no way of taking.
+	DimTime
+	// DimCurrent is stored in amperes.
+	DimCurrent
+	// DimVoltage is stored in volts.
+	DimVoltage
+	// DimCharge is stored in coulombs. It is the dimension a battery capacity
+	// in ampere hours carries, which is not an energy until it is multiplied by
+	// a voltage.
+	DimCharge
+	// DimRotationRate is stored in revolutions per second. A revolution is a
+	// counted event rather than an SI unit, so this dimension is deliberately
+	// not the same as an angular rate in radians per second and nothing here
+	// converts between the two.
+	DimRotationRate
 )
 
 var dimensionSymbols = [...]string{
@@ -71,6 +88,11 @@ var dimensionSymbols = [...]string{
 
 	DimDynamicViscosity: "Pa*s",
 	DimMassMoment:       "kg*m",
+	DimTime:             "s",
+	DimCurrent:          "A",
+	DimVoltage:          "V",
+	DimCharge:           "C",
+	DimRotationRate:     "rev/s",
 }
 
 // String returns the dimension's SI symbol.
@@ -123,6 +145,10 @@ const (
 	Inch
 	// Foot is 0.3048 m.
 	Foot
+	// Kilometer is 1e3 m.
+	Kilometer
+	// NauticalMile is 1852 m.
+	NauticalMile
 	// SquareMeter is the SI area unit.
 	SquareMeter
 	// SquareCentimeter is 1e-4 m².
@@ -145,6 +171,9 @@ const (
 	FootPerSecond
 	// KilogramPerCubicMeter is the SI density unit.
 	KilogramPerCubicMeter
+	// SlugPerCubicFoot is the customary density unit the primary reference's
+	// worked examples are quoted in.
+	SlugPerCubicFoot
 	// NewtonPerSquareMeter is the SI unit of force-based wing loading.
 	NewtonPerSquareMeter
 	// PoundForcePerSquareFoot is the customary force-based wing loading unit.
@@ -161,10 +190,18 @@ const (
 	Degree
 	// Watt is the SI power unit.
 	Watt
+	// Kilowatt is 1e3 W.
+	Kilowatt
+	// Horsepower is the mechanical horsepower, 745.6998715822702 W. It is here
+	// so a book example quoted in horsepower can be checked in its original
+	// units; nothing in this package produces one.
+	Horsepower
 	// Joule is the SI energy unit.
 	Joule
 	// WattHour is 3600 J.
 	WattHour
+	// KilowattHour is 3.6e6 J.
+	KilowattHour
 	// PascalSecond is the SI unit of dynamic viscosity.
 	PascalSecond
 	// MicropascalSecond is 1e-6 Pa*s, the magnitude air viscosity is usually
@@ -175,6 +212,31 @@ const (
 	// GramMillimeter is 1e-6 kg*m, the magnitude a small RC component's moment
 	// falls in when its mass is quoted in grams and its arm in millimetres.
 	GramMillimeter
+	// Second is the SI time unit.
+	Second
+	// Minute is 60 s.
+	Minute
+	// Hour is 3600 s.
+	Hour
+	// Ampere is the SI current unit.
+	Ampere
+	// Milliampere is 1e-3 A.
+	Milliampere
+	// Volt is the SI electric potential unit.
+	Volt
+	// Millivolt is 1e-3 V.
+	Millivolt
+	// Coulomb is the SI charge unit.
+	Coulomb
+	// AmpereHour is 3600 C.
+	AmpereHour
+	// MilliampereHour is 3.6 C, the unit an RC battery pack is labelled in.
+	MilliampereHour
+	// RevolutionPerSecond is the SI-consistent rotation rate this package holds.
+	RevolutionPerSecond
+	// RevolutionPerMinute is 1/60 rev/s, the unit a motor and propeller are
+	// quoted in.
+	RevolutionPerMinute
 )
 
 // unitDef carries a unit's symbol, dimension, and the exact factor that
@@ -198,11 +260,13 @@ var unitTable = [...]unitDef{
 	Newton:     {symbol: "N", dim: DimForce, factor: 1},
 	PoundForce: {symbol: "lbf", dim: DimForce, factor: 4.4482216152605},
 
-	Meter:      {symbol: "m", dim: DimLength, factor: 1},
-	Millimeter: {symbol: "mm", dim: DimLength, factor: 1e-3},
-	Centimeter: {symbol: "cm", dim: DimLength, factor: 1e-2},
-	Inch:       {symbol: "in", dim: DimLength, factor: 0.0254},
-	Foot:       {symbol: "ft", dim: DimLength, factor: 0.3048},
+	Meter:        {symbol: "m", dim: DimLength, factor: 1},
+	Millimeter:   {symbol: "mm", dim: DimLength, factor: 1e-3},
+	Centimeter:   {symbol: "cm", dim: DimLength, factor: 1e-2},
+	Inch:         {symbol: "in", dim: DimLength, factor: 0.0254},
+	Foot:         {symbol: "ft", dim: DimLength, factor: 0.3048},
+	Kilometer:    {symbol: "km", dim: DimLength, factor: 1e3},
+	NauticalMile: {symbol: "NM", dim: DimLength, factor: 1852},
 
 	SquareMeter:      {symbol: "m^2", dim: DimArea, factor: 1},
 	SquareCentimeter: {symbol: "cm^2", dim: DimArea, factor: 1e-4},
@@ -217,6 +281,13 @@ var unitTable = [...]unitDef{
 	FootPerSecond:    {symbol: "ft/s", dim: DimSpeed, factor: 0.3048},
 
 	KilogramPerCubicMeter: {symbol: "kg/m^3", dim: DimDensity, factor: 1},
+	// One slug is 1 lbf*s^2/ft, so the factor is written from the pound force
+	// and the foot rather than as a rounded decimal.
+	SlugPerCubicFoot: {
+		symbol: "slug/ft^3",
+		dim:    DimDensity,
+		factor: (4.4482216152605 / 0.3048) / (0.3048 * 0.3048 * 0.3048),
+	},
 
 	NewtonPerSquareMeter:    {symbol: "N/m^2", dim: DimForcePerArea, factor: 1},
 	PoundForcePerSquareFoot: {symbol: "lbf/ft^2", dim: DimForcePerArea, factor: 4.4482216152605 / (0.3048 * 0.3048)},
@@ -228,10 +299,30 @@ var unitTable = [...]unitDef{
 	Radian: {symbol: "rad", dim: DimAngle, factor: 1},
 	Degree: {symbol: "deg", dim: DimAngle, factor: math.Pi / 180},
 
-	Watt: {symbol: "W", dim: DimPower, factor: 1},
+	Watt:       {symbol: "W", dim: DimPower, factor: 1},
+	Kilowatt:   {symbol: "kW", dim: DimPower, factor: 1e3},
+	Horsepower: {symbol: "hp", dim: DimPower, factor: 745.6998715822702},
 
-	Joule:    {symbol: "J", dim: DimEnergy, factor: 1},
-	WattHour: {symbol: "Wh", dim: DimEnergy, factor: 3600},
+	Joule:        {symbol: "J", dim: DimEnergy, factor: 1},
+	WattHour:     {symbol: "Wh", dim: DimEnergy, factor: 3600},
+	KilowattHour: {symbol: "kWh", dim: DimEnergy, factor: 3.6e6},
+
+	Second: {symbol: "s", dim: DimTime, factor: 1},
+	Minute: {symbol: "min", dim: DimTime, factor: 60},
+	Hour:   {symbol: "h", dim: DimTime, factor: 3600},
+
+	Ampere:      {symbol: "A", dim: DimCurrent, factor: 1},
+	Milliampere: {symbol: "mA", dim: DimCurrent, factor: 1e-3},
+
+	Volt:      {symbol: "V", dim: DimVoltage, factor: 1},
+	Millivolt: {symbol: "mV", dim: DimVoltage, factor: 1e-3},
+
+	Coulomb:         {symbol: "C", dim: DimCharge, factor: 1},
+	AmpereHour:      {symbol: "Ah", dim: DimCharge, factor: 3600},
+	MilliampereHour: {symbol: "mAh", dim: DimCharge, factor: 3.6},
+
+	RevolutionPerSecond: {symbol: "rev/s", dim: DimRotationRate, factor: 1},
+	RevolutionPerMinute: {symbol: "rpm", dim: DimRotationRate, factor: 1.0 / 60.0},
 
 	PascalSecond:      {symbol: "Pa*s", dim: DimDynamicViscosity, factor: 1},
 	MicropascalSecond: {symbol: "uPa*s", dim: DimDynamicViscosity, factor: 1e-6},
@@ -257,6 +348,11 @@ var dimensionSIUnits = [...]Unit{
 	DimEnergy:           Joule,
 	DimDynamicViscosity: PascalSecond,
 	DimMassMoment:       KilogramMeter,
+	DimTime:             Second,
+	DimCurrent:          Ampere,
+	DimVoltage:          Volt,
+	DimCharge:           Coulomb,
+	DimRotationRate:     RevolutionPerSecond,
 }
 
 // ErrUnknownUnit reports a Unit outside the supported table, including the zero

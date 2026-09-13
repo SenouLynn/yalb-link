@@ -188,6 +188,174 @@ type Component struct {
 	Basis string `json:"basis"`
 }
 
+// DragPolar is the aircraft drag polar and the evidence behind it. Both
+// coefficients are supplied: nothing in this system estimates a zero-lift drag
+// coefficient, and the Oswald correlation is offered rather than applied.
+type DragPolar struct {
+	// CD0Basis states where CD0 came from. It must describe the whole aircraft.
+	CD0Basis string `json:"cd0Basis"`
+	// EfficiencyBasis states where the Oswald factor came from.
+	EfficiencyBasis string `json:"efficiencyBasis"`
+	// Configuration names the airframe configuration the polar describes.
+	Configuration string `json:"configuration"`
+	// Scope is "aircraft" or "airfoil-section". A section polar is refused
+	// where an aircraft polar is required, rather than reinterpreted.
+	Scope string `json:"scope"`
+	// Evidence grades the coefficients: "assumed", "measured" or "simulated".
+	Evidence string `json:"evidence,omitempty"`
+	// CD0 is the zero-lift drag coefficient.
+	CD0 float64 `json:"cd0"`
+	// OswaldEfficiency is the span efficiency factor e.
+	OswaldEfficiency float64 `json:"oswaldEfficiency"`
+	// CLValidMin and CLValidMax bound the lift coefficients the polar is
+	// claimed over. They are required: a parabolic polar is symmetric in CL and
+	// returns a drag coefficient at lift coefficients the aircraft cannot reach.
+	CLValidMin float64 `json:"clValidMin"`
+	// CLValidMax is the upper end of that range.
+	CLValidMax float64 `json:"clValidMax"`
+}
+
+// Capability is what the propulsion chain was measured or estimated to deliver
+// at one explicitly named operating condition. Every condition field is part of
+// the claim: the same motor and propeller on a different pack is a different
+// point, and static thrust is never cruise thrust.
+type Capability struct {
+	Speed           *Quantity `json:"speed,omitempty"`
+	Density         *Quantity `json:"density,omitempty"`
+	Voltage         *Quantity `json:"voltage,omitempty"`
+	RPM             *Quantity `json:"rpm,omitempty"`
+	Thrust          *Quantity `json:"thrust,omitempty"`
+	ElectricalPower *Quantity `json:"electricalPower,omitempty"`
+	Current         *Quantity `json:"current,omitempty"`
+	Name            string    `json:"name"`
+	Basis           string    `json:"basis"`
+	DensityBasis    string    `json:"densityBasis,omitempty"`
+	Note            string    `json:"note,omitempty"`
+	// Kind is "static" or "in-flight".
+	Kind     string `json:"kind"`
+	Evidence string `json:"evidence,omitempty"`
+	// Throttle is the setting as a fraction of full, from 0 to 1.
+	Throttle float64 `json:"throttle"`
+}
+
+// ThrustTarget is a required or preferred thrust-to-weight ratio, stated at the
+// condition of one named capability point.
+type ThrustTarget struct {
+	Name  string `json:"name"`
+	Basis string `json:"basis"`
+	// Capability names the point whose condition the target is stated at.
+	Capability string `json:"capability"`
+	// Priority is "required" or "preferred".
+	Priority string  `json:"priority"`
+	Ratio    float64 `json:"ratio"`
+}
+
+// PropulsionLimits are the component ratings a feasibility claim is made
+// against. An absent rating is reported as an unchecked limit, never as a
+// satisfied one.
+type PropulsionLimits struct {
+	MaxContinuousPower *Quantity `json:"maxContinuousPower,omitempty"`
+	MaxPeakPower       *Quantity `json:"maxPeakPower,omitempty"`
+	MaxRPM             *Quantity `json:"maxRpm,omitempty"`
+	MaxVoltage         *Quantity `json:"maxVoltage,omitempty"`
+	PropellerDiameter  *Quantity `json:"propellerDiameter,omitempty"`
+	PropellerHubHeight *Quantity `json:"propellerHubHeight,omitempty"`
+	Basis              string    `json:"basis,omitempty"`
+}
+
+// Propulsion is the design's propulsion definition.
+type Propulsion struct {
+	Limits *PropulsionLimits `json:"limits,omitempty"`
+	// EfficiencyBasis states where the chain efficiency came from and at what
+	// condition.
+	EfficiencyBasis    string         `json:"efficiencyBasis,omitempty"`
+	EfficiencyEvidence string         `json:"efficiencyEvidence,omitempty"`
+	Capabilities       []Capability   `json:"capabilities,omitempty"`
+	Targets            []ThrustTarget `json:"targets,omitempty"`
+	// Efficiency is the combined propeller, motor and speed-controller
+	// efficiency. Zero means it is not stated.
+	Efficiency float64 `json:"efficiency"`
+}
+
+// Battery is the flight pack. It carries no mass: Component names the mass item
+// that does, which is what stops a pack from being weighed twice.
+type Battery struct {
+	Capacity               *Quantity `json:"capacity,omitempty"`
+	NominalVoltage         *Quantity `json:"nominalVoltage,omitempty"`
+	Energy                 *Quantity `json:"energy,omitempty"`
+	ContinuousCurrentLimit *Quantity `json:"continuousCurrentLimit,omitempty"`
+	PeakCurrentLimit       *Quantity `json:"peakCurrentLimit,omitempty"`
+	Basis                  string    `json:"basis"`
+	Component              string    `json:"component"`
+	// Mode is "capacity-and-voltage" or "entered-energy".
+	Mode     string `json:"mode"`
+	Evidence string `json:"evidence,omitempty"`
+	// UsableFraction is how much of the nominal energy may be drawn. It is not
+	// a mission reserve.
+	UsableFraction float64 `json:"usableFraction"`
+}
+
+// AuxiliaryLoad is one non-propulsive electrical draw. Continuous and peak
+// answer different questions and are never merged.
+type AuxiliaryLoad struct {
+	Continuous *Quantity `json:"continuous,omitempty"`
+	Peak       *Quantity `json:"peak,omitempty"`
+	Name       string    `json:"name"`
+	Basis      string    `json:"basis"`
+	// Component optionally names the mass item this draw belongs to.
+	Component string `json:"component,omitempty"`
+	// Side is "pack-side" or "load-side": which side of the regulator the
+	// figures were measured on. Without it the regulator loss is either counted
+	// twice or not at all.
+	Side     string `json:"side"`
+	Evidence string `json:"evidence,omitempty"`
+	// RegulatorEfficiency converts a load-side figure to a pack-side one. It is
+	// required on the load side and refused on the pack side.
+	RegulatorEfficiency float64 `json:"regulatorEfficiency"`
+}
+
+// MissionSegment is one editable leg of a mission.
+type MissionSegment struct {
+	Speed          *Quantity `json:"speed,omitempty"`
+	ClimbAngle     *Quantity `json:"climbAngle,omitempty"`
+	Duration       *Quantity `json:"duration,omitempty"`
+	Distance       *Quantity `json:"distance,omitempty"`
+	WindAlongTrack *Quantity `json:"windAlongTrack,omitempty"`
+	EnteredPower   *Quantity `json:"enteredPower,omitempty"`
+	Name           string    `json:"name"`
+	// Case names the flight case supplying the density, CLmax and load factor.
+	Case  string `json:"case"`
+	Notes string `json:"notes,omitempty"`
+	// Kind is "launch", "climb", "cruise", "loiter", "return", "recovery" or
+	// "other". It carries no physics.
+	Kind string `json:"kind"`
+	// Model is "drag-polar" or "entered-estimate".
+	Model string `json:"model"`
+	// Timing is "duration" or "ground-distance": exactly one is stated and the
+	// other follows from the ground speed.
+	Timing          string `json:"timing"`
+	EnteredBasis    string `json:"enteredBasis,omitempty"`
+	EnteredEvidence string `json:"enteredEvidence,omitempty"`
+	EfficiencyBasis string `json:"efficiencyBasis,omitempty"`
+	// Capability optionally names the point the required thrust is checked
+	// against. Without it the segment's flight feasibility is unknown and its
+	// energy still counts.
+	Capability string `json:"capability,omitempty"`
+	// Efficiency optionally overrides the design chain efficiency here.
+	Efficiency float64 `json:"efficiency"`
+}
+
+// Mission is the flight the energy budget is formed over. Segments keep their
+// stated order: a mission is a sequence.
+type Mission struct {
+	Name         string           `json:"name"`
+	Basis        string           `json:"basis"`
+	ReserveBasis string           `json:"reserveBasis,omitempty"`
+	Segments     []MissionSegment `json:"segments,omitempty"`
+	// ReserveFraction is applied exactly once, to the pack's usable energy.
+	ReserveFraction float64 `json:"reserveFraction"`
+}
+
 // Design is the authoritative parametric definition on the wire. It is the
 // whole request state: the service holds none of it between calls.
 type Design struct {
@@ -202,7 +370,17 @@ type Design struct {
 	Components   []Component   `json:"components,omitempty"`
 	Cases        []Case        `json:"cases,omitempty"`
 	Requirements []Requirement `json:"requirements,omitempty"`
-	Wing         Wing          `json:"wing"`
+	// Polar is the aircraft drag polar the power model reads.
+	Polar *DragPolar `json:"polar,omitempty"`
+	// Propulsion is what the chain delivers, its ratings and its targets.
+	Propulsion *Propulsion `json:"propulsion,omitempty"`
+	// Battery is the flight pack, whose mass is a component.
+	Battery *Battery `json:"battery,omitempty"`
+	// Auxiliary are the non-propulsive electrical loads.
+	Auxiliary []AuxiliaryLoad `json:"auxiliary,omitempty"`
+	// Mission is the flight the energy budget covers.
+	Mission *Mission `json:"mission,omitempty"`
+	Wing    Wing     `json:"wing"`
 }
 
 // Scope names the cases an action covers. It is required rather than defaulted:
@@ -233,6 +411,18 @@ type Command struct {
 	Component   *Component   `json:"component,omitempty"`
 	Position    *Position    `json:"position,omitempty"`
 
+	// The Task 09 union members: the drag polar, the propulsion chain, the pack,
+	// one auxiliary load, the mission header and one mission segment.
+	Polar      *DragPolar        `json:"polar,omitempty"`
+	Efficiency *Efficiency       `json:"efficiency,omitempty"`
+	Limits     *PropulsionLimits `json:"limits,omitempty"`
+	Capability *Capability       `json:"capability,omitempty"`
+	Target     *ThrustTarget     `json:"target,omitempty"`
+	Battery    *Battery          `json:"battery,omitempty"`
+	Load       *AuxiliaryLoad    `json:"load,omitempty"`
+	Profile    *MissionProfile   `json:"profile,omitempty"`
+	Segment    *MissionSegment   `json:"segment,omitempty"`
+
 	// Kind selects the edit.
 	Kind string `json:"kind"`
 
@@ -252,6 +442,8 @@ type Command struct {
 
 	// Ratio is the taper ratio, for the shape and taper-ratio edits.
 	Ratio float64 `json:"ratio,omitempty"`
+	// Index is the position a mission segment moves to, counting from zero.
+	Index int `json:"index,omitempty"`
 }
 
 // Angles is every stated wing angle. They travel together because the geometry
@@ -531,6 +723,153 @@ type Change struct {
 	Vanished  bool   `json:"vanished"`
 }
 
+// AuxiliaryContribution is one auxiliary load's draw as the pack supplies it.
+type AuxiliaryContribution struct {
+	Continuous *Quantity `json:"continuous,omitempty"`
+	Peak       *Quantity `json:"peak,omitempty"`
+	Name       string    `json:"name"`
+	Component  string    `json:"component,omitempty"`
+	Side       string    `json:"side"`
+	Evidence   string    `json:"evidence,omitempty"`
+	Detail     string    `json:"detail,omitempty"`
+	// Known reports whether the load contributed. A load with no stated
+	// continuous draw contributes nothing and is never treated as drawing zero.
+	Known bool `json:"known"`
+}
+
+// ElectricalBudget is the non-propulsive electrical demand. The continuous
+// total is what the energy budget pays for; the peak is what the pack and the
+// regulators have to survive, and the two are never merged.
+type ElectricalBudget struct {
+	Continuous *Quantity `json:"continuous,omitempty"`
+	Peak       *Quantity `json:"peak,omitempty"`
+	// Status is "computed", "missing", "invalid" or "stale". An empty load list
+	// is missing, not zero: silence is not a statement that nothing draws power.
+	Status   string                  `json:"status"`
+	Detail   string                  `json:"detail,omitempty"`
+	Evidence string                  `json:"evidence,omitempty"`
+	Loads    []AuxiliaryContribution `json:"loads"`
+	Complete bool                    `json:"complete"`
+}
+
+// SegmentAvailability is whether the propulsion system was measured to deliver
+// the thrust a segment needs, at that segment's own condition.
+type SegmentAvailability struct {
+	AvailableThrust *Quantity `json:"availableThrust,omitempty"`
+	Trace           *Trace    `json:"trace,omitempty"`
+	Capability      string    `json:"capability,omitempty"`
+	Detail          string    `json:"detail,omitempty"`
+	Evidence        string    `json:"evidence,omitempty"`
+	// Status is "met", "unmet" or "unknown".
+	Status string  `json:"status"`
+	Margin float64 `json:"margin"`
+}
+
+// SegmentPower is the power one segment requires and the chain behind it.
+type SegmentPower struct {
+	DynamicPressure *Quantity `json:"dynamicPressure,omitempty"`
+	Lift            *Quantity `json:"lift,omitempty"`
+	Drag            *Quantity `json:"drag,omitempty"`
+	Thrust          *Quantity `json:"thrust,omitempty"`
+	Propulsive      *Quantity `json:"propulsive,omitempty"`
+	// PropulsiveElectrical is the chain draw before any auxiliary load, held
+	// separately so a peak demand adds the peak auxiliary draw to it rather
+	// than to a figure that already contains the continuous one.
+	PropulsiveElectrical *Quantity `json:"propulsiveElectrical,omitempty"`
+	Electrical           *Quantity `json:"electrical,omitempty"`
+	// Model is "drag-polar" or "entered-estimate".
+	Model string `json:"model"`
+	// Status is "computed", "missing", "invalid" or "stale".
+	Status          string  `json:"status"`
+	Detail          string  `json:"detail,omitempty"`
+	Evidence        string  `json:"evidence,omitempty"`
+	Traces          []Trace `json:"traces"`
+	LiftCoefficient float64 `json:"liftCoefficient"`
+	DragCoefficient float64 `json:"dragCoefficient"`
+	LiftToDrag      float64 `json:"liftToDrag"`
+	ChainEfficiency float64 `json:"chainEfficiency"`
+}
+
+// SegmentResult is one mission segment fully evaluated.
+type SegmentResult struct {
+	GroundSpeed  *Quantity           `json:"groundSpeed,omitempty"`
+	Duration     *Quantity           `json:"duration,omitempty"`
+	Distance     *Quantity           `json:"distance,omitempty"`
+	Energy       *Quantity           `json:"energy,omitempty"`
+	Name         string              `json:"name"`
+	Case         string              `json:"case,omitempty"`
+	Kind         string              `json:"kind"`
+	Status       string              `json:"status"`
+	Detail       string              `json:"detail,omitempty"`
+	Traces       []Trace             `json:"traces"`
+	Availability SegmentAvailability `json:"availability"`
+	Power        SegmentPower        `json:"power"`
+}
+
+// MissionResult is the mission's energy budget. Energy sufficiency and flight
+// feasibility are separate answers and neither implies the other.
+type MissionResult struct {
+	RequiredEnergy      *Quantity `json:"requiredEnergy,omitempty"`
+	UsableEnergy        *Quantity `json:"usableEnergy,omitempty"`
+	Budget              *Quantity `json:"budget,omitempty"`
+	TotalDuration       *Quantity `json:"totalDuration,omitempty"`
+	TotalDistance       *Quantity `json:"totalDistance,omitempty"`
+	PeakContinuousPower *Quantity `json:"peakContinuousPower,omitempty"`
+	// Status is "computed", "missing", "invalid" or "stale".
+	Status string `json:"status"`
+	// EnergyStatus is "met", "unmet" or "unknown": whether the required energy
+	// fits the budget.
+	EnergyStatus string          `json:"energyStatus"`
+	Detail       string          `json:"detail,omitempty"`
+	Segments     []SegmentResult `json:"segments"`
+	Traces       []Trace         `json:"traces"`
+	// ReserveFraction echoes the reserve, applied exactly once.
+	ReserveFraction float64 `json:"reserveFraction"`
+	// Complete reports that every listed segment contributed.
+	Complete bool `json:"complete"`
+}
+
+// SupplyCheck is one component rating against what the design demands of it. An
+// unstated rating is an unknown check rather than an absent row.
+type SupplyCheck struct {
+	Limit  *Quantity `json:"limit,omitempty"`
+	Actual *Quantity `json:"actual,omitempty"`
+	Name   string    `json:"name"`
+	Status string    `json:"status"`
+	Detail string    `json:"detail,omitempty"`
+	Margin float64   `json:"margin"`
+}
+
+// PowerFeasibility compares the electrical demand with the component ratings.
+// It is a separate answer from the energy budget.
+type PowerFeasibility struct {
+	ContinuousDemand *Quantity `json:"continuousDemand,omitempty"`
+	PeakDemand       *Quantity `json:"peakDemand,omitempty"`
+	Status           string    `json:"status"`
+	Detail           string    `json:"detail,omitempty"`
+	// PeakDetail says how the worst-moment demand was constructed.
+	PeakDetail string        `json:"peakDetail,omitempty"`
+	Checks     []SupplyCheck `json:"checks"`
+}
+
+// ThrustCheck is one thrust-to-weight target against the capability point it
+// names. The target and the measurement stay separate throughout.
+type ThrustCheck struct {
+	Trace      *Trace `json:"trace,omitempty"`
+	Name       string `json:"name"`
+	Capability string `json:"capability,omitempty"`
+	// Condition describes the point's condition, so a ratio never appears
+	// without the condition that gives it meaning.
+	Condition string  `json:"condition,omitempty"`
+	Detail    string  `json:"detail,omitempty"`
+	Priority  string  `json:"priority"`
+	Evidence  string  `json:"evidence,omitempty"`
+	Status    string  `json:"status"`
+	Available float64 `json:"available"`
+	Target    float64 `json:"target"`
+	Margin    float64 `json:"margin"`
+}
+
 // Evaluation is one complete assessment, tied to the request identity it
 // answers and the input snapshot it was computed from.
 type Evaluation struct {
@@ -541,24 +880,32 @@ type Evaluation struct {
 	// Aggregate is the combined status of the required checks. It makes no
 	// feasibility claim when HasRequired is false: an empty required set is not
 	// a passing one.
-	Aggregate           string     `json:"aggregate"`
-	Checks              []Check    `json:"checks"`
-	Conflicts           []Conflict `json:"conflicts"`
-	Patterns            []string   `json:"patterns"`
+	Aggregate string `json:"aggregate"`
+	// PowerFeasibility compares the electrical demand with the component ratings.
+	PowerFeasibility PowerFeasibility `json:"powerFeasibility"`
+	Request          Request          `json:"request"`
+	// Loads are the lumped lift each case demands: a magnitude with no line of
+	// action, from the Task 02 model.
+	Loads               []CaseLoad `json:"loads"`
 	DefinitionIssues    []Issue    `json:"definitionIssues"`
 	GeometryIssues      []Issue    `json:"geometryIssues"`
 	ConfigurationIssues []Issue    `json:"configurationIssues"`
-	Request             Request    `json:"request"`
-	AreaLower           Bound      `json:"areaLower"`
-	AreaUpper           Bound      `json:"areaUpper"`
+	Conflicts           []Conflict `json:"conflicts"`
+	// ThrustChecks are the thrust-to-weight targets against their points.
+	ThrustChecks []ThrustCheck `json:"thrustChecks"`
+	Patterns     []string      `json:"patterns"`
+	Checks       []Check       `json:"checks"`
+	AreaUpper    Bound         `json:"areaUpper"`
+	AreaLower    Bound         `json:"areaLower"`
+	// Electrical is the auxiliary demand on the pack side of every regulator.
+	Electrical ElectricalBudget `json:"electrical"`
 	// MassProperties is the mechanical balance of the listed components. It is
 	// reported in either mass mode.
 	MassProperties MassProperties `json:"massProperties"`
-	// Loads are the lumped lift each case demands: a magnitude with no line of
-	// action, from the Task 02 model.
-	Loads       []CaseLoad `json:"loads"`
-	Mass        MassRange  `json:"mass"`
-	HasRequired bool       `json:"hasRequired"`
+	Mass           MassRange      `json:"mass"`
+	// Mission is the energy budget over the stated segments.
+	Mission     MissionResult `json:"mission"`
+	HasRequired bool          `json:"hasRequired"`
 }
 
 // Port names one input or output of an equation and fixes its dimension.
@@ -658,7 +1005,16 @@ type Limits struct {
 	// MaxSweepSamples is the largest sensitivity sweep the core evaluates in one
 	// request. A sweep evaluates the whole design once per sample.
 	MaxSweepSamples int `json:"maxSweepSamples"`
-	MaxRequestBytes int `json:"maxRequestBytes"`
+	// MaxCapabilities is the number of propulsion capability points one design
+	// may carry.
+	MaxCapabilities int `json:"maxCapabilities"`
+	// MaxThrustTargets is the number of thrust-to-weight targets.
+	MaxThrustTargets int `json:"maxThrustTargets"`
+	// MaxAuxiliaryLoads is the number of auxiliary electrical loads.
+	MaxAuxiliaryLoads int `json:"maxAuxiliaryLoads"`
+	// MaxMissionSegments is the number of legs one mission may carry.
+	MaxMissionSegments int `json:"maxMissionSegments"`
+	MaxRequestBytes    int `json:"maxRequestBytes"`
 }
 
 // EvaluateRequest asks for one design to be assessed under one identity.
@@ -801,4 +1157,87 @@ type SweepResponse struct {
 	// Invariant reports that every computed sample produced the same output. It
 	// is a fact about this output at this solve mode, not about the driver.
 	Invariant bool `json:"invariant"`
+}
+
+// PowerSearchSettings is one bounded search for the candidates whose electrical
+// demand stays inside a power ceiling.
+//
+// It exists because an all-up mass and a power maximum together do not
+// determine a wing. The demand is not monotonic in wing area at a fixed speed,
+// so the feasible set is generally an interval and can be several.
+type PowerSearchSettings struct {
+	// Driver names the value to move, using the core's own parameter keys. It
+	// must be one the design currently holds.
+	Driver string   `json:"driver"`
+	From   Quantity `json:"from"`
+	To     Quantity `json:"to"`
+	// Ceiling is the largest electrical power any single segment may hold.
+	Ceiling Quantity `json:"ceiling"`
+	// Samples is how many candidates to evaluate, endpoints included.
+	Samples int `json:"samples"`
+}
+
+// PowerSearchCandidate is one evaluated candidate.
+type PowerSearchCandidate struct {
+	Demand *Quantity `json:"demand,omitempty"`
+	// Status is "computed", "missing", "invalid" or "stale".
+	Status string `json:"status"`
+	// Feasibility is the aggregate of this candidate's own required checks,
+	// reported separately from the ceiling.
+	Feasibility string   `json:"feasibility"`
+	Detail      string   `json:"detail,omitempty"`
+	Driver      Quantity `json:"driver"`
+	Margin      float64  `json:"margin"`
+	HasRequired bool     `json:"hasRequired"`
+	// WithinCeiling reports whether the demand fits the ceiling.
+	WithinCeiling bool `json:"withinCeiling"`
+	// Feasible is WithinCeiling together with the required checks.
+	Feasible bool `json:"feasible"`
+}
+
+// PowerSearchInterval is one run of consecutive feasible candidates, with the
+// evaluated candidates that bracket its ends. The ends are brackets rather than
+// boundaries: no iterate converges anywhere, so naming a single crossing value
+// would present a number nothing computed.
+type PowerSearchInterval struct {
+	BelowFirst *Quantity `json:"belowFirst,omitempty"`
+	AboveLast  *Quantity `json:"aboveLast,omitempty"`
+	Detail     string    `json:"detail"`
+	First      Quantity  `json:"first"`
+	Last       Quantity  `json:"last"`
+	// OpenLow and OpenHigh report that the run reaches a searched bound, beyond
+	// which this search says nothing.
+	OpenLow  bool `json:"openLow"`
+	OpenHigh bool `json:"openHigh"`
+}
+
+// PowerSearchRequest asks for one bounded power search of one design.
+type PowerSearchRequest struct {
+	Request  Request             `json:"request"`
+	Settings PowerSearchSettings `json:"settings"`
+	Design   Design              `json:"design"`
+}
+
+// PowerSearchResponse is one complete bounded search. It commits nothing and
+// selects nothing: choosing a candidate from an interval is a separate edit.
+type PowerSearchResponse struct {
+	// SettingsFingerprint is the canonical form of Settings.
+	SettingsFingerprint string `json:"settingsFingerprint"`
+	// Snapshot is the fingerprint of the design searched.
+	Snapshot string `json:"snapshot"`
+	// SolveMode names the driver pair the planform solves from, without which
+	// the result is ambiguous.
+	SolveMode string `json:"solveMode"`
+	Detail    string `json:"detail"`
+	// HeldFixed names the parameters that did not move.
+	HeldFixed  []string               `json:"heldFixed"`
+	Candidates []PowerSearchCandidate `json:"candidates"`
+	Intervals  []PowerSearchInterval  `json:"intervals"`
+	Request    Request                `json:"request"`
+	Settings   PowerSearchSettings    `json:"settings"`
+	// Unique reports that exactly one candidate in the range was feasible. Even
+	// then it is a sampled candidate rather than a solved answer.
+	Unique bool `json:"unique"`
+	// Found reports whether any candidate was feasible at all.
+	Found bool `json:"found"`
 }

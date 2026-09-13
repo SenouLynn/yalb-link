@@ -20,9 +20,10 @@ const (
 	// JourneyExistingDesign starts from a wing that already exists and evaluates
 	// it against requirements.
 	JourneyExistingDesign
-	// JourneyPowerFirst starts from an electrical power ceiling. It is named
-	// here so that its absence is explicit, and it is not implemented: power
-	// alone cannot determine a wing, and the model it needs arrives with Task 09.
+	// JourneyPowerFirst starts from an all-up mass and an electrical power
+	// ceiling. Power alone still cannot determine a wing: the journey checks a
+	// stated candidate against the ceiling, or searches a bounded range of
+	// candidates and reports the feasible interval it finds.
 	JourneyPowerFirst
 )
 
@@ -89,6 +90,7 @@ const (
 	PatternMassAndSize     = "workflow.mass-and-size-first"
 	PatternExistingDesign  = "workflow.existing-design"
 	PatternPowerFirst      = "workflow.power-first"
+	PatternMissionEnergy   = "workflow.mission-and-energy"
 )
 
 // limitLumpedLift and the other shared limits are stated once, so that a
@@ -102,6 +104,19 @@ const (
 		"result is only as good as the coefficient behind it."
 	limitTwoDrivers = "A planform holds exactly two size drivers, plus the taper ratio for a " +
 		"trapezoid. Kinked, cranked and elliptical planforms and pointed tips are unsupported."
+	limitPolarEvidence = "CD0 and the span efficiency are always supplied evidence at " +
+		"aircraft level. Nothing here estimates a zero-lift drag coefficient, and the offered " +
+		"Oswald correlation is an unswept-wing statistical fit with no RC validation behind it."
+	limitStaticNotCruise = "Static thrust is not cruise thrust. A capability point answers only " +
+		"questions at its own condition, and no propeller operating-point model interpolates " +
+		"between points."
+	limitEnergyNotFeasibility = "Energy sufficiency and flight feasibility are separate answers. " +
+		"A mission whose energy fits is not thereby flyable, and a segment with a thrust margin " +
+		"is not thereby within the pack's energy."
+	limitBoundedSearch = "The power search is a bounded scan of evaluated candidates, not a " +
+		"solver. Its interval ends are brackets between two evaluated candidates, it says " +
+		"nothing outside its own range, and no iterate exists that could be reported as a " +
+		"converged design."
 )
 
 var patterns = []Pattern{
@@ -196,18 +211,58 @@ var patterns = []Pattern{
 		ID:      PatternPowerFirst,
 		Name:    "Power first",
 		Journey: JourneyPowerFirst,
-		Rationale: "An electrical power ceiling is the deciding constraint. It is listed so its " +
-			"absence is explicit.",
+		Rationale: "The all-up mass and an electrical power ceiling are what the builder holds, " +
+			"and the question is which wings can fly the mission inside that ceiling.",
 		RequiredInputs: []string{
-			"a battery and motor model, an energy budget and a drag polar, none of which exists yet",
+			"all-up mass and its basis, entered or from the component inventory",
+			"an aircraft drag polar with CD0, the span efficiency, their bases and the " +
+				"lift-coefficient range it is claimed over",
+			"a propeller, motor and speed-controller chain efficiency with its basis",
+			"the avionics, servo, sensor and payload electrical demand, on a stated side of " +
+				"each regulator",
+			"a flight case per mission segment, with its density and CLmax evidence",
+			"mission segments with their speeds, flight-path angles, wind and timing",
+			"a required maximum on electrical power, or a ceiling supplied to the search",
 		},
-		Outcome: "Not implemented. Power alone cannot determine a wing, and fabricating a sizing " +
-			"formula for it would produce a number with nothing behind it.",
+		ActiveDrivers: []ParameterKey{ParamAreaReference, ParamAspectRatio},
+		Outcome: "The electrical power and energy the mission demands, the segment that " +
+			"controls the ceiling, and either a candidate checked against that ceiling or the " +
+			"interval of candidates a bounded search found inside it.",
 		ValidityLimits: []string{
-			"Deferred to Task 09, which brings the drag polar, the propulsion model and the " +
-				"mission energy budget this journey needs.",
+			"A mass and a power ceiling do not determine a wing. The demand is not monotonic in " +
+				"wing area at a fixed speed, so the feasible set is an interval and can be " +
+				"several; this journey reports them and selects none.",
+			limitPolarEvidence, limitStaticNotCruise, limitEnergyNotFeasibility,
+			limitBoundedSearch, limitCLmaxEvidence, limitLumpedLift, limitNoHandling,
 		},
-		Supported: false,
+		Supported: true,
+	},
+	{
+		ID:      PatternMissionEnergy,
+		Name:    "Mission and energy",
+		Journey: JourneyPowerFirst,
+		Rationale: "The aircraft exists and the question is what it can actually do on one " +
+			"pack: how long, how far, and whether the return leg makes it home.",
+		RequiredInputs: []string{
+			"the complete wing definition and the all-up mass",
+			"an aircraft drag polar with its bases and validity range",
+			"a flight pack whose mass is a listed component, with its usable fraction",
+			"the auxiliary electrical demand, continuous and peak",
+			"mission segments including the return leg and the wind along its track",
+			"a mission reserve and where it came from",
+		},
+		ActiveDrivers: []ParameterKey{ParamSpanProjected, ParamAreaReference},
+		Outcome: "A segment-by-segment energy budget against the pack, the mission duration and " +
+			"ground distance, and the component ratings the demand is checked against.",
+		ValidityLimits: []string{
+			"A return leg is a segment the builder states. An autopilot's own return setting " +
+				"establishes no wind-aware range, and nothing here adds a leg that was not asked for.",
+			"The reserve is applied once, to the usable energy. A peak draw with no stated duty " +
+				"cycle carries no energy and is checked against supply ratings instead.",
+			limitPolarEvidence, limitStaticNotCruise, limitEnergyNotFeasibility,
+			limitCLmaxEvidence, limitNoHandling,
+		},
+		Supported: true,
 	},
 }
 

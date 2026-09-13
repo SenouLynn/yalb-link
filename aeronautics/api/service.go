@@ -140,12 +140,16 @@ func (s *Service) Discover() Discovery {
 		Units:           s.Units(),
 		Vocabularies:    Vocabularies(),
 		Limits: Limits{
-			MaxCases:        MaxCases,
-			MaxRequirements: MaxRequirements,
-			MaxCommands:     MaxCommands,
-			MaxBatch:        MaxBatch,
-			MaxComponents:   MaxComponents,
-			MaxSweepSamples: calculator.MaxSweepSamples,
+			MaxCases:           MaxCases,
+			MaxRequirements:    MaxRequirements,
+			MaxCommands:        MaxCommands,
+			MaxBatch:           MaxBatch,
+			MaxComponents:      MaxComponents,
+			MaxSweepSamples:    calculator.MaxSweepSamples,
+			MaxCapabilities:    MaxCapabilities,
+			MaxThrustTargets:   MaxThrustTargets,
+			MaxAuxiliaryLoads:  MaxAuxiliaryLoads,
+			MaxMissionSegments: MaxMissionSegments,
 		},
 	}
 }
@@ -356,6 +360,33 @@ func (s *Service) Sweep(ctx context.Context, req SweepRequest) (SweepResponse, e
 			"the caller went away before the sweep finished: "+ctx.Err().Error())
 	}
 	return encodeSweep(result, identity), nil
+}
+
+// PowerSearch evaluates one bounded search for the candidates whose electrical
+// demand stays inside a power ceiling.
+//
+// Nothing is committed and nothing is selected. The response describes
+// candidates the client's design does not hold, and it carries the input
+// snapshot and the settings fingerprint so a client can tell whether the answer
+// still belongs to the question it is asking. Choosing a candidate from a
+// reported interval is a separate, explicit edit.
+func (s *Service) PowerSearch(ctx context.Context, req PowerSearchRequest) (PowerSearchResponse, error) {
+	if err := checkContext(ctx); err != nil {
+		return PowerSearchResponse{}, err
+	}
+	d := &decoder{}
+	identity := d.request(req.Request)
+	design := d.design(req.Design)
+	settings := d.powerSearchSettings("settings", req.Settings)
+	if len(d.issues) > 0 {
+		return PowerSearchResponse{}, fail(worstKind(d.issues), "the request could not be read", d.issues...)
+	}
+	result, err := design.PowerSizingSearch(settings)
+	if err != nil {
+		return PowerSearchResponse{}, fail(coreFailureKind(err),
+			"the search was refused, so nothing was evaluated", encodeIssues(err)...)
+	}
+	return encodePowerSearch(result, identity), nil
 }
 
 // coreFailureKind maps the core's own typed issues onto a boundary failure

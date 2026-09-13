@@ -26,16 +26,34 @@ const (
 	// SubjectWingLoadingMass bounds mass-based wing loading, the form RC
 	// builders usually quote. It carries no load factor.
 	SubjectWingLoadingMass
+	// SubjectElectricalPower bounds the largest electrical power any single
+	// mission segment holds continuously. A required maximum on it is the power
+	// ceiling a weight-first design can be decided by.
+	SubjectElectricalPower
+	// SubjectMissionEnergy bounds the energy the whole mission requires.
+	SubjectMissionEnergy
+	// SubjectMissionDuration bounds the mission's total time.
+	SubjectMissionDuration
+	// SubjectMissionRange bounds the mission's total ground distance.
+	SubjectMissionRange
+	// SubjectPropellerClearance bounds the propeller tip's clearance above the
+	// ground line.
+	SubjectPropellerClearance
 )
 
 var requirementSubjectNames = [...]string{
-	SubjectUnknown:         "unknown",
-	SubjectStallSpeed:      "stall speed",
-	SubjectWingArea:        "wing area",
-	SubjectSpan:            "span",
-	SubjectMass:            "all-up mass",
-	SubjectAspectRatio:     "aspect ratio",
-	SubjectWingLoadingMass: "mass wing loading",
+	SubjectUnknown:            "unknown",
+	SubjectStallSpeed:         "stall speed",
+	SubjectWingArea:           "wing area",
+	SubjectSpan:               "span",
+	SubjectMass:               "all-up mass",
+	SubjectAspectRatio:        "aspect ratio",
+	SubjectWingLoadingMass:    "mass wing loading",
+	SubjectElectricalPower:    "electrical power",
+	SubjectMissionEnergy:      "mission energy",
+	SubjectMissionDuration:    "mission duration",
+	SubjectMissionRange:       "mission range",
+	SubjectPropellerClearance: "propeller clearance",
 }
 
 // String returns the subject's readable name.
@@ -59,6 +77,14 @@ func (s RequirementSubject) Dimension() Dimension {
 		return DimMass
 	case SubjectWingLoadingMass:
 		return DimMassPerArea
+	case SubjectElectricalPower:
+		return DimPower
+	case SubjectMissionEnergy:
+		return DimEnergy
+	case SubjectMissionDuration:
+		return DimTime
+	case SubjectMissionRange, SubjectPropellerClearance:
+		return DimLength
 	case SubjectAspectRatio, SubjectUnknown:
 		return Dimensionless
 	default:
@@ -379,6 +405,9 @@ func (d Design) read(subject RequirementSubject, dc DesignCase, solved solvedWin
 	if subject == SubjectMass {
 		return mass
 	}
+	if subject.fromPowerModel() {
+		return d.readPowerSubject(subject)
+	}
 	if solved.err != nil {
 		return subjectReading{Status: solved.status, Detail: "the wing geometry did not solve: " + solved.err.Error()}
 	}
@@ -402,6 +431,58 @@ func (d Design) read(subject RequirementSubject, dc DesignCase, solved solvedWin
 		return reading(StallSpeed(dc.Case, mass.Value, w.Projected.Area))
 	case SubjectMass, SubjectUnknown:
 		return subjectReading{Status: ResultMissing, Detail: "no value is defined for " + subject.String()}
+	default:
+		return subjectReading{Status: ResultMissing, Detail: "no value is defined for " + subject.String()}
+	}
+}
+
+// fromPowerModel reports whether the subject's value comes from the Task 09
+// power and mission model rather than from the geometry and lift models. Those
+// subjects need no solved wing of their own: the mission analysis solves it
+// once and reports why it could not when it could not.
+func (s RequirementSubject) fromPowerModel() bool {
+	switch s {
+	case SubjectElectricalPower, SubjectMissionEnergy, SubjectMissionDuration,
+		SubjectMissionRange, SubjectPropellerClearance:
+		return true
+	default:
+		return false
+	}
+}
+
+// readPowerSubject reads a value the power and mission model produces.
+func (d Design) readPowerSubject(subject RequirementSubject) subjectReading {
+	if subject == SubjectPropellerClearance {
+		if !d.Propulsion.Limits.PropellerDiameter.supplied() ||
+			!d.Propulsion.Limits.PropellerHubHeight.supplied() {
+			return subjectReading{
+				Status: ResultMissing,
+				Detail: "a tip clearance needs both the propeller diameter and the hub height " +
+					"above the ground line",
+			}
+		}
+		return reading(d.Propulsion.Limits.PropellerClearance())
+	}
+	mission := d.MissionAnalysis()
+	if mission.Status != ResultComputed {
+		return subjectReading{Status: mission.Status, Detail: mission.Detail}
+	}
+	if !mission.Complete {
+		return subjectReading{
+			Status: ResultMissing,
+			Detail: "the mission covers only some of its segments, so its totals understate it " +
+				"rather than describing it: " + mission.Detail,
+		}
+	}
+	switch subject {
+	case SubjectElectricalPower:
+		return subjectReading{Status: ResultComputed, Value: mission.PeakContinuousPower}
+	case SubjectMissionEnergy:
+		return subjectReading{Status: ResultComputed, Value: mission.RequiredEnergy}
+	case SubjectMissionDuration:
+		return subjectReading{Status: ResultComputed, Value: mission.TotalDuration}
+	case SubjectMissionRange:
+		return subjectReading{Status: ResultComputed, Value: mission.TotalDistance}
 	default:
 		return subjectReading{Status: ResultMissing, Detail: "no value is defined for " + subject.String()}
 	}
@@ -559,6 +640,11 @@ func (d Design) Validate() error {
 	d.validateMass(rs)
 	d.validateComponents(rs)
 	d.validateCases(rs)
+	d.Polar.validate(rs)
+	d.Propulsion.validate(rs)
+	d.Battery.validate(d, rs)
+	d.validateAuxiliary(rs)
+	d.Mission.validate(d, rs)
 	for _, r := range d.Requirements {
 		r.validate(d, rs)
 	}
@@ -583,6 +669,28 @@ func (d Design) validateMass(rs *resultSet) {
 	if d.MassBasis == "" {
 		rs.add("mass", IssueMissing,
 			"state where the all-up mass came from, so a target mass is not read as a measured one")
+	}
+}
+
+// validateAuxiliary checks the electrical loads. A load that names a component
+// must name one the design lists, so that a device's mass and its draw stay
+// attached to the same thing.
+func (d Design) validateAuxiliary(rs *resultSet) {
+	seen := make(map[string]bool, len(d.Auxiliary))
+	for _, load := range d.Auxiliary {
+		if seen[load.Name] && load.Name != "" {
+			rs.add("auxiliary."+load.Name, IssueInvalid, "the design lists this load twice")
+		}
+		seen[load.Name] = true
+		load.validate(rs)
+		if load.Component == "" {
+			continue
+		}
+		if _, ok := d.Component(load.Component); !ok {
+			rs.add("auxiliary."+load.Name, IssueMissing,
+				"names component "+load.Component+", which the design does not list; it lists "+
+					joinNames(d.componentNames()))
+		}
 	}
 }
 

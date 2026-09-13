@@ -52,7 +52,7 @@ async function addComponent(
   x: string,
 ): Promise<void> {
   await user.type(screen.getByLabelText('Add a component'), name)
-  await press(user, 'Add')
+  await press(user, 'Add component')
   const panel = componentPanel(name)
   await user.click(within(panel).getByText(name, { selector: '.component-name' }))
   await selectIn(user, panel, 'What it is', role)
@@ -124,7 +124,7 @@ describe('mass placement', () => {
     await addComponent(user, 'battery', 'battery', '0.5', '0.2')
 
     await user.type(screen.getByLabelText('Add a component'), 'payload')
-    await press(user, 'Add')
+    await press(user, 'Add component')
     const payload = componentPanel('payload')
     await user.click(within(payload).getByText('payload', { selector: '.component-name' }))
     await selectIn(user, payload, 'What it is', 'payload')

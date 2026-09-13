@@ -60,6 +60,7 @@ func (d Design) Snapshot() string {
 	c.text("mass_basis", d.MassBasis)
 	c.code("mass_mode", int(d.MassMode))
 	d.canonicalizeComponents(c)
+	d.canonicalizePower(c)
 	d.Wing.canonicalize(c)
 	d.Tail.canonicalize(c)
 	d.canonicalizeCases(c)
@@ -83,6 +84,147 @@ func (d Design) canonicalizeComponents(c *canonical) {
 		c.qty(prefix+".y", item.Position.Y)
 		c.qty(prefix+".z", item.Position.Z)
 	}
+}
+
+// canonicalizePower writes the Task 09 definition: the drag polar, the
+// propulsion chain, the pack, the auxiliary loads and the mission. The
+// name-keyed lists are sorted for the same reason the components are, so that
+// reordering a slice cannot change the fingerprint.
+func (d Design) canonicalizePower(c *canonical) {
+	d.Polar.canonicalize(c)
+	d.Propulsion.canonicalize(c)
+	d.Battery.canonicalize(c)
+	d.canonicalizeAuxiliary(c)
+	d.Mission.canonicalize(c)
+}
+
+func (p DragPolar) canonicalize(c *canonical) {
+	c.num("polar.cd0", p.CD0)
+	c.text("polar.cd0_basis", p.CD0Basis)
+	c.num("polar.oswald_efficiency", p.OswaldEfficiency)
+	c.text("polar.oswald_basis", p.EfficiencyBasis)
+	c.text("polar.configuration", p.Configuration)
+	c.num("polar.cl_valid_min", p.CLValidMin)
+	c.num("polar.cl_valid_max", p.CLValidMax)
+	c.code("polar.scope", int(p.Scope))
+	c.code("polar.evidence", int(p.Evidence))
+}
+
+func (p Propulsion) canonicalize(c *canonical) {
+	c.num("propulsion.efficiency", p.Efficiency.Total)
+	c.text("propulsion.efficiency_basis", p.Efficiency.Basis)
+	c.code("propulsion.efficiency_evidence", int(p.Efficiency.Evidence))
+	p.Limits.canonicalize(c)
+	capabilities := append([]PropulsionCapability(nil), p.Capabilities...)
+	sort.Slice(capabilities, func(i, j int) bool { return capabilities[i].Name < capabilities[j].Name })
+	c.code("capabilities", len(capabilities))
+	for n := range capabilities {
+		capabilities[n].canonicalize(c)
+	}
+	targets := append([]ThrustTarget(nil), p.Targets...)
+	sort.Slice(targets, func(i, j int) bool { return targets[i].Name < targets[j].Name })
+	c.code("thrust_targets", len(targets))
+	for _, target := range targets {
+		prefix := "thrust_target[" + target.Name + "]"
+		c.text(prefix+".name", target.Name)
+		c.text(prefix+".basis", target.Basis)
+		c.text(prefix+".capability", target.Capability)
+		c.num(prefix+".ratio", target.Ratio)
+		c.code(prefix+".priority", int(target.Priority))
+	}
+}
+
+func (l PropulsionLimits) canonicalize(c *canonical) {
+	c.text("propulsion.limits_basis", l.Basis)
+	c.qty("propulsion.max_continuous_power", l.MaxContinuousElectricalPower)
+	c.qty("propulsion.max_peak_power", l.MaxPeakElectricalPower)
+	c.qty("propulsion.max_rpm", l.MaxRPM)
+	c.qty("propulsion.max_voltage", l.MaxVoltage)
+	c.qty("propulsion.propeller_diameter", l.PropellerDiameter)
+	c.qty("propulsion.propeller_hub_height", l.PropellerHubHeight)
+}
+
+func (p PropulsionCapability) canonicalize(c *canonical) {
+	prefix := "capability[" + p.Name + "]"
+	c.text(prefix+".name", p.Name)
+	c.text(prefix+".basis", p.Basis)
+	c.text(prefix+".note", p.Note)
+	c.code(prefix+".kind", int(p.Kind))
+	c.qty(prefix+".speed", p.Speed)
+	c.qty(prefix+".density", p.Density)
+	c.text(prefix+".density_basis", p.DensityBasis)
+	c.qty(prefix+".voltage", p.Voltage)
+	c.qty(prefix+".rpm", p.RPM)
+	c.num(prefix+".throttle", p.Throttle)
+	c.qty(prefix+".thrust", p.Thrust)
+	c.qty(prefix+".electrical_power", p.ElectricalPower)
+	c.qty(prefix+".current", p.Current)
+	c.code(prefix+".evidence", int(p.Evidence))
+}
+
+func (b Battery) canonicalize(c *canonical) {
+	c.text("battery.basis", b.Basis)
+	c.text("battery.component", b.Component)
+	c.code("battery.mode", int(b.Mode))
+	c.qty("battery.capacity", b.Capacity)
+	c.qty("battery.nominal_voltage", b.NominalVoltage)
+	c.qty("battery.energy", b.Energy)
+	c.num("battery.usable_fraction", b.UsableFraction)
+	c.qty("battery.continuous_current_limit", b.ContinuousCurrentLimit)
+	c.qty("battery.peak_current_limit", b.PeakCurrentLimit)
+	c.code("battery.evidence", int(b.Evidence))
+}
+
+func (d Design) canonicalizeAuxiliary(c *canonical) {
+	loads := append([]AuxiliaryLoad(nil), d.Auxiliary...)
+	sort.Slice(loads, func(i, j int) bool { return loads[i].Name < loads[j].Name })
+	c.code("auxiliary", len(loads))
+	for _, load := range loads {
+		prefix := "auxiliary[" + load.Name + "]"
+		c.text(prefix+".name", load.Name)
+		c.text(prefix+".basis", load.Basis)
+		c.text(prefix+".component", load.Component)
+		c.qty(prefix+".continuous", load.Continuous)
+		c.qty(prefix+".peak", load.Peak)
+		c.num(prefix+".regulator_efficiency", load.RegulatorEfficiency)
+		c.code(prefix+".side", int(load.Side))
+		c.code(prefix+".evidence", int(load.Evidence))
+	}
+}
+
+// canonicalize writes the mission. Segments keep their stated order rather than
+// being sorted: a mission is a sequence, and reordering its legs is a different
+// mission even when every leg is unchanged.
+func (m Mission) canonicalize(c *canonical) {
+	c.text("mission.name", m.Name)
+	c.text("mission.basis", m.Basis)
+	c.num("mission.reserve", m.ReserveFraction)
+	c.text("mission.reserve_basis", m.ReserveBasis)
+	c.code("mission.segments", len(m.Segments))
+	for n := range m.Segments {
+		m.Segments[n].canonicalize(c, n)
+	}
+}
+
+func (s MissionSegment) canonicalize(c *canonical, index int) {
+	prefix := "segment[" + formatFloat(float64(index)) + "]"
+	c.text(prefix+".name", s.Name)
+	c.text(prefix+".case", s.Case)
+	c.text(prefix+".notes", s.Notes)
+	c.code(prefix+".kind", int(s.Kind))
+	c.code(prefix+".model", int(s.Model))
+	c.code(prefix+".timing", int(s.Timing))
+	c.qty(prefix+".speed", s.Speed)
+	c.qty(prefix+".climb_angle", s.ClimbAngle)
+	c.qty(prefix+".duration", s.Duration)
+	c.qty(prefix+".distance", s.Distance)
+	c.qty(prefix+".wind_along_track", s.WindAlongTrack)
+	c.qty(prefix+".entered_power", s.EnteredPower)
+	c.text(prefix+".entered_basis", s.EnteredBasis)
+	c.code(prefix+".entered_evidence", int(s.EnteredEvidence))
+	c.num(prefix+".efficiency", s.Efficiency)
+	c.text(prefix+".efficiency_basis", s.EfficiencyBasis)
+	c.text(prefix+".capability", s.Capability)
 }
 
 func (def WingDefinition) canonicalize(c *canonical) {

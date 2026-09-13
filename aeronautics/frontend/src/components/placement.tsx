@@ -145,7 +145,7 @@ export function ComponentsPanel(props: { api: WorksheetApi }): ReactNode {
               }])
             }}
           >
-            Add
+            Add component
           </button>
         </div>
       </div>

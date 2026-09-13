@@ -17,9 +17,12 @@ import type {
   Design,
   Evaluation,
   Issue,
+  PowerSearchSettings,
   Request as RequestIdentity,
   SweepSettings,
 } from '../api/contract.ts'
+import type { Searched, Searching } from './power.ts'
+import { answersSearch } from './power.ts'
 import type { Sweeping, Swept } from './sweep.ts'
 import { answers } from './sweep.ts'
 import type { JourneyId } from './design.ts'
@@ -72,6 +75,10 @@ export interface Worksheet {
   readonly sweeping: Sweeping | null
   /** swept is the sensitivity answer currently being shown. */
   readonly swept: Swept | null
+  /** searching is the outstanding power search, if there is one. */
+  readonly searching: Searching | null
+  /** searched is the power search answer currently being shown. */
+  readonly searched: Searched | null
 }
 
 export function initialWorksheet(session: string, design = startingDesign()): Worksheet {
@@ -90,6 +97,8 @@ export function initialWorksheet(session: string, design = startingDesign()): Wo
     selection: null,
     sweeping: null,
     swept: null,
+    searching: null,
+    searched: null,
   }
 }
 
@@ -121,6 +130,15 @@ export function staleSweep(worksheet: Worksheet): boolean {
   return worksheet.swept !== null && worksheet.swept.revision !== worksheet.revision
 }
 
+/**
+ * staleSearch reports whether the shown power search describes an earlier
+ * revision. A search is a question about candidates the design does not hold,
+ * so it goes stale exactly as a sweep does and for the same reason.
+ */
+export function staleSearch(worksheet: Worksheet): boolean {
+  return worksheet.searched !== null && worksheet.searched.revision !== worksheet.revision
+}
+
 export type Action =
   | { readonly type: 'journey-selected'; readonly journey: JourneyId }
   | { readonly type: 'draft-changed'; readonly field: string; readonly text: string }
@@ -137,6 +155,9 @@ export type Action =
   | { readonly type: 'preview-started'; readonly sequence: number }
   | { readonly type: 'swept'; readonly response: import('../api/contract.ts').SweepResponse; readonly snapshot: string }
   | { readonly type: 'sweep-discarded' }
+  | { readonly type: 'search-started'; readonly settings: PowerSearchSettings; readonly sequence: number }
+  | { readonly type: 'searched'; readonly response: import('../api/contract.ts').PowerSearchResponse; readonly snapshot: string }
+  | { readonly type: 'search-discarded' }
 
 /**
  * nextIdentity mints the identity the next request will carry. The sequence
@@ -173,6 +194,7 @@ function commitDesign(worksheet: Worksheet, next: Design): Worksheet {
     // branch the builder has left. The plotted curve stays on screen, marked as
     // describing an earlier revision, rather than vanishing mid-read.
     sweeping: null,
+    searching: null,
   }
 }
 
@@ -245,6 +267,7 @@ export function reduce(worksheet: Worksheet, action: Action): Worksheet {
         pending: null,
         failure: null,
         sweeping: null,
+        searching: null,
       }
 
     case 'redo':
@@ -256,6 +279,7 @@ export function reduce(worksheet: Worksheet, action: Action): Worksheet {
         pending: null,
         failure: null,
         sweeping: null,
+        searching: null,
       }
 
     case 'parameter-selected':
@@ -306,6 +330,40 @@ export function reduce(worksheet: Worksheet, action: Action): Worksheet {
     case 'sweep-discarded':
       return { ...worksheet, sweeping: null, swept: null }
 
+    case 'search-started':
+      return {
+        ...worksheet,
+        nextSequence: action.sequence,
+        searching: {
+          settings: action.settings,
+          sequence: action.sequence,
+          revision: worksheet.revision,
+        },
+        failure: null,
+      }
+
+    case 'searched': {
+      // The same three-way match a sweep answer has to pass. A search over a
+      // different range, or over inputs the design has since left, is an answer
+      // to somebody else's question.
+      const asked = worksheet.searching
+      if (asked === null || !answersSearch(action.response, asked, action.snapshot, asked.settings)) {
+        return worksheet
+      }
+      return {
+        ...worksheet,
+        searching: null,
+        searched: {
+          response: action.response,
+          settings: asked.settings,
+          revision: asked.revision,
+        },
+      }
+    }
+
+    case 'search-discarded':
+      return { ...worksheet, searching: null, searched: null }
+
     case 'draft-loaded': {
       const committed = commitDesign(worksheet, action.design)
       return {
@@ -322,6 +380,7 @@ export function reduce(worksheet: Worksheet, action: Action): Worksheet {
         // previous one is not an earlier revision of this one; it is an answer
         // about something else and is dropped rather than shown as stale.
         swept: null,
+        searched: null,
       }
     }
 

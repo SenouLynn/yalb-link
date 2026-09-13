@@ -11,6 +11,7 @@ import type {
   Design,
   Evaluation,
   Issue,
+  PowerSearchSettings,
   Quantity,
   SweepSettings,
   UnitInfo,
@@ -28,6 +29,7 @@ import {
   nextIdentity,
   reduce,
   staleResult,
+  staleSearch,
   staleSweep,
 } from './state/worksheet.ts'
 import type { Snapshot, SnapshotContext } from './state/drafts.ts'
@@ -48,12 +50,18 @@ export interface WorksheetApi {
   readonly sweeping: boolean
   /** staleSweep reports whether the plotted curve describes an earlier revision. */
   readonly staleSweep: boolean
+  /** searching reports whether a power search is outstanding. */
+  readonly searching: boolean
+  /** staleSearch reports whether the shown search describes an earlier revision. */
+  readonly staleSearch: boolean
   /** selection is the parameter key a dimension or a field has selected. */
   readonly selection: string | null
   select(key: string | null): void
   runSweep(settings: SweepSettings): Promise<void>
   runSweepCandidate(driver: string, value: Quantity): Promise<boolean>
   discardSweep(): void
+  runPowerSearch(settings: PowerSearchSettings): Promise<void>
+  discardPowerSearch(): void
   previewCommand(command: Command): Promise<Evaluation | null>
   selectJourney(journey: JourneyId): void
   setDraft(field: string, text: string): void
@@ -104,8 +112,9 @@ export function useWorksheet(
   //
   // The two counters agree because every mint below is paired with exactly one
   // dispatch that advances the reducer's counter, in that order: an evaluation
-  // and an apply through 'request-started', a sweep through 'sweep-started',
-  // and a preview through 'preview-started', which exists for no other reason.
+  // and an apply through 'request-started', a sweep through 'sweep-started', a
+  // power search through 'search-started', and a preview through
+  // 'preview-started', which exists for no other reason.
   // A mint without its dispatch puts them out of step, and a pending identity
   // that never matches an answer then discards every response after it.
   // TestEveryRequestKindKeepsTheCountersInStep holds this.
@@ -175,6 +184,25 @@ export function useWorksheet(
       try {
         const response = await transport.sweep({ request: identity, design, settings })
         dispatch({ type: 'swept', response, snapshot: response.snapshot })
+      } catch (error) {
+        dispatch({ type: 'failed', failure: asFailure(error) })
+      }
+    },
+    [transport, design, mintIdentity],
+  )
+
+  // A power search is the same kind of question a sweep is, and it is
+  // answered under the same discipline: it commits nothing, joins no history,
+  // and its answer is matched against the design and the settings it was asked
+  // about. A candidate reported here is adopted, if at all, by the ordinary
+  // driver edit through run().
+  const runPowerSearch = useCallback(
+    async (settings: PowerSearchSettings) => {
+      const identity = mintIdentity()
+      dispatch({ type: 'search-started', settings, sequence: identity.sequence })
+      try {
+        const response = await transport.powerSearch({ request: identity, design, settings })
+        dispatch({ type: 'searched', response, snapshot: response.snapshot })
       } catch (error) {
         dispatch({ type: 'failed', failure: asFailure(error) })
       }
@@ -295,6 +323,8 @@ export function useWorksheet(
     notice,
     sweeping: worksheet.sweeping !== null,
     staleSweep: staleSweep(worksheet),
+    searching: worksheet.searching !== null,
+    staleSearch: staleSearch(worksheet),
     selection: worksheet.selection,
     select: (key) => { dispatch({ type: 'parameter-selected', key }) },
     runSweep,
@@ -307,6 +337,8 @@ export function useWorksheet(
         ? run([{ kind: 'set-mass', mass: value, basis: design.massBasis }])
         : run([{ kind: 'set-driver', key: driver, value }]),
     discardSweep: () => { dispatch({ type: 'sweep-discarded' }) },
+    runPowerSearch,
+    discardPowerSearch: () => { dispatch({ type: 'search-discarded' }) },
     previewCommand,
     selectJourney: (journey) => { dispatch({ type: 'journey-selected', journey }) },
     setDraft: (field, text) => { dispatch({ type: 'draft-changed', field, text }) },

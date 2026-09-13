@@ -14,9 +14,17 @@ export type AreaBasis =
   "reference-trapezoid" |
   "exposed-panels";
 
+export type BatteryEnergyMode =
+  "capacity-and-voltage" |
+  "entered-energy";
+
 export type BoundDirection =
   "minimum" |
   "maximum";
+
+export type CapabilityKind =
+  "static" |
+  "in-flight";
 
 export type CaseScope =
   "all-required" |
@@ -27,24 +35,38 @@ export type CoefficientScope =
   "airfoil-section";
 
 export type CommandKind =
+  "move-mission-segment" |
   "place-component" |
   "promote-driver" |
+  "remove-auxiliary-load" |
+  "remove-capability" |
   "remove-case" |
   "remove-component" |
+  "remove-mission-segment" |
   "remove-requirement" |
+  "remove-thrust-target" |
+  "set-auxiliary-load" |
+  "set-battery" |
   "set-body-width" |
+  "set-capability" |
   "set-case" |
   "set-case-clmax" |
   "set-case-priority" |
   "set-component" |
   "set-configuration" |
+  "set-drag-polar" |
   "set-driver" |
   "set-mass" |
   "set-mass-mode" |
+  "set-mission-profile" |
+  "set-mission-segment" |
   "set-planform-shape" |
+  "set-propulsion-efficiency" |
+  "set-propulsion-limits" |
   "set-requirement" |
   "set-requirement-priority" |
   "set-taper-ratio" |
+  "set-thrust-target" |
   "set-wing-angles" |
   "size-at-stall-limit";
 
@@ -79,7 +101,12 @@ export type Dimension =
   "power" |
   "energy" |
   "dynamic-viscosity" |
-  "mass-moment";
+  "mass-moment" |
+  "time" |
+  "current" |
+  "voltage" |
+  "charge" |
+  "rotation-rate";
 
 export type DimensionKind =
   "linear" |
@@ -130,6 +157,10 @@ export type Priority =
   "required" |
   "preferred";
 
+export type RegulatorSide =
+  "pack-side" |
+  "load-side";
+
 export type RequirementStatus =
   "unknown" |
   "met" |
@@ -141,13 +172,35 @@ export type RequirementSubject =
   "span" |
   "mass" |
   "aspect-ratio" |
-  "mass-wing-loading";
+  "mass-wing-loading" |
+  "electrical-power" |
+  "mission-energy" |
+  "mission-duration" |
+  "mission-range" |
+  "propeller-clearance";
 
 export type ResultStatus =
   "missing" |
   "computed" |
   "invalid" |
   "stale";
+
+export type SegmentKind =
+  "launch" |
+  "climb" |
+  "cruise" |
+  "loiter" |
+  "return" |
+  "recovery" |
+  "other";
+
+export type SegmentModel =
+  "drag-polar" |
+  "entered-estimate";
+
+export type SegmentTiming =
+  "duration" |
+  "ground-distance";
 
 export type SketchRole =
   "outline" |
@@ -200,6 +253,10 @@ export interface Limits {
   maxBatch: number;
   maxComponents: number;
   maxSweepSamples: number;
+  maxCapabilities: number;
+  maxThrustTargets: number;
+  maxAuxiliaryLoads: number;
+  maxMissionSegments: number;
   maxRequestBytes: number;
 }
 
@@ -344,23 +401,77 @@ export interface SweepBound {
   value: Quantity;
 }
 
+export interface PowerSearchRequest {
+  request: Request;
+  settings: PowerSearchSettings;
+  design: Design;
+}
+
+export interface PowerSearchResponse {
+  settingsFingerprint: string;
+  snapshot: string;
+  solveMode: string;
+  detail: string;
+  heldFixed: string[];
+  candidates: PowerSearchCandidate[];
+  intervals: PowerSearchInterval[];
+  request: Request;
+  settings: PowerSearchSettings;
+  unique: boolean;
+  found: boolean;
+}
+
+export interface PowerSearchSettings {
+  driver: string;
+  from: Quantity;
+  to: Quantity;
+  ceiling: Quantity;
+  samples: number;
+}
+
+export interface PowerSearchCandidate {
+  demand?: Quantity | null;
+  status: string;
+  feasibility: string;
+  detail?: string;
+  driver: Quantity;
+  margin: number;
+  hasRequired: boolean;
+  withinCeiling: boolean;
+  feasible: boolean;
+}
+
+export interface PowerSearchInterval {
+  belowFirst?: Quantity | null;
+  aboveLast?: Quantity | null;
+  detail: string;
+  first: Quantity;
+  last: Quantity;
+  openLow: boolean;
+  openHigh: boolean;
+}
+
 export interface Evaluation {
   wing?: SolvedWing | null;
   snapshot: string;
   geometry: string;
   aggregate: string;
-  checks: Check[];
-  conflicts: Conflict[];
-  patterns: string[];
+  powerFeasibility: PowerFeasibility;
+  request: Request;
+  loads: CaseLoad[];
   definitionIssues: Issue[];
   geometryIssues: Issue[];
   configurationIssues: Issue[];
-  request: Request;
-  areaLower: Bound;
+  conflicts: Conflict[];
+  thrustChecks: ThrustCheck[];
+  patterns: string[];
+  checks: Check[];
   areaUpper: Bound;
+  areaLower: Bound;
+  electrical: ElectricalBudget;
   massProperties: MassProperties;
-  loads: CaseLoad[];
   mass: MassRange;
+  mission: MissionResult;
   hasRequired: boolean;
 }
 
@@ -374,6 +485,11 @@ export interface Design {
   components?: Component[];
   cases?: Case[];
   requirements?: Requirement[];
+  polar?: DragPolar | null;
+  propulsion?: Propulsion | null;
+  battery?: Battery | null;
+  auxiliary?: AuxiliaryLoad[];
+  mission?: Mission | null;
   wing: Wing;
 }
 
@@ -463,6 +579,15 @@ export interface Command {
   tail?: Tail | null;
   component?: Component | null;
   position?: Position | null;
+  polar?: DragPolar | null;
+  efficiency?: Efficiency | null;
+  limits?: PropulsionLimits | null;
+  capability?: Capability | null;
+  target?: ThrustTarget | null;
+  battery?: Battery | null;
+  load?: AuxiliaryLoad | null;
+  profile?: MissionProfile | null;
+  segment?: MissionSegment | null;
   kind: string;
   basis?: string;
   key?: string;
@@ -475,6 +600,7 @@ export interface Command {
   configuration?: string;
   mode?: string;
   ratio?: number;
+  index?: number;
 }
 
 export interface Scope {
@@ -531,6 +657,240 @@ export interface CaseLoad {
   priority: string;
   status: string;
   detail?: string;
+}
+
+export interface DragPolar {
+  cd0Basis: string;
+  efficiencyBasis: string;
+  configuration: string;
+  scope: string;
+  evidence?: string;
+  cd0: number;
+  oswaldEfficiency: number;
+  clValidMin: number;
+  clValidMax: number;
+}
+
+export interface Capability {
+  speed?: Quantity | null;
+  density?: Quantity | null;
+  voltage?: Quantity | null;
+  rpm?: Quantity | null;
+  thrust?: Quantity | null;
+  electricalPower?: Quantity | null;
+  current?: Quantity | null;
+  name: string;
+  basis: string;
+  densityBasis?: string;
+  note?: string;
+  kind: string;
+  evidence?: string;
+  throttle: number;
+}
+
+export interface ThrustTarget {
+  name: string;
+  basis: string;
+  capability: string;
+  priority: string;
+  ratio: number;
+}
+
+export interface PropulsionLimits {
+  maxContinuousPower?: Quantity | null;
+  maxPeakPower?: Quantity | null;
+  maxRpm?: Quantity | null;
+  maxVoltage?: Quantity | null;
+  propellerDiameter?: Quantity | null;
+  propellerHubHeight?: Quantity | null;
+  basis?: string;
+}
+
+export interface Propulsion {
+  limits?: PropulsionLimits | null;
+  efficiencyBasis?: string;
+  efficiencyEvidence?: string;
+  capabilities?: Capability[];
+  targets?: ThrustTarget[];
+  efficiency: number;
+}
+
+export interface Battery {
+  capacity?: Quantity | null;
+  nominalVoltage?: Quantity | null;
+  energy?: Quantity | null;
+  continuousCurrentLimit?: Quantity | null;
+  peakCurrentLimit?: Quantity | null;
+  basis: string;
+  component: string;
+  mode: string;
+  evidence?: string;
+  usableFraction: number;
+}
+
+export interface AuxiliaryLoad {
+  continuous?: Quantity | null;
+  peak?: Quantity | null;
+  name: string;
+  basis: string;
+  component?: string;
+  side: string;
+  evidence?: string;
+  regulatorEfficiency: number;
+}
+
+export interface MissionSegment {
+  speed?: Quantity | null;
+  climbAngle?: Quantity | null;
+  duration?: Quantity | null;
+  distance?: Quantity | null;
+  windAlongTrack?: Quantity | null;
+  enteredPower?: Quantity | null;
+  name: string;
+  case: string;
+  notes?: string;
+  kind: string;
+  model: string;
+  timing: string;
+  enteredBasis?: string;
+  enteredEvidence?: string;
+  efficiencyBasis?: string;
+  capability?: string;
+  efficiency: number;
+}
+
+export interface Mission {
+  name: string;
+  basis: string;
+  reserveBasis?: string;
+  segments?: MissionSegment[];
+  reserveFraction: number;
+}
+
+export interface Efficiency {
+  basis: string;
+  evidence?: string;
+  total: number;
+}
+
+export interface MissionProfile {
+  name: string;
+  basis: string;
+  reserveBasis?: string;
+  reserveFraction: number;
+}
+
+export interface ElectricalBudget {
+  continuous?: Quantity | null;
+  peak?: Quantity | null;
+  status: string;
+  detail?: string;
+  evidence?: string;
+  loads: AuxiliaryContribution[];
+  complete: boolean;
+}
+
+export interface AuxiliaryContribution {
+  continuous?: Quantity | null;
+  peak?: Quantity | null;
+  name: string;
+  component?: string;
+  side: string;
+  evidence?: string;
+  detail?: string;
+  known: boolean;
+}
+
+export interface MissionResult {
+  requiredEnergy?: Quantity | null;
+  usableEnergy?: Quantity | null;
+  budget?: Quantity | null;
+  totalDuration?: Quantity | null;
+  totalDistance?: Quantity | null;
+  peakContinuousPower?: Quantity | null;
+  status: string;
+  energyStatus: string;
+  detail?: string;
+  segments: SegmentResult[];
+  traces: Trace[];
+  reserveFraction: number;
+  complete: boolean;
+}
+
+export interface SegmentResult {
+  groundSpeed?: Quantity | null;
+  duration?: Quantity | null;
+  distance?: Quantity | null;
+  energy?: Quantity | null;
+  name: string;
+  case?: string;
+  kind: string;
+  status: string;
+  detail?: string;
+  traces: Trace[];
+  availability: SegmentAvailability;
+  power: SegmentPower;
+}
+
+export interface SegmentPower {
+  dynamicPressure?: Quantity | null;
+  lift?: Quantity | null;
+  drag?: Quantity | null;
+  thrust?: Quantity | null;
+  propulsive?: Quantity | null;
+  propulsiveElectrical?: Quantity | null;
+  electrical?: Quantity | null;
+  model: string;
+  status: string;
+  detail?: string;
+  evidence?: string;
+  traces: Trace[];
+  liftCoefficient: number;
+  dragCoefficient: number;
+  liftToDrag: number;
+  chainEfficiency: number;
+}
+
+export interface SegmentAvailability {
+  availableThrust?: Quantity | null;
+  trace?: Trace | null;
+  capability?: string;
+  detail?: string;
+  evidence?: string;
+  status: string;
+  margin: number;
+}
+
+export interface SupplyCheck {
+  limit?: Quantity | null;
+  actual?: Quantity | null;
+  name: string;
+  status: string;
+  detail?: string;
+  margin: number;
+}
+
+export interface PowerFeasibility {
+  continuousDemand?: Quantity | null;
+  peakDemand?: Quantity | null;
+  status: string;
+  detail?: string;
+  peakDetail?: string;
+  checks: SupplyCheck[];
+}
+
+export interface ThrustCheck {
+  trace?: Trace | null;
+  name: string;
+  capability?: string;
+  condition?: string;
+  detail?: string;
+  priority: string;
+  evidence?: string;
+  status: string;
+  available: number;
+  target: number;
+  margin: number;
 }
 
 export interface SolvedWing {

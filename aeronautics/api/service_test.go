@@ -155,6 +155,12 @@ func TestEveryCoreConstantHasAWireToken(t *testing.T) {
 		{func(n int) string { return calculator.SketchRole(n).String() }, "sketchRole", "unknown", 1},
 		{func(n int) string { return calculator.DimensionKind(n).String() }, "dimensionKind", "unknown", 1},
 		{func(n int) string { return calculator.OutlinePlane(n).String() }, "outlinePlane", "unknown", 1},
+		{func(n int) string { return calculator.CapabilityKind(n).String() }, "capabilityKind", "unknown", 1},
+		{func(n int) string { return calculator.RegulatorSide(n).String() }, "regulatorSide", "unknown", 1},
+		{func(n int) string { return calculator.BatteryEnergyMode(n).String() }, "batteryEnergyMode", "unknown", 1},
+		{func(n int) string { return calculator.SegmentKind(n).String() }, "segmentKind", "unknown", 1},
+		{func(n int) string { return calculator.SegmentModel(n).String() }, "segmentModel", "unknown", 1},
+		{func(n int) string { return calculator.SegmentTiming(n).String() }, "segmentTiming", "unknown", 1},
 	} {
 		t.Run(tc.vocabulary, func(t *testing.T) {
 			want := countNamed(tc.name, tc.first, tc.past)
@@ -250,24 +256,32 @@ func wantPublishedEquation(t *testing.T, equation api.Equation) {
 	}
 }
 
-// TestPowerFirstStaysUnsupportedThroughTheAPI holds that the boundary does not
-// quietly present a deferred journey as available.
-func TestPowerFirstStaysUnsupportedThroughTheAPI(t *testing.T) {
+// TestPowerFirstJourneyIsPublishedWithItsLimits holds that the boundary
+// publishes the power-first journey together with the limits that keep it
+// honest. Task 09 made it supported; what must never be dropped is the
+// statement that a mass and a power ceiling do not size a wing between them.
+func TestPowerFirstJourneyIsPublishedWithItsLimits(t *testing.T) {
 	patterns := api.NewService().Patterns()
+	found := 0
 	for n := range patterns {
 		pattern := &patterns[n]
 		if pattern.Journey != "power-first" {
 			continue
 		}
-		if pattern.Supported {
-			t.Error("the power-first journey has no model behind it and must not read as supported")
+		found++
+		if !pattern.Supported {
+			t.Errorf("%s: Task 09 implements the models this journey needs", pattern.ID)
 		}
 		if len(pattern.ValidityLimits) == 0 {
-			t.Error("an unsupported pattern must say what it is waiting on")
+			t.Errorf("%s: a supported pattern must still say where it stops applying", pattern.ID)
 		}
-		return
+		if len(pattern.RequiredInputs) == 0 {
+			t.Errorf("%s: a supported pattern must say what it needs", pattern.ID)
+		}
 	}
-	t.Error("the power-first journey is not published, so its absence is silent")
+	if found == 0 {
+		t.Error("the power-first journey is not published at all")
+	}
 }
 
 // TestUnknownEquationIsNotFound separates "no such equation" from "your request

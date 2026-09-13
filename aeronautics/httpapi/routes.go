@@ -122,6 +122,27 @@ func sweep(service *api.Service) http.Handler {
 	})
 }
 
+// powerSearch answers a bounded power search. It echoes the identity like the
+// other evaluation routes, and the body carries the input snapshot and the
+// settings fingerprint for the same reason a sweep does: an answer must be
+// matchable against the question it was asked.
+func powerSearch(service *api.Service) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		request, err := decodeBody[api.PowerSearchRequest](r)
+		if err != nil {
+			writeFailure(w, err)
+			return
+		}
+		result, err := service.PowerSearch(r.Context(), request)
+		if err != nil {
+			writeFailure(w, err)
+			return
+		}
+		writeIdentity(w, result.Request)
+		writeJSON(w, http.StatusOK, result)
+	})
+}
+
 func preview(service *api.Service) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		request, err := decodeBody[api.PreviewRequest](r)

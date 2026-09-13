@@ -144,6 +144,9 @@ func (c Command) present() map[commandField]bool {
 		fieldPosition:    c.Position != nil,
 		fieldMode:        c.Mode != "",
 	}
+	for name, present := range c.powerCommandFields() {
+		carried[name] = present
+	}
 	return carried
 }
 
@@ -286,7 +289,7 @@ func (d *decoder) buildMassCommand(field string, c Command) calculator.Command {
 	case CmdSetBodyWidth:
 		return calculator.SetBodyWidth{Value: d.quantity(field+".value", c.Value)}
 	default:
-		return nil
+		return d.buildPowerCommand(field, c)
 	}
 }
 

@@ -12,6 +12,9 @@ import {
   WingPanel,
 } from './components/panels.tsx'
 import { ComponentsPanel, PlacementPanel } from './components/placement.tsx'
+import { AuxiliaryPanel, BatteryPanel, PolarPanel, PropulsionPanel } from './components/power.tsx'
+import { MissionPanel } from './components/mission.tsx'
+import { PowerSearchPanel } from './components/powersearch.tsx'
 import { SensitivityPanel } from './components/sensitivity.tsx'
 import { SketchPanel } from './components/sketch.tsx'
 
@@ -59,6 +62,11 @@ export function Worksheet(props: { transport: Transport; session: string; storag
           <WingPanel api={api} />
           <CasesPanel api={api} />
           <RequirementsPanel api={api} />
+          <PolarPanel api={api} />
+          <PropulsionPanel api={api} />
+          <BatteryPanel api={api} />
+          <AuxiliaryPanel api={api} />
+          <MissionPanel api={api} />
           <DraftsPanel api={api} />
         </div>
         <ResultsPanel api={api} />
@@ -75,6 +83,7 @@ export function Worksheet(props: { transport: Transport; session: string; storag
         <SketchPanel api={api} />
         <PlacementPanel api={api} />
         <SensitivityPanel api={api} />
+        <PowerSearchPanel api={api} />
       </div>
     </div>
   )

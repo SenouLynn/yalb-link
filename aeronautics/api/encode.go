@@ -92,6 +92,13 @@ func encodeDesign(d calculator.Design) Design {
 	for n := range d.Components {
 		out.Components = append(out.Components, encodeComponent(d.Components[n]))
 	}
+	out.Polar = encodeDragPolar(d.Polar)
+	out.Propulsion = encodePropulsion(d.Propulsion)
+	out.Battery = encodeBattery(d.Battery)
+	for n := range d.Auxiliary {
+		out.Auxiliary = append(out.Auxiliary, encodeAuxiliaryLoad(d.Auxiliary[n]))
+	}
+	out.Mission = encodeMission(d.Mission)
 	return out
 }
 
@@ -276,6 +283,10 @@ func encodeEvaluation(e calculator.Evaluation, request Request) Evaluation {
 		Mass:                encodeMassRange(e.Mass),
 		MassProperties:      encodeMassProperties(e.MassProperties),
 		Loads:               encodeLoads(e.Loads),
+		Electrical:          encodeElectricalBudget(e.Electrical),
+		Mission:             encodeMissionResult(e.Mission),
+		PowerFeasibility:    encodePowerFeasibility(e.PowerFeasibility),
+		ThrustChecks:        encodeThrustChecks(e.ThrustChecks),
 		Conflicts:           encodeConflicts(e.Conflicts),
 		Patterns:            patternIDsFor(e.Design),
 		DefinitionIssues:    encodeIssues(e.DefinitionIssues),

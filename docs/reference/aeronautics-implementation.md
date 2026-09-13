@@ -1,6 +1,6 @@
 # Aeronautics implementation record
 
-Updated 2026-09-07. This is the review record for implementation in `aeronautics/`.
+Updated 2026-09-13. This is the review record for implementation in `aeronautics/`.
 The task plan defines acceptance targets; this file records actual checks and
 decisions. All thirteen tasks are authorized: the original eleven on
 2026-09-05, with 12 and 13 added afterwards. OpenVSP is the selected NASA tool.
@@ -15,7 +15,7 @@ decisions. All thirteen tasks are authorized: the original eleven on
 | 06 — Worksheet | Complete | Span-first and both weight-first journeys drive the running Go service; versioned drafts save and reopen; 166 Go tests and 61 frontend tests pass. The status row was left stale when the work landed and is corrected here |
 | 07 — Visuals | Complete | Mass properties, a one-driver sensitivity sweep, dimensioned views and the formula behind each dimension implemented in Go and surfaced in the worksheet; 237 Go tests pass, 466 including subtests, and 101 frontend tests. The Center of gravity chapter was read and its worked example reproduces; the Trade study chapter was read and Task 07 claims no equation from it, see below |
 | 08 — Handling | Pending | Conventional minimum defined in task; no model implemented |
-| 09 — Power | Pending | No electric/mission model implemented |
+| 09 — Power | Complete | Drag polar, steady segment force balance, measured propulsion capability, thrust-to-weight targets, auxiliary electrical budget, flight pack, mission energy and a bounded power-ceiling search implemented in Go, surfaced through the boundary and driven from the worksheet; 299 Go tests pass, 562 including subtests, and 122 frontend tests. The Drag Polar and Mission analysis chapters were read and the book example reproduces; the Engine and Propeller chapter contributes no equation, see below |
 | 10 — MCP | Pending | No sidecar implemented |
 | 11 — Handoff | Pending | OpenVSP selected; target application/version checks remain |
 | 12 — Airfoil sections | Pending | Task defined; no section generation, coordinate ingest or lofting implemented |
@@ -728,6 +728,106 @@ so a builder entering degrees must choose the unit; that is Task 06's field
 behaviour, it is visible rather than silent, and changing it was left out of
 this task's scope.
 
+## Task 09 verification
+
+Run on 2026-09-13 from `aeronautics/`: `go build ./...`, `go vet ./...`,
+`go test -race -timeout=3m ./...` and `golangci-lint run` (0 issues) all pass,
+with no lint relaxation added. From `aeronautics/frontend/`: `pnpm typecheck`,
+`pnpm lint`, `pnpm test` and `pnpm build` all pass. The Go module holds 299
+top-level tests, 562 counting subtests: 230 in `calculator`, 43 in `api`, 21 in
+`httpapi` and 5 in `boundary`. The frontend holds 122 tests across fifteen
+files, of which 19 are new across four new files: 7 power-first journey and mass
+modes, 4 mission and energy, 4 bounded power search and 4 measured capability.
+
+**Two chapters were read and a third was not used.** The
+[Drag Polar and Induced Drag chapter](https://computationaldesignlab.github.io/aircraft-design/aerodynamics/drag_polar_induced_drag.html)
+contains the parabolic polar and the Raymer straight-wing Oswald correlation
+implemented from it, so the polar family is the third set in this package to
+carry `SourceBook`. Its worked example reproduces: the displayed **max L/D =
+12.31** is 12.30630701372340671267261, and its `(CD, CL) = (0.065, 0.8)` marker
+reproduces exactly as the polar at `CL = 0.8`. That marker is annotated "L/D
+max" and taken literally names a point that is not the maximum — L/D there is
+12.2992 — so this package implements the relations rather than the annotation,
+and `LiftToDrag` documents itself as a ratio at a condition. The reproduction,
+the chapter's own 100-point alpha grid as a cross-check, and a dimensional
+extension evaluated in US customary and SI are in
+`calculator/testdata/drag-polar-book-example.md`.
+
+The [Mission analysis chapter](https://computationaldesignlab.github.io/aircraft-design/performance/mission_analysis.html)
+contributes exactly two relations — `L/D = CL/(CD0 + K CL²)` and the
+maximum-endurance `CL = sqrt(3 CD0/K)` — and nothing else. Its own mission method
+is a piston fuel-weight-fraction analysis, and it is not implemented: the
+mechanism behind those fractions is that the aircraft gets *lighter*, so `CL`
+falls through the cruise and the aircraft moves along its own polar. An electric
+aircraft's mass is constant, that mechanism is absent, and reading a state of
+charge as a weight fraction would be wrong rather than approximate. The
+[Engine and Propeller Selection chapter](https://computationaldesignlab.github.io/aircraft-design/powerplant/engine_propeller.html)
+sizes a piston engine; no equation is taken from it and no electric analogue of
+its correlations was invented.
+
+**The electric model is an adaptation and says so.** The energy and propulsion
+accounting rests on coherent SI derived relations cited to the SI Brochure. Four
+modelling choices are layered on them and belong to this project rather than to
+any source: one propeller/motor/ESC chain efficiency stated at a condition and
+never applied at zero speed; an auxiliary draw carried on the pack side of every
+regulator, with a load-side figure converted by that regulator's own efficiency
+so a loss is counted once; a usable fraction of the pack's nominal energy; and a
+mission reserve applied exactly once to the usable energy and never inside a
+segment. All four are recorded on the equations and in
+[sources.md](../../aeronautics/docs/reference/sources.md). The independent
+fixtures in `calculator/testdata/electric-power-fixtures.md` state plainly that
+their polar coefficients, chain efficiency and usable fraction are synthetic.
+
+**Static thrust is not cruise thrust, and the refusal is reachable.** A
+capability point is one condition, and nothing interpolates between points. The
+browser tests record a bench point delivering a thrust-to-weight of 0.815773 and
+a 16 m/s point delivering 0.122366 on the same aircraft: a 0.8 target is met at
+the first and nowhere near met at the second, and the bench figure is never
+borrowed to answer the cruise question. A target whose condition is unstated is
+`unknown` rather than `unmet`.
+
+**Two envelope refusals are reported separately.** A leg needing more lift than
+its case's CLmax allows and a leg outside the range the polar is claimed over are
+different facts, and both are stated. The bounded power search is where this
+matters most: at 0.10 m², the fixture aircraft's parabolic polar would return
+76.2 W at 16 m/s — comfortably under a 90 W ceiling — and the candidate is
+refused instead, so a wing the aircraft cannot fly never appears affordable. The
+same search reports the wings that do fit as a single interval from 0.15 m² to
+0.40 m², selects none of them, and makes adopting one the ordinary driver edit.
+
+### Defects found and fixed during this task
+
+- **The new panels collapsed twenty-two existing browser tests by name.** Four
+  separate "Add" buttons, two "Move"/"From"/"To" control groups and a panel note
+  containing the words "is not a number" made previously unique accessible names
+  ambiguous. The buttons now say what they add, the search panel's range controls
+  are "Vary", "Lowest" and "Highest", and the note was reworded. The one
+  capability field that was not named after its point — "Kind of point" — now is,
+  like every field beside it.
+- **The power search greeted every builder with an error about an empty box.** Its
+  ceiling starts unstated, and an unstated field was reported as text that would
+  not read as a number. A field nobody has filled in is now a prompt for what the
+  search still needs; only text the builder actually typed is refused.
+- **A missing polar basis complained on the wrong field.** The core keyed "state
+  where CD0 came from" to `polar.cd0` and "state where the Oswald efficiency came
+  from" to `polar.oswald_efficiency`, so the complaint appeared under the number
+  rather than under the empty basis box. The worksheet was already reading
+  `polar.cd0_basis` and `polar.efficiency_basis`, so the intent was recorded in
+  one half of the system and not the other; the core now uses the basis keys.
+- **A leg whose power did not compute reported a bare "thrust unknown".**
+  `checkAvailability` was called only after the power computed, which made its own
+  "no required thrust to compare" branch unreachable and hid a static measurement
+  being declined for a cruise leg behind the same word as an empty field. The
+  check is now resolved either way, and its two reasons — no power figure at all,
+  and an entered estimate that establishes no thrust — are separate messages.
+- **The fixture file's tailwind distance was wrong.** It recorded 10800 m for a
+  600 s leg at 16 m/s with a 3 m/s tailwind; 19 m/s for 600 s is 11400 m. The
+  code was right and the document was wrong, which is the direction that matters:
+  the browser test now pins all three wind cases.
+- **Three Task 09 test fixtures exceeded the module's function-length rule.** The
+  module allows no `funlen` relaxation, so they were split into composed builders
+  rather than exempted.
+
 ## Post-review corrections (2026-09-05)
 
 Findings from an adversarial review of the Task 01–03 commits, fixed in place.
@@ -797,18 +897,24 @@ with no lint relaxation added. The calculator package holds 69 top-level tests,
 - The lift model is lumped: no separate wing and tail trim loads. Handling,
   stability and control remain entirely unimplemented, and no configuration
   (conventional, V-tail or flying wing) has a supported handling assessment.
-- The workflow engine's constraint set is stall-only. Requirement subjects cover
-  stall speed, span, area, mass, aspect ratio and mass wing loading — the
-  quantities the implemented models produce — and nothing else. The book's
-  takeoff, landing, climb-gradient and cruise-speed constraints, and any handling
-  or power requirement, are absent until the models behind them exist.
+- The workflow engine's *sizing* constraint set is stall-only. Requirement
+  subjects now also cover electrical power, mission energy, duration, range and
+  propeller clearance — the quantities Task 09's models produce — but those bound
+  a candidate rather than narrowing the area and mass bounds, which still come
+  from the stall relation alone. The book's takeoff, landing, climb-gradient and
+  cruise-speed constraints, and any handling requirement, are absent until the
+  models behind them exist.
 - No solver runs. Feedback loops are explicit builder revisions: `SizeAtStallLimit`
   is a closed-form bound, not an iteration, so there is no iterate that could be
   mislabelled converged and no residual or budget to report. A conflicting group
-  is reported as known rather than minimal for the same reason.
+  is reported as known rather than minimal for the same reason. Task 09's power
+  search is a bounded scan of independently evaluated candidates at a stated
+  resolution, not an iteration either: it reports the runs that fit a ceiling and
+  selects no wing, and an interval it reports is a statement about that range at
+  that resolution rather than about every wing.
 - A `Session` is single-goroutine. Concurrency belongs to whatever serves it;
   the HTTP boundary avoids the question entirely by holding no session.
-- The API is the Task 04 workflow and nothing more. The service is stateless and
+- The API is the workflow and nothing more. The service is stateless and
   has no persistence, no authentication, no rate limiting and no CORS handling:
   the dev server proxies same-origin, and a deployment that needs any of those
   adds them outside these packages. Task 06's drafts are held in the browser's
@@ -816,12 +922,21 @@ with no lint relaxation added. The calculator package holds 69 top-level tests,
   with site data; an export format is Task 11's.
 - The generated TypeScript is types only. It disappears at run time and does not
   validate an untrusted response; a client that parses one still has to check it.
-- Component placements, mass items and mission cases are not expressible in a
-  `Design` yet; they arrive with Tasks 07 and 09. Task 06 added draft versioning
+- Task 06 added draft versioning
   and load-time compatibility checks: a draft records its contract, schema and
   equation revisions, and an unreadable or unknown-schema one is refused with the
   open design left untouched. `MIGRATIONS` is still empty, so an older schema is
   refused rather than migrated and no migration path has been exercised.
+- No propeller operating-point model exists. A capability point is a measurement
+  at one condition and nothing interpolates between points, so a motor Kv with a
+  propeller's diameter and pitch establishes no thrust anywhere. Pack voltage sag
+  against state of charge is deferred with it: the usable fraction stands in for
+  that whole family of effects and is documented as doing so rather than as clean
+  energy accounting.
+- CD0 and the span efficiency are always supplied evidence. No parasite-drag
+  buildup — component, wetted-area or equivalent-skin-friction — is implemented,
+  and the polar is a single attached-flow parabola that must carry the
+  lift-coefficient range it is claimed over.
 - No method estimates a lift coefficient; `CLmax` is always supplied evidence.
   Task 03 supplies the geometry the book's CLmax estimation needs, but no airfoil
   polar evidence exists, so nothing estimates a coefficient yet.

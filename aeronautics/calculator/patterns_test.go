@@ -45,25 +45,61 @@ func checkPatternDescription(t *testing.T, p calculator.Pattern) {
 	}
 }
 
-// TestPowerFirstIsRecordedAsUnsupported holds that the journey the task defers
-// to Task 09 is listed with its absence stated, rather than left out so that
-// its absence reads as an oversight.
-func TestPowerFirstIsRecordedAsUnsupported(t *testing.T) {
+// TestPowerFirstStatesThatPowerAloneDoesNotSizeAWing holds the one thing the
+// power-first journey must never stop saying now that Task 09 has made it
+// supported: a mass and a power ceiling do not determine a wing. The journey
+// reports a candidate check or an interval, and the pattern has to keep saying
+// so where a builder reads it.
+func TestPowerFirstStatesThatPowerAloneDoesNotSizeAWing(t *testing.T) {
 	p, err := calculator.LookupPattern(calculator.PatternPowerFirst)
 	if err != nil {
 		t.Fatalf("the power-first journey should be registered: %v", err)
 	}
-	if p.Supported {
-		t.Error("no power model exists, so this journey cannot be supported")
+	if !p.Supported {
+		t.Error("Task 09 implements the drag polar, the propulsion model and the energy budget " +
+			"this journey needs, so it is no longer a stated gap")
 	}
 	if p.Journey != calculator.JourneyPowerFirst {
 		t.Errorf("journey = %v, want power first", p.Journey)
 	}
-	for _, supported := range calculator.PatternsFor(baseDesign(t)) {
-		if supported.ID == calculator.PatternPowerFirst {
-			t.Error("an unsupported pattern must never be offered for a design")
+	if !anyLimitMentions(p.ValidityLimits, "do not determine a wing") {
+		t.Errorf("validity limits = %v, want one saying a mass and a power ceiling do not "+
+			"determine a wing", p.ValidityLimits)
+	}
+	if !anyLimitMentions(p.ValidityLimits, "Static thrust is not cruise thrust") {
+		t.Errorf("validity limits = %v, want the static-versus-cruise limit", p.ValidityLimits)
+	}
+	if !anyLimitMentions(p.ValidityLimits, "not a solver") {
+		t.Errorf("validity limits = %v, want the bounded-search limit", p.ValidityLimits)
+	}
+}
+
+// TestMissionEnergyPatternSeparatesEnergyFromFeasibility holds that the mission
+// journey never lets an energy result read as permission to fly.
+func TestMissionEnergyPatternSeparatesEnergyFromFeasibility(t *testing.T) {
+	p, err := calculator.LookupPattern(calculator.PatternMissionEnergy)
+	if err != nil {
+		t.Fatalf("the mission-and-energy journey should be registered: %v", err)
+	}
+	if !p.Supported {
+		t.Error("the mission energy budget is implemented, so this journey is supported")
+	}
+	if !anyLimitMentions(p.ValidityLimits, "separate answers") {
+		t.Errorf("validity limits = %v, want one separating energy sufficiency from flight "+
+			"feasibility", p.ValidityLimits)
+	}
+	if !anyLimitMentions(p.ValidityLimits, "establishes no wind-aware range") {
+		t.Errorf("validity limits = %v, want the autopilot-return limit", p.ValidityLimits)
+	}
+}
+
+func anyLimitMentions(limits []string, want string) bool {
+	for _, limit := range limits {
+		if containsSubstring(limit, want) {
+			return true
 		}
 	}
+	return false
 }
 
 // TestPatternMetadataCannotBeMutated holds the same guarantee the equation

@@ -42,6 +42,7 @@ func Handler(service *api.Service) http.Handler {
 	mux.Handle("POST "+Prefix+"/apply", apply(service))
 	mux.Handle("POST "+Prefix+"/preview", preview(service))
 	mux.Handle("POST "+Prefix+"/sweep", sweep(service))
+	mux.Handle("POST "+Prefix+"/power-search", powerSearch(service))
 	return route(mux)
 }
 

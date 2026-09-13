@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { ResponseShapeError, discovery, evaluation, failure, units } from './validate.ts'
+import { unpowered } from '../testing/fixtures.ts'
 
 // A response is untrusted data. These checks are what stands between a body
 // that is not the shape this worksheet expects and a page that renders "NaN" or
@@ -47,6 +48,10 @@ const good = {
   definitionIssues: [],
   geometryIssues: [],
   configurationIssues: [],
+  // The power half is a design that states no propulsion. It comes from the
+  // shared fixture so that a contract change breaks it here too, rather than
+  // leaving this one describing a response the service no longer sends.
+  ...unpowered(),
 }
 
 describe('evaluations', () => {

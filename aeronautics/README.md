@@ -2,11 +2,13 @@
 
 Independent fixed-wing RC aircraft calculator project. The current implementation
 is a transport-free Go library covering units, the initial lift calculations,
-wing geometry, mass properties and a sizing workflow engine; a JSON HTTP
-boundary over it; an executable that serves that boundary; and a Vite/React
-worksheet that drives the running service, draws the dimensioned views, places
-component masses and plots one-driver sensitivity sweeps. No handling
-prediction, power model or external-tool adapter is implemented.
+wing geometry, mass properties, a sizing workflow engine and an electric power,
+propulsion and mission model; a JSON HTTP boundary over it; an executable that
+serves that boundary; and a Vite/React worksheet that drives the running
+service, draws the dimensioned views, places component masses, plots one-driver
+sensitivity sweeps and searches a range of wings against a power ceiling. No
+handling prediction, propeller operating-point model or external-tool adapter is
+implemented.
 
 ## What the library does
 
@@ -117,12 +119,13 @@ general-purpose expression language or arbitrary caller code.
   after it — including when an undo restores the exact inputs the result came
   from. A `Session` is single-goroutine: the core reaches neither a clock nor
   `sync/atomic`, and serialization belongs to whatever serves it.
-- **Curated patterns, including the one that is missing.** `Patterns()` returns
-  the span-first, mass-and-performance-first, mass-and-size-first and
-  existing-design workflows with their rationale, required inputs, active
-  drivers, outcome and validity limits. The power-first journey is registered as
-  unsupported and is never offered: power alone cannot determine a wing, and no
-  sizing formula was invented for it.
+- **Curated patterns, and what each of them cannot answer.** `Patterns()` returns
+  the span-first, mass-and-performance-first, mass-and-size-first,
+  existing-design, power-first and mission-and-energy workflows with their
+  rationale, required inputs, active drivers, outcome and validity limits. The
+  power-first journey does not size a wing from a power ceiling — power alone
+  cannot determine one, and no sizing formula was invented for it. What it does
+  is report the evaluated candidates that fit the ceiling, as an interval.
 
 The constraint set is stall-only. This is not the book's takeoff, climb and
 cruise matching plot, and nothing here presents it as one; later constraints
@@ -160,14 +163,108 @@ enter through the same case engine as their models arrive.
   stayed fixed, and where the plotted output does not move it names the derived
   parameters that did — at a fixed area a longer span leaves the stall speed
   alone and changes the aspect ratio and every chord. This is a documented
-  one-driver subset, not the book's wing-loading/power-loading trade study, which
-  needs the propulsion models Task 09 brings.
+  one-driver subset, not the book's wing-loading/power-loading trade study: the
+  power model below answers a stated ceiling over a stated range rather than
+  plotting the matching chart.
 - **Dimensions and formulas.** `Wing.Views` returns dimensioned plan, front and
   side views with the sketch origin, axes, centerline and construction geometry,
   and every dimension carries the parameter key it measures and that parameter's
   value. `Wing.Explain` returns the relationship, revision, substituted values
   and dependencies behind any parameter. Projected and panel dimensions are
   distinguished; a projected outline is not a cutting template.
+
+## Power, propulsion and mission
+
+An electric propulsion and mission model, and the deliberate refusals in it. The
+book's powerplant chapter sizes a piston engine and its mission analysis burns
+fuel; neither produces a number an electric RC aircraft can be checked against,
+so the electric adaptations are documented as adaptations and verified against
+[independent fixtures](calculator/testdata/electric-power-fixtures.md) rather
+than against the book.
+
+- **A polar is aircraft-level evidence.** `CD = CD0 + CL²/(pi*e*A)` and
+  `D = q*S*CD`, with CD0 and the span efficiency supplied by the builder and
+  each carrying its own basis. A 2D airfoil section polar is refused rather than
+  reinterpreted: it carries no induced, interference or trim drag. The
+  lift-coefficient range the polar is claimed over is stated with both ends
+  spelled out, and a condition outside it is refused — the parabola would still
+  return a number there, and it would not describe the aircraft.
+- **A leg is a force balance, not a lookup.** Each segment resolves dynamic
+  pressure, `L = n*W*cos(gamma)`, the lift coefficient, the polar, the drag,
+  `T = D + W*sin(gamma)`, the useful power `T*V` and the electrical draw. The
+  useful power is divided by one stated propeller/motor/ESC chain efficiency; it
+  is never divided by a propulsive efficiency at zero speed, which is why a
+  static condition has no computed power at all.
+- **Two envelopes, both checked.** A leg that needs more lift than its case's
+  CLmax allows is a condition the aircraft cannot hold, and a leg outside the
+  polar's claimed range is one the evidence does not cover. Both are reported,
+  separately, and neither produces a power figure: flight below the supported
+  envelope cannot appear affordable.
+- **Capability is measured, not inferred.** A `PropulsionCapability` is one
+  condition — a speed, an air density, a pack voltage and a throttle or rpm —
+  with the thrust and the electrical power actually seen there. Nothing
+  interpolates between points, and a Kv with a propeller diameter establishes
+  nothing: that needs a propeller operating-point model with real blade data,
+  which is not implemented. A static point is refused for a leg in flight and an
+  in-flight point for a standing start, with the reason stated.
+- **A thrust-to-weight target names its condition.** 0.8 static and 0.8 at
+  cruise speed are different aircraft, so a target is stated against one
+  capability point. A target whose condition is unstated is `unknown` rather
+  than `unmet`: an aircraft is not failing something never asked of it.
+  Required and preferred targets are both assessed and reported as what they are.
+- **The auxiliary budget is counted once, on a stated side.** Autopilot,
+  receiver, telemetry, sensors, regulators, servos, wiring and payload are
+  listed with a continuous draw and a peak, and each says whether the figure is
+  what the pack supplies or what the device consumes — they differ by the
+  regulator's own losses. Continuous draw is what the mission's energy is spent
+  on; a peak with no stated duty cycle carries no energy and is checked against
+  the supply ratings instead. A listed load with no stated draw makes the budget
+  incomplete, and no complete electrical feasibility claim rests on it.
+- **The pack's mass belongs to its component.** A `Battery` states its energy
+  one way or the other — a capacity and a nominal voltage, or an energy that was
+  measured — and names the listed component whose mass and position are its own,
+  so a pack is never added to the inventory twice. The usable fraction is a
+  property of the pack; the mission reserve is a decision about the flight. They
+  are separate numbers and are applied separately, the reserve exactly once, to
+  the total and never inside a leg.
+- **A mission is an ordered list of legs.** Each names a flight case, a model —
+  computed from the polar, or a figure you entered — a timing, a wind along the
+  track and optionally the capability point it is checked against. The same legs
+  in a different order are a different mission. `E = sum(P_i*dt_i)`; ground speed
+  is `V*cos(gamma) + w`, so wind moves the distance and the time and never the
+  airspeed the power was computed at. A return leg is stated with its own wind
+  rather than inferred from the outbound one.
+- **No model estimates a launch or a recovery.** Those legs carry figures the
+  builder entered, labelled as entered evidence rather than as results, and no
+  thrust, lift coefficient or envelope conclusion follows from one. The
+  auxiliary draw is added to an entered leg exactly as it is to a computed one,
+  so switching a leg between the two models cannot silently change whether the
+  avionics were counted.
+- **Energy sufficiency is not flight feasibility.** Whether the pack holds
+  enough energy and whether each leg can actually be flown are separate
+  statements, computed separately and reported separately. A mission whose
+  energy fits is not thereby flyable.
+- **An unchecked rating is unknown, not passed.** Continuous and peak electrical
+  power, pack continuous and peak current, controller voltage and rotation rate
+  are each compared with the demand when a rating is stated, and reported as
+  unknown when it is not. The peak demand is the worst segment's propulsion draw
+  together with every auxiliary peak, and says so, because a worst case built
+  from figures that never coincide is not one. Propeller tip clearance, mission
+  energy, duration, range and the electrical-power ceiling enter through the
+  same requirement engine as span and mass do.
+- **A ceiling does not determine a wing.** `PowerSearch` scans a bounded range of
+  one size driver and reports every evaluated candidate with the runs they fall
+  into. The demand is not monotonic in wing area at a fixed speed — a small wing
+  pays induced drag and a large one pays parasite drag — so the wings under a
+  ceiling form an interval and can form several. The search reports them and
+  selects none: adopting a candidate is the ordinary driver edit, made
+  deliberately from the table. It is a scan of evaluated candidates at a stated
+  resolution, not a solver, and it presents no iterate as a converged design.
+
+The state-of-charge side of an electric flight — falling pack voltage under load
+moving the available power, the rpm and the thrust, and the rising current that
+goes with it — is deferred rather than approximated, and the fixture file records
+why the fuel-fraction method has no electric analogue.
 
 ## The HTTP boundary
 

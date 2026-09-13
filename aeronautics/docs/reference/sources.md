@@ -169,8 +169,102 @@ What the chapter does contribute is methodology, recorded as such: a design
 parameter is moved across a bounded range, every candidate is evaluated by the
 same method, the constraints are drawn against the result rather than applied
 silently, and the builder chooses. Task 07's sweep follows exactly that, over
-the outputs the implemented models actually produce. The wing-loading and
-power-loading plots wait for Task 09.
+the outputs the implemented models actually produce, and Task 09's power search
+follows it again over wing area against an electrical power ceiling. Neither is
+the chapter's plot: its axes are wing loading against *power loading* for a
+piston engine, and its constraints are the four this package still does not
+have.
+
+## What the Drag Polar chapter actually contains
+
+The [Drag Polar and Induced Drag chapter](https://computationaldesignlab.github.io/aircraft-design/aerodynamics/drag_polar_induced_drag.html)
+was read on 2026-09-07, before Task 09 was implemented. It is the third chapter
+whose methods this package claims:
+
+- It states the parabolic polar `CD = CD0 + CL²/(pi A e)` and the Raymer
+  straight-wing Oswald correlation `e = 1.78(1 − 0.045 A^0.68) − 0.64`. Both are
+  implemented, and both cite it.
+- Its worked example is a manned twin in US customary units with `A = 8` and
+  `CD0 = 0.03363`. Its displayed **max L/D = 12.31** reproduces as
+  12.30630701372340671267261, and the `(CD, CL) = (0.065, 0.8)` marker it
+  annotates "L/D max" reproduces exactly as the polar at `CL = 0.8`, where L/D is
+  12.2992 — slightly below the true maximum. This package implements the
+  relations rather than the annotation: `LiftToDrag` is a ratio at a condition
+  and does not claim to be a maximum. The full reproduction, the alpha-grid
+  cross-check and the dimensional extension in both unit systems are in
+  [calculator/testdata/drag-polar-book-example.md](../../calculator/testdata/drag-polar-book-example.md).
+- It states `CD0 = 0.03363` and refers elsewhere for how it was obtained. **No
+  parasite-drag buildup is implemented**: no component buildup, wetted area or
+  equivalent skin friction. CD0 is always supplied evidence with an
+  aircraft-level basis, as is the span efficiency when the builder does not take
+  it from the correlation.
+- **It states no validity range for the polar.** This package requires one, with
+  the negative end spelled out, because the parabola is symmetric in CL and knows
+  nothing about stall: without a range it reports a drag coefficient at lift
+  coefficients the aircraft cannot reach. That requirement is this project's
+  addition and is recorded on the source.
+
+## What the Mission analysis chapter actually contains
+
+The [Mission analysis chapter](https://computationaldesignlab.github.io/aircraft-design/performance/mission_analysis.html)
+was read on the same date, and the reading again narrowed what may be claimed:
+
+- Exactly **two** relations are ported from it: `L/D = CL/(CD0 + K CL²)` and the
+  maximum-endurance lift coefficient `sqrt(3 CD0/K)`. Both cite it.
+- **Its own mission method is not implemented at all.** The chapter analyses a
+  piston-engine mission by fuel weight fractions, with a brake specific fuel
+  consumption and a 6% trapped-fuel allowance. The mechanism behind those
+  fractions is that the aircraft gets *lighter*: `W` falls through the cruise, so
+  `CL = W/(qS)` falls and the aircraft moves along its own polar. An electric
+  aircraft's mass is constant, so that mechanism is absent and a depletion
+  fraction changes nothing on the airframe side. Reading a state of charge as a
+  weight fraction would be wrong rather than approximate.
+- Its code cell rounds the Oswald factor to `e = 0.81` where the Drag Polar
+  chapter computes 0.810592… from the correlation for the same aircraft, a 0.07%
+  difference in `K`. This package does not choose between them: `e` is supplied
+  evidence with its own basis.
+
+The [Engine and Propeller Selection chapter](https://computationaldesignlab.github.io/aircraft-design/powerplant/engine_propeller.html)
+sizes a piston engine and selects a propeller for it. **No equation is taken from
+it**, and no electric analogue of its correlations is invented.
+
+**What the electric model is instead.** The energy and propulsion accounting
+rests on coherent SI derived relations — `W = V·A`, `J = W·s`, `J = C·V` and
+`W = N·(m/s)` — cited to the
+[SI Brochure](https://www.bipm.org/en/publications/si-brochure). The modelling
+choices layered on those identities are **this project's**, taken from no
+published method and recorded as adaptations:
+
+- one propeller/motor/ESC chain efficiency, stated at a condition, applied to the
+  useful power `T·V`. It is never applied at zero speed, so a static condition
+  has no computed power requirement at all;
+- an auxiliary electrical draw carried on the pack side of every regulator, with
+  a load-side figure converted by that regulator's own efficiency, so a loss is
+  counted once;
+- a usable fraction of a pack's nominal energy, standing in for voltage sag, cell
+  balance and the state of charge the pack is not taken below;
+- a mission reserve applied exactly once, to the usable energy, and never inside
+  a segment.
+
+The steady flight-path balance a segment resolves — `L = n W cos(gamma)` and
+`T = D + W sin(gamma)` — is a reduction of the ground-axis balances on the
+[NASA Forces in a Climb page](https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/forces-in-a-climb/)
+with both accelerations set to zero; that reduction is this package's algebra and
+is recorded on the equations that use it. The
+[UIUC propeller database](https://m-selig.ae.illinois.edu/props/propDB.html) is
+cited for applicability and for no arithmetic: it holds static and wind-tunnel
+measurements as separate data, which is the evidence for refusing to answer an
+in-flight thrust question from a static capability point.
+
+The electric relations are checked against
+[calculator/testdata/electric-power-fixtures.md](../../calculator/testdata/electric-power-fixtures.md),
+which is independent of the book and states plainly that its polar coefficients,
+chain efficiency and usable fraction are synthetic assumptions rather than
+recommended values. It also records, as deferred work rather than as an
+implemented adaptation, what an electric analogue of the fuel-fraction method
+would actually have to be: a propulsion-availability model against state of
+charge, needing pack discharge evidence and the propeller operating-point model
+that is recorded as unsupported.
 
 ## Implemented methods
 
@@ -217,6 +311,33 @@ declared input/output ports, source record and assumptions. SI is internal.
 | `mass.moment-sum` | `M = sum(M_i)` | book |
 | `mass.center-of-gravity` | `r_cg = sum(m_i r_i) / sum(m_i)` | book |
 | `mass.station-fraction-of-mac` | `fraction = (x − x_le_mac) / MAC` | derived |
+| `aero.induced-drag-factor` | `K = 1/(pi A e)` | book |
+| `aero.drag-coefficient` | `CD = CD0 + K CL²` | book |
+| `aero.oswald-straight-wing` | `e = 1.78(1 − 0.045 A^0.68) − 0.64` | book |
+| `aero.lift-to-drag` | `L/D = CL / CD` | book |
+| `aero.minimum-power-cl` | `CL_minimum_power = sqrt(3 CD0 / K)` | book |
+| `aero.drag-force` | `D = q S CD` | supplementary |
+| `flight.segment-lift` | `L = n m g cos(gamma)` | supplementary |
+| `flight.required-thrust` | `T = D + m g sin(gamma)` | supplementary |
+| `flight.segment-lift-coefficient` | `CL = L / (q S)` | derived |
+| `power.electrical` | `P = V I` | supplementary |
+| `power.propulsive` | `P_useful = T V` | supplementary |
+| `power.electrical-required` | `P_elec = P_useful / eta_total + P_aux` | supplementary |
+| `power.auxiliary-pack-side` | `P_pack = P_load / eta_regulator` | supplementary |
+| `power.auxiliary-sum` | `P_aux = sum(P_pack_i)` | supplementary |
+| `propulsion.thrust-to-weight` | `T/W = T / (m g)` | derived |
+| `propulsion.propeller-clearance` | `clearance = h_hub − D_prop / 2` | derived |
+| `battery.nominal-energy` | `E = Q V_nominal` | supplementary |
+| `battery.usable-energy` | `E_usable = E f_usable` | derived |
+| `mission.energy-budget` | `E_budget = E_usable (1 − reserve)` | derived |
+| `mission.segment-energy` | `E_i = P_i dt_i` | supplementary |
+| `mission.energy-required` | `E_required = sum(E_i)` | derived |
+| `mission.endurance-constant-draw` | `t = E_usable / P_elec` | derived |
+| `mission.ground-speed` | `V_ground = V cos(gamma) + w_track` | derived |
+| `mission.segment-distance` | `d = V_ground t` | derived |
+| `mission.segment-duration` | `t = d / V_ground` | derived |
+| `mission.distance-total` | `d_total = sum(d_i)` | derived |
+| `mission.duration-total` | `t_total = sum(t_i)` | derived |
 
 The geometry entries marked derived are algebraic consequences of the chapter's
 own relations — rearrangements for a different driver pair, linear interpolation
@@ -263,16 +384,24 @@ it does not choose an area.
 | Kinked, cranked, elliptical or multi-panel planforms | Unsupported; reported as unsupported rather than solved approximately |
 | Requirement intersection over required cases, controlling case and deliberate candidate selection | **Implemented as a stall-only subset** (Task 04). The book's four-constraint matching plot is not delivered by it and is not claimed |
 | Discovery and evaluation over HTTP, with the source records preserved | **Implemented** (Task 05). An application task: it adds no equation and no solver decision, and `TestTransportDoesNotReimplementTheCore` fails on any arithmetic in the boundary packages |
-| Takeoff, landing, OEI climb-gradient and cruise-speed constraints | Unsupported. Each needs a propulsion model, a drag polar and empirical constants this package does not have; they enter through the same case engine when Task 09 supplies them |
+| Takeoff, landing, OEI climb-gradient and cruise-speed constraints | Unsupported. Task 09 supplies the drag polar and the propulsion model two of them need, but each also needs empirical constants — a takeoff parameter correlation, a landing-distance relation, a climb-gradient requirement — that this package does not have, and none of them narrows the sizing bounds today |
 | Numerical solvers, convergence budgets and discrete component search | Unsupported. Task 04 treats feedback loops as explicit builder revisions; no iterate is produced, so none can be mislabelled converged |
 | Component mass properties: total mass and mechanical centre of gravity on all three axes | **Implemented** (Task 07), against the chapter's own worked example. Missing mass or position makes the assessment incomplete rather than assuming an origin |
 | Station as a fraction of the mean aerodynamic chord | **Implemented** (Task 07) as a geometric reference only. It is not a static margin and no handling conclusion follows from it |
-| One-driver sensitivity sweep over an implemented output, with requirement boundaries and feasible/unknown regions | **Implemented** (Task 07) as a documented subset. The book's trade study and its matching plot need Task 09's power models and are not claimed |
+| One-driver sensitivity sweep over an implemented output, with requirement boundaries and feasible/unknown regions | **Implemented** (Task 07) as a documented subset. The book's trade study and its matching plot are not claimed: their axes are power loading for a piston engine and their constraints are not implemented |
 | Dimensioned plan, front and side views with construction geometry, and the relationship behind each dimension | **Implemented** (Task 07). Fusion-ready expressions and units are Task 11's; until then the parameter table is a generic geometry handoff |
 | Wing aerodynamic centre, aircraft neutral point, centre of pressure, static margin and trim | Unsupported. Task 07 draws none of them and names each as unknown; Task 08 owns the conventional minimum |
 | Line of action, spanwise pressure distribution and separately solved wing and tail loads | Unsupported. Task 07 reports the lumped required lift as a magnitude only |
 | Conventional static margin and trim | Deferred to Task 08 |
-| Drag and electric propulsion/mission adaptations | Deferred to Task 09 |
+| Parabolic drag polar and the Raymer straight-wing Oswald correlation | **Implemented** (Task 09), against the chapter's own worked example. A validity range the chapter does not state is required here, and a condition outside it is refused rather than extrapolated |
+| Parasite-drag buildup: component, wetted-area or equivalent-skin-friction methods | Unsupported. CD0 is always supplied evidence with an aircraft-level basis |
+| Steady segment force balance, required thrust and the electrical power a leg needs | **Implemented** (Task 09) from the NASA climb balance reduced to steady flight, through one stated propeller/motor/ESC chain efficiency |
+| Electric energy accounting: pack energy, usable fraction, mission reserve, segment energies and totals | **Implemented** (Task 09) as this project's adaptation on coherent SI identities, verified against independent fixtures. The chapter's piston fuel-fraction mission method is not implemented and has no electric analogue |
+| Auxiliary electrical demand — autopilot, receiver, telemetry, sensors, regulators, servos, wiring, payload | **Implemented** (Task 09), continuous and peak, on a stated side of each regulator. A listed load with no stated draw makes the budget incomplete rather than small |
+| Measured propulsion capability at a stated condition, and thrust-to-weight targets against one | **Implemented** (Task 09). A static point is refused for a leg in flight and an in-flight point for a standing start |
+| Propeller operating-point model: thrust and power across the flight envelope from Kv, diameter and pitch | Unsupported. It needs measured propeller data of the UIUC kind; nothing here interpolates between capability points |
+| Pack voltage sag and thrust availability against state of charge | Deferred. The usable fraction stands in for the whole family of effects, and the fixture file records what doing it properly would require |
+| Bounded power-ceiling search over one size driver, reported as intervals | **Implemented** (Task 09) as a scan of evaluated candidates at a stated resolution. It is not a solver, selects no wing, and presents no iterate as converged |
 | Carbon spar geometric fit under taper, twist and varying section | Deferred to Task 13 |
 | Spanwise load distribution, bending moment, flexural rigidity and deflection | Deferred to Task 13, against supplied material evidence |
 | Structural strength: allowable stress, margin of safety, failure, buckling, joints, bonds and fatigue | Unsupported. Task 13 reports stiffness and fit only, and refuses a strength result explicitly rather than omitting one |
@@ -303,6 +432,24 @@ balances at `x = 0.35 m`; moving the battery to `x = 0.6 m` gives `x = 0.45 m`
 with the loading unchanged; growing it to 1 kg gives 2.5 kg at `x = 0.48 m` and a
 stall speed higher by `sqrt(2.5/2)`, which is Task 02's model responding to a
 mass change rather than a new one.
+
+Task 09's fixtures are two files. The Drag Polar chapter's worked example is
+reproduced in
+[calculator/testdata/drag-polar-book-example.md](../../calculator/testdata/drag-polar-book-example.md),
+together with the chapter's own alpha grid as a cross-check and a dimensional
+extension evaluated once in US customary units and once in SI, which agree to 25
+significant digits. Everything electric is in
+[calculator/testdata/electric-power-fixtures.md](../../calculator/testdata/electric-power-fixtures.md),
+which is independent of the book because the book has no electric case to check
+against: a 2.5 kg aircraft on 0.40 m² at aspect ratio 8 draws
+84.91046324557467581 W at the pack in 16 m/s level flight and 173.6129327478650903 W
+climbing at 14 m/s on a 10° path — 2.05 times the power at a *lower* airspeed,
+which is the point of separating the two conditions. A six-leg mission and the
+pack that flies it are recorded there as well, along with the browser tests'
+600 s cruise in still air, a 3 m/s headwind and a 3 m/s tailwind, which cover
+9600 m, 7800 m and 11400 m for identical energy. Its polar coefficients, chain
+efficiency and usable fraction are synthetic assumptions and are not recommended
+values for any aircraft.
 
 Task 02's numerical fixtures are synthetic and independently calculated at 40
 significant digits, not taken from the book: m=2 kg, rho=1.225 kg/m³, CLmax=1.2,

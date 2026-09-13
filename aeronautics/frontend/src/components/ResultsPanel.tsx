@@ -3,6 +3,7 @@ import type { Bound, Check, Evaluation, Parameter } from '../api/contract.ts'
 import { displayNumber } from '../state/fields.ts'
 import type { WorksheetApi } from '../useWorksheet.ts'
 import { Section } from './fields.tsx'
+import { PowerResults } from './PowerResults.tsx'
 
 // Status is said in words. Colour carries no information here: a status that
 // can only be read by seeing it is not readable at all.
@@ -99,11 +100,27 @@ export function ResultsPanel(props: { api: WorksheetApi }): ReactNode {
       ) : (
         <ResultsBody
           evaluation={current.evaluation}
+          statesPower={statesPower(api)}
           {...(api.worksheet.previous ? { previousRevision: api.worksheet.previous.revision } : {})}
         />
       )}
     </aside>
   )
+}
+
+/**
+ * statesPower reports whether the design describes a propulsion system at all.
+ * It reads the definition rather than the result: a design with a mission and
+ * no polar has a power answer to show — the one that says what is missing —
+ * whereas a wing-sizing worksheet that has never mentioned a motor has none.
+ */
+function statesPower(api: WorksheetApi): boolean {
+  const design = api.design
+  return design.polar != null
+    || design.battery != null
+    || design.propulsion != null
+    || (design.mission?.segments ?? []).length > 0
+    || (design.auxiliary ?? []).length > 0
 }
 
 function statusHeadline(api: WorksheetApi): string {
@@ -114,7 +131,11 @@ function statusHeadline(api: WorksheetApi): string {
   return 'Current'
 }
 
-function ResultsBody(props: { evaluation: Evaluation; previousRevision?: number | undefined }): ReactNode {
+function ResultsBody(props: {
+  evaluation: Evaluation
+  statesPower: boolean
+  previousRevision?: number | undefined
+}): ReactNode {
   const { evaluation } = props
   return (
     <>
@@ -189,6 +210,8 @@ function ResultsBody(props: { evaluation: Evaluation; previousRevision?: number 
         </Section>
       )}
 
+      <PowerResults evaluation={evaluation} stated={props.statesPower} />
+
       <Section title="Geometry" defaultOpen={false}>
         {evaluation.wing === null || evaluation.wing === undefined ? (
           <>
@@ -241,8 +264,9 @@ function ResultsBody(props: { evaluation: Evaluation; previousRevision?: number 
 
       <p className="coverage">
         Handling is unknown for every configuration: no trim, static-margin, control or
-        structural model is implemented, and none of these numbers is one. No motor,
-        battery or mission result is available either.
+        structural model is implemented, and none of these numbers is one. The power and
+        mission results above are energy and force balances at conditions you stated; they
+        say nothing about whether the aircraft is controllable.
       </p>
       {props.previousRevision !== undefined && (
         <p className="coverage">A previous result, for revision {props.previousRevision}, is kept for comparison.</p>

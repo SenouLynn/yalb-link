@@ -95,23 +95,43 @@ type DesignCase struct {
 // driver roles and evaluation identity stay consistent; nothing mutates a
 // Design in place.
 //
-// Not yet present, and deliberately so: power and mission cases (Task 09), and
-// any handling requirement (Task 08). Only the implemented lift, geometry and
-// mass-properties constraints are expressible here.
+// Not yet present, and deliberately so: any handling requirement (Task 08).
+// Only the implemented lift, geometry, mass-properties, drag-polar and
+// electric-propulsion constraints are expressible here.
 type Design struct {
 	// Name identifies the candidate.
 	Name string
 	// MassBasis states where Mass came from, for example "target all-up mass"
 	// or "measured airframe plus payload".
 	MassBasis string
-	// Cases are the flight conditions this candidate is judged in.
-	Cases []DesignCase
+	// Propulsion is what the propulsion chain was measured to deliver, how
+	// efficiently it converts electrical power, its ratings and its
+	// thrust-to-weight targets.
+	Propulsion Propulsion
 	// Requirements are the bounds it is judged against.
 	Requirements []Requirement
 	// Components are the placed masses the design is built from. They are
 	// balanced whatever the mass mode; whether they also set the all-up mass is
 	// what MassMode selects.
 	Components []MassItem
+	// Auxiliary are the non-propulsive electrical loads: the autopilot, the
+	// receiver, telemetry, sensors, regulators, servos and payload. They are a
+	// separate list from Components because a device's mass and its power draw
+	// are separate evidence: a servo whose mass is known and whose stall current
+	// is not is a complete mass entry and an incomplete electrical one.
+	Auxiliary []AuxiliaryLoad
+	// Cases are the flight conditions this candidate is judged in.
+	Cases []DesignCase
+	// Mission is the flight the energy budget is formed over.
+	Mission Mission
+	// Polar is the drag polar the power model reads. It is the design's, not a
+	// case's: CD0 and the span efficiency describe an aircraft in a stated
+	// configuration, and the flight case supplies the atmosphere it flies in.
+	Polar DragPolar
+	// Battery is the flight pack. It carries no mass of its own: the pack's mass
+	// is a component in the inventory and Battery.Component names it, which is
+	// what stops a pack from being weighed twice.
+	Battery Battery
 	// Wing is the wing definition, whose Drivers hold the active solve mode.
 	Wing WingDefinition
 	// Tail is the tail description the configuration calls for.
@@ -137,6 +157,9 @@ func (d Design) clone() Design {
 		c.Requirements[n] = d.Requirements[n].clone()
 	}
 	c.Components = append([]MassItem(nil), d.Components...)
+	c.Auxiliary = append([]AuxiliaryLoad(nil), d.Auxiliary...)
+	c.Propulsion = d.Propulsion.clone()
+	c.Mission = d.Mission.clone()
 	return c
 }
 

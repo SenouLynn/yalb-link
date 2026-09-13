@@ -111,6 +111,7 @@ func (d *decoder) design(design Design) calculator.Design {
 		out.Components = append(out.Components,
 			d.component("design.components["+strconv.Itoa(n)+"]", design.Components[n]))
 	}
+	d.powerDefinition(design, &out)
 	return out
 }
 

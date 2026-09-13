@@ -140,6 +140,11 @@ var (
 			{calculator.SubjectMass, "mass"},
 			{calculator.SubjectAspectRatio, "aspect-ratio"},
 			{calculator.SubjectWingLoadingMass, "mass-wing-loading"},
+			{calculator.SubjectElectricalPower, "electrical-power"},
+			{calculator.SubjectMissionEnergy, "mission-energy"},
+			{calculator.SubjectMissionDuration, "mission-duration"},
+			{calculator.SubjectMissionRange, "mission-range"},
+			{calculator.SubjectPropellerClearance, "propeller-clearance"},
 		},
 	}
 	directions = enumTable[calculator.BoundDirection]{
@@ -284,6 +289,58 @@ var (
 			{calculator.DimEnergy, "energy"},
 			{calculator.DimDynamicViscosity, "dynamic-viscosity"},
 			{calculator.DimMassMoment, "mass-moment"},
+			{calculator.DimTime, "time"},
+			{calculator.DimCurrent, "current"},
+			{calculator.DimVoltage, "voltage"},
+			{calculator.DimCharge, "charge"},
+			{calculator.DimRotationRate, "rotation-rate"},
+		},
+	}
+	capabilityKinds = enumTable[calculator.CapabilityKind]{
+		field: "capability kind",
+		entries: []enumEntry[calculator.CapabilityKind]{
+			{calculator.CapabilityStatic, "static"},
+			{calculator.CapabilityInFlight, "in-flight"},
+		},
+	}
+	regulatorSides = enumTable[calculator.RegulatorSide]{
+		field: "regulator side",
+		entries: []enumEntry[calculator.RegulatorSide]{
+			{calculator.RegulatorPackSide, "pack-side"},
+			{calculator.RegulatorLoadSide, "load-side"},
+		},
+	}
+	batteryEnergyModes = enumTable[calculator.BatteryEnergyMode]{
+		field: "battery energy mode",
+		entries: []enumEntry[calculator.BatteryEnergyMode]{
+			{calculator.BatteryEnergyFromCapacity, "capacity-and-voltage"},
+			{calculator.BatteryEnergyEntered, "entered-energy"},
+		},
+	}
+	segmentKinds = enumTable[calculator.SegmentKind]{
+		field: "segment kind",
+		entries: []enumEntry[calculator.SegmentKind]{
+			{calculator.SegmentLaunch, "launch"},
+			{calculator.SegmentClimb, "climb"},
+			{calculator.SegmentCruise, "cruise"},
+			{calculator.SegmentLoiter, "loiter"},
+			{calculator.SegmentReturn, "return"},
+			{calculator.SegmentRecovery, "recovery"},
+			{calculator.SegmentOther, "other"},
+		},
+	}
+	segmentModels = enumTable[calculator.SegmentModel]{
+		field: "segment power model",
+		entries: []enumEntry[calculator.SegmentModel]{
+			{calculator.SegmentModelPolar, "drag-polar"},
+			{calculator.SegmentModelEntered, "entered-estimate"},
+		},
+	}
+	segmentTimings = enumTable[calculator.SegmentTiming]{
+		field: "segment timing",
+		entries: []enumEntry[calculator.SegmentTiming]{
+			{calculator.SegmentTimingDuration, "duration"},
+			{calculator.SegmentTimingDistance, "ground-distance"},
 		},
 	}
 )
@@ -378,6 +435,12 @@ func Vocabularies() []Vocabulary {
 		{Name: "dimension", Tokens: dimensions.tokens()},
 		{Name: "componentRole", Tokens: componentRoles.tokens()},
 		{Name: "massMode", Tokens: massModes.tokens()},
+		{Name: "capabilityKind", Tokens: capabilityKinds.tokens()},
+		{Name: "regulatorSide", Tokens: regulatorSides.tokens()},
+		{Name: "batteryEnergyMode", Tokens: batteryEnergyModes.tokens()},
+		{Name: "segmentKind", Tokens: segmentKinds.tokens()},
+		{Name: "segmentModel", Tokens: segmentModels.tokens()},
+		{Name: "segmentTiming", Tokens: segmentTimings.tokens()},
 		{Name: "viewKind", Tokens: viewKinds.tokens()},
 		{Name: "sketchRole", Tokens: sketchRoles.tokens()},
 		{Name: "dimensionKind", Tokens: dimensionKinds.tokens()},

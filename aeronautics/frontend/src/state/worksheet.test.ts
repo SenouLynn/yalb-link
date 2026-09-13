@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import type { Design, Evaluation, Request as RequestIdentity } from '../api/contract.ts'
 import { startingDesign } from './design.ts'
+import { unpowered } from '../testing/fixtures.ts'
 import type { Worksheet } from './worksheet.ts'
 import type { SweepResponse, SweepSettings } from '../api/contract.ts'
 import { canRedo, canUndo, design, initialWorksheet, reduce, staleResult, staleSweep } from './worksheet.ts'
@@ -38,6 +39,7 @@ function answer(request: RequestIdentity, snapshot = 'snapshot'): Evaluation {
     definitionIssues: [],
     geometryIssues: [],
     configurationIssues: [],
+    ...unpowered(),
   }
 }
 

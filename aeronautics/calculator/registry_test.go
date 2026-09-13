@@ -50,6 +50,35 @@ var evaluatedEquations = []string{
 	calculator.EqMomentSum,
 	calculator.EqCenterOfGravity,
 	calculator.EqStationFractionOfMAC,
+
+	calculator.EqInducedDragFactor,
+	calculator.EqDragCoefficient,
+	calculator.EqDragForce,
+	calculator.EqLiftToDrag,
+	calculator.EqOswaldStraightWing,
+	calculator.EqMinimumPowerCL,
+
+	calculator.EqElectricalPower,
+	calculator.EqPropulsivePower,
+	calculator.EqElectricalRequired,
+	calculator.EqThrustToWeight,
+	calculator.EqPropellerClearance,
+	calculator.EqAuxiliaryPackSide,
+	calculator.EqAuxiliarySum,
+	calculator.EqSegmentLift,
+	calculator.EqSegmentLiftCoefficient,
+	calculator.EqRequiredThrust,
+	calculator.EqBatteryEnergy,
+	calculator.EqBatteryUsableEnergy,
+	calculator.EqEnergyBudget,
+	calculator.EqSegmentEnergy,
+	calculator.EqEnergySum,
+	calculator.EqEnduranceConstantDraw,
+	calculator.EqGroundSpeed,
+	calculator.EqSegmentDistance,
+	calculator.EqSegmentDuration,
+	calculator.EqDistanceSum,
+	calculator.EqDurationSum,
 }
 
 func TestRegistryDefinesEveryEvaluatedEquation(t *testing.T) {
@@ -254,11 +283,26 @@ var bookSourcedEquations = map[string]string{
 	calculator.EqComponentMoment: centerOfGravityURL,
 	calculator.EqMomentSum:       centerOfGravityURL,
 	calculator.EqCenterOfGravity: centerOfGravityURL,
+
+	// The Drag Polar chapter was read on 2026-09-07 for Task 09 and does
+	// contain the parabolic polar and the Raymer straight-wing Oswald
+	// correlation it quotes.
+	calculator.EqInducedDragFactor:  dragPolarURL,
+	calculator.EqDragCoefficient:    dragPolarURL,
+	calculator.EqOswaldStraightWing: dragPolarURL,
+
+	// The Mission analysis chapter was read on the same date. Only these two
+	// relations are taken from it: its own mission method is a piston
+	// fuel-fraction analysis and is not implemented.
+	calculator.EqLiftToDrag:     missionAnalysisURL,
+	calculator.EqMinimumPowerCL: missionAnalysisURL,
 }
 
 const (
 	wingLayoutURL      = "https://computationaldesignlab.github.io/aircraft-design/wing_layout.html"
 	centerOfGravityURL = "https://computationaldesignlab.github.io/aircraft-design/weight_and_balance/cg.html"
+	dragPolarURL       = "https://computationaldesignlab.github.io/aircraft-design/aerodynamics/drag_polar_induced_drag.html"
+	missionAnalysisURL = "https://computationaldesignlab.github.io/aircraft-design/performance/mission_analysis.html"
 )
 
 func TestBookProvenanceIsLimitedToCheckedChapterMethods(t *testing.T) {
