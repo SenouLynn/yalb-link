@@ -191,17 +191,17 @@ describe('FlightDisplay with a fully reporting vehicle', () => {
     expect(html).toContain('092');
   });
 
-  it('names the source message under each reading', () => {
-    expect(html).toContain('ATTITUDE');
-    expect(html).toContain('VFR_HUD');
-    expect(html).toContain('GLOBAL_POSITION_INT');
-    expect(html).toContain('SYS_STATUS');
+  it('names the source message as a tooltip on each group header', () => {
+    expect(html).toContain('title="ATTITUDE"');
+    expect(html).toContain('title="VFR_HUD"');
+    expect(html).toContain('title="GLOBAL_POSITION_INT"');
+    expect(html).toContain('SYS_STATUS'); // carried on the Glance tooltip, not a Group header
   });
 
   it('shows armed state, numeric mode, GPS fix, and EKF health', () => {
     expect(html).toContain('ARMED');
     expect(html).toContain('>4<'); // custom mode, undecoded
-    expect(html).toContain('3D');
+    expect(html).toContain('3D · 14'); // GPS fix row's own value, not the map's unrelated tilt lever
     expect(html).toContain('OK');
   });
 
@@ -285,7 +285,7 @@ describe('FlightDisplay staleness', () => {
     expect(html).not.toContain('25.3');
     expect(html).toContain(NO_VALUE);
     expect(html).toContain('Attitude unavailable');
-    expect(html).not.toContain('3D');
+    expect(html).not.toContain('3D · 14'); // the withheld GPS fix, not the map's unrelated tilt lever
     expect(html).not.toContain('>OK<');
     expect(html).not.toContain('5 s prediction');
   });

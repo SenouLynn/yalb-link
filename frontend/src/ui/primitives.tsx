@@ -219,11 +219,18 @@ export interface LeverProps extends AriaAttributes {
   caution?: boolean | undefined;
   /** Fills its container — a group's committing action, not a lever in a row. */
   wide?: boolean | undefined;
-  /** Pads to the chip token instead of the target-x token, for a one-glyph
-   *  label — the rail's mirror "+" — so it doesn't carry a worded button's
-   *  full-width padding around a single character. The hit area stays on the
-   *  target axis regardless. */
+  /** Sizes a one-glyph label — a map's zoom "+", the rail's mirror "+" — into
+   *  a square instead of the full-width padding a worded label needs. Border
+   *  and fill are unaffected; see `quiet` for dropping those too. The hit
+   *  area stays on the target axis regardless: it is sized, not padded. */
   compact?: boolean | undefined;
+  /** Drops the border and fill for a lever sitting on a line that already
+   *  carries no chrome of its own — a group header, a disclosure row — where
+   *  a worded lever's box would read as a second control bolted onto bare
+   *  text. Combine with `compact` for a one-glyph lever like the rail's
+   *  mirror "+"; never on a lever floating over the map, which needs its own
+   *  contrast against arbitrary tile imagery. */
+  quiet?: boolean | undefined;
   disabled?: boolean | undefined;
   /** Renders the toggled-on state for a control that holds a position. */
   pressed?: boolean | undefined;
@@ -258,6 +265,7 @@ export function Lever({
   caution,
   wide,
   compact,
+  quiet,
   disabled,
   pressed,
   title,
@@ -269,6 +277,7 @@ export function Lever({
   if (caution === true) classes.push('lever--caution');
   if (wide === true) classes.push('lever--wide');
   if (compact === true) classes.push('lever--compact');
+  if (quiet === true) classes.push('lever--quiet');
 
   if (href !== undefined) {
     return (

@@ -10,6 +10,16 @@ export interface BatteryResult {
   remainingPct: number | null;
   /** Pack current, amps. Negative means charging. */
   currentA: number | null;
+  /**
+   * Populated cells, when `BATTERY_STATUS` reported them individually.
+   *
+   * `null` on a `SYS_STATUS`-only reading: that message carries one pack
+   * voltage and never says how many cells it is split across, so a per-cell
+   * figure computed against a guessed count would be fabricated precision.
+   * Anything that grades a cell voltage against a threshold must treat a null
+   * count as "cannot grade," not as "assume 1S" or any other default.
+   */
+  cellCount: number | null;
   source: 'BATTERY_STATUS' | 'SYS_STATUS';
 }
 
@@ -42,6 +52,7 @@ export function resolveBattery(sample: TelemetrySample): BatteryResult | null {
       voltageV: cells,
       remainingPct: batteryRemaining,
       currentA: batteryCurrent,
+      cellCount: cellCountOf(sample.batteryStatusCellVoltagesMv),
       source: 'BATTERY_STATUS',
     };
   }
@@ -51,6 +62,7 @@ export function resolveBattery(sample: TelemetrySample): BatteryResult | null {
       voltageV: sample.systemStatusVoltageMv * MV_TO_V,
       remainingPct: percentOf(sample.systemStatusRemainingPct),
       currentA: currentOf(sample.systemStatusCurrentCa),
+      cellCount: null,
       source: 'SYS_STATUS',
     };
   }
@@ -63,6 +75,7 @@ export function resolveBattery(sample: TelemetrySample): BatteryResult | null {
       voltageV: null,
       remainingPct: remaining,
       currentA: currentOf(sample.systemStatusCurrentCa),
+      cellCount: null,
       source: 'SYS_STATUS',
     };
   }
@@ -88,6 +101,19 @@ function cellVoltageV(cells: number[] | undefined): number | null {
   }
 
   return populated.reduce((total, mv) => total + mv, 0) * MV_TO_V;
+}
+
+/** Count of populated cells, the divisor a per-cell voltage needs. Null and
+ *  zero both mean "cannot grade a cell voltage," so this returns null for
+ *  either rather than a count a caller would have to special-case. */
+function cellCountOf(cells: number[] | undefined): number | null {
+  if (cells === undefined) {
+    return null;
+  }
+
+  const populated = cells.filter((mv) => isNum(mv) && mv !== UNKNOWN_MV).length;
+
+  return populated === 0 ? null : populated;
 }
 
 function percentOf(value: number | undefined): number | null {

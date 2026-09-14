@@ -341,7 +341,7 @@ it('auto-loads mock missions, refreshes, switches identity and clears fixtures o
   ); };
   await act(async () => { render(1, 'mock'); await Promise.resolve(); });
   expect(container.querySelector('.mission-panel')?.textContent).toContain('Refresh mission');
-  expect(container.querySelector('.mission-panel')?.textContent).toContain('MISSION SNAPSHOT');
+  expect(container.querySelector('.mission-panel .provenance__text > span')?.getAttribute('title')).toBe('MISSION SNAPSHOT');
   for (let count = 0; count < 2; count++) {
     await act(async () => { container.querySelector<HTMLButtonElement>('.mission-panel button')?.click(); await Promise.resolve(); });
     expect(container.querySelector('.mission-panel')?.textContent).toContain('Refresh mission');

@@ -35,6 +35,27 @@
   max-height: 4rem;
 }
 
+/*
+ * The three status icons on the app bar's vitals strip: battery, link, GPS.
+ *
+ * Coloured by `currentColor` off `color`, the same indirection the vehicle
+ * marker's SVG uses for `--lume` — one property to set per tone rather than a
+ * `fill` and a `stroke` each. `--status-good`/`--status-critical` are the
+ * deliberate, narrow exception to "no good green" recorded in `system.css`;
+ * `--dead` here is genuinely disabled-control grey, not a fourth status hue,
+ * because "no data" is not a graded state to alarm on.
+ */
+.status-icon {
+  display: block;
+  flex: none;
+  color: var(--dead);
+}
+
+.status-icon--good { color: var(--status-good); }
+.status-icon--caution { color: var(--caution); }
+.status-icon--critical { color: var(--status-critical); }
+.status-icon--dead { color: var(--dead); }
+
 /* --- command -------------------------------------------------------------- */
 
 /*
@@ -67,20 +88,35 @@
 }
 
 /*
- * Map overlays sit in one stack in the top-left corner, in a fixed order, so a
- * second cluster cannot land on top of the first — which is exactly what
- * "Fit mission" and "Follow vehicle" did when each positioned itself.
+ * Map overlays sit in the top-right corner, right-justified, in a fixed
+ * order, so a second cluster cannot land on top of the first — which is
+ * exactly what "Fit mission" and "Follow vehicle" did when each positioned
+ * itself. Right-justified so the row grows toward the corner rather than
+ * across the ground track the operator is looking at.
  */
 .map-overlays {
   position: absolute;
   z-index: 2;
   top: var(--row-x);
-  left: var(--row-x);
+  right: var(--row-x);
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: var(--lever-gap);
   max-width: calc(100% - 2 * var(--row-x));
+  /*
+   * Deliberately smaller than the system's default lever, `--target-h`
+   * included: this cluster floats over live imagery the operator is looking
+   * past rather than through, so it trades the field-glove floor the rest of
+   * the app holds to for a footprint that gets out of the way of the ground
+   * track. Overridden as custom properties, inherited by `.lever-row` and
+   * `.lever` rather than restating either primitive's own geometry (ADR 0005
+   * One Implementation).
+   */
+  --target-h: 1.375rem;
+  --target-x: 0.3125rem;
+  --lever-gap: 0.1875rem;
+  --fs-body: var(--fs-label);
 }
 
 /*

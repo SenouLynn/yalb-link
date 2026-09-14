@@ -17,7 +17,7 @@ describe('resolveBattery', () => {
     expect(actual).not.toBeNull();
     expect(actual?.source).toBe(expected.source);
 
-    for (const field of ['voltageV', 'remainingPct', 'currentA'] as const) {
+    for (const field of ['voltageV', 'remainingPct', 'currentA', 'cellCount'] as const) {
       const want = expected[field];
 
       if (want === null) {

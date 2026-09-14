@@ -3,6 +3,7 @@ import maplibregl from 'maplibre-gl';
 import { useEffect, useRef, type RefObject } from 'react';
 import type { FleetPosition } from '@/fleet/overview';
 import { buildStyle } from './MapPanel';
+import { MapControls } from './MapControls';
 import { DEFAULT_BASEMAP } from './tileSource';
 import { framePoints, type Frame } from './camera';
 
@@ -73,6 +74,11 @@ export function FleetMap({ positions, onOpen, camera, request }: {
   }, [positions]);
   useEffect(() => { if (request) { apply(request.frame); fitted.current = true; } }, [request]);
   return <div className="map-shell fleet-map">
+    <div className="map-overlays">
+      <MapControls
+        onZoom={delta => { fitted.current = true; map.current?.zoomTo(map.current.getZoom() + delta, { duration: 200 }); }}
+        onReset={() => { map.current?.easeTo({ bearing: 0, pitch: 0, duration: 300 }); }} />
+    </div>
     <div ref={container} className="map-panel" aria-label="Fleet position map" />
     {positions.length === 0 && <p className="fleet-map__empty">No fresh vehicle positions</p>}
   </div>;

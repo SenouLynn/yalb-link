@@ -44,6 +44,20 @@
   --caution: #d9a441;
 
   /*
+   * A deliberate, narrow exception to "no good green" above: at-a-glance
+   * status icons (battery, link, GPS) — never a row, never general chrome.
+   * A row that lights up green says "nothing is wrong" about a fact the
+   * operator was already reading as a number; a status icon in a strip built
+   * to answer one question at a sideways glance ("is the link still good?")
+   * is a different kind of surface, and three unlabelled states without a
+   * healthy one is not a real traffic light. `--critical` is the one place
+   * this app distinguishes "wrong" from "about to be wrong" — everywhere else
+   * `--caution` alone still covers both, on purpose.
+   */
+  --status-good: #6da357;
+  --status-critical: #c96257;
+
+  /*
    * Two greys for two different absences.
    *
    * `--dead` is for disabled controls, which WCAG exempts from contrast.
@@ -216,6 +230,15 @@ body {
    */
   background: color-mix(in srgb, var(--lume) 7%, transparent);
   border-bottom: var(--rule);
+  /*
+   * An `actions` lever — the mirror "+"/"−" — sizes to the header's own row,
+   * not to the target axis. Without this, a header carrying one lever stood
+   * `--target-h` (28px) tall while its neighbours sat at `--row-h` (20px),
+   * so the rail read as a ragged column instead of a table of equal rows.
+   * The lever stays a real, if dense, click target — it is a mouse-driven
+   * toggle beside a disclosure, not a field-glove control like the map's.
+   */
+  --target-h: var(--row-h);
 }
 
 .group__label {
@@ -441,10 +464,11 @@ details[open] > .group__head--disclosure::before {
 /* --- provenance ---------------------------------------------------------- */
 
 /*
- * The signature of this display. Every reading states the MAVLink message it
- * came from and how old that message is, over a rule that drains as the value
- * ages toward its TTL. The drain is what makes staleness pre-attentive: the
- * operator sees the bar emptying without having to read the age.
+ * The signature of this display. Every reading states how old its message is,
+ * over a rule that drains as the value ages toward its TTL. The drain is what
+ * makes staleness pre-attentive: the operator sees the bar emptying without
+ * having to read the age. The MAVLink message it came from is a native
+ * tooltip on the age text, not drawn — see Provenance.tsx.
  */
 .provenance {
   padding: 0 var(--row-x);
@@ -491,21 +515,14 @@ details[open] > .group__head--disclosure::before {
 
 .provenance__text {
   display: flex;
-  justify-content: space-between;
-  gap: var(--row-x);
+  justify-content: flex-end;
   min-width: 0;
   font-family: var(--data);
   font-size: var(--fs-label);
   line-height: var(--lh-label);
   letter-spacing: var(--track-data);
   color: var(--lume-dim);
-}
-
-/* The source name is the long one; let it ellipsis rather than widen the row. */
-.provenance__text > :first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  cursor: help;
 }
 
 /* --- reading: a row that carries its own provenance ---------------------- */
@@ -611,16 +628,48 @@ a.lever {
 }
 
 /*
- * A single-glyph lever — the rail's mirror "+" — spends the target axis on
- * height only. Padded to `--pad-chip` rather than `--target-x`, both already
- * declared tokens, so a one-character label sits in a near-square button
- * instead of the full-width padding a worded label needs. `min-width` keeps
- * the tap target itself on the target axis regardless — the glyph gets
- * smaller padding, not a smaller hit area.
+ * A single-glyph lever spends the target axis on height only: `min-width`
+ * squares it up to `--target-h` and the padding a worded label needs is
+ * dropped, rather than dimensioning a "+" as if it read "Reset view". The
+ * border and fill stay — a map's zoom glyphs float over arbitrary tile
+ * imagery and need the same contrast as any other lever to stay legible on
+ * a light basemap. `min-width` alone holds the tap target on the target
+ * axis regardless of how little the glyph itself needs.
  */
 .lever--compact {
   min-width: var(--target-h);
-  padding: 0 var(--pad-chip);
+  padding: 0;
+}
+
+/*
+ * Drops the border and fill for a lever sitting on a line that already
+ * carries no chrome of its own — a group header, a disclosure row — where a
+ * worded lever's box would read as a second control bolted onto bare text.
+ * Pairs with `compact` for a one-glyph lever like the rail's mirror "+";
+ * standing alone it would work as well for a worded one, there is just no
+ * caller yet. Brightens only on hover or while pressed, the same weight step
+ * the disclosure chevron next to it already uses.
+ */
+.lever--quiet {
+  border-color: transparent;
+  background: transparent;
+  color: var(--lume-dim);
+}
+
+.lever--quiet:hover:not(:disabled) {
+  border-color: transparent;
+  background: color-mix(in srgb, var(--lume) 11%, transparent);
+  color: var(--lume);
+}
+
+.lever--quiet:active:not(:disabled) {
+  background: color-mix(in srgb, var(--lume) 18%, transparent);
+}
+
+.lever--quiet[aria-pressed="true"] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--lume);
 }
 
 .lever-row {
@@ -889,15 +938,33 @@ body {
  * Inside a stack the slots divide a height, not a width, so the column's own
  * `--grow` must not reach them. Without this the instrument slot takes the
  * column's share as a height and the developer tier claims everything below.
+ * The fallback stays `1 1 auto` for any future section stacked here without
+ * its own override; both current members size to content instead, below.
  */
 .slot__stack > .slot {
   flex: 1 1 auto;
 }
 
-/* The developer tier: resident, tabbed, and bounded so it cannot crowd out the
-   instruments above it. */
+/*
+ * Both members of the stack size to their own content rather than one of them
+ * absorbing the column's leftover height. Sized-to-content used to belong to
+ * the developer tier alone (a fixed 10rem, so a resident tab strip could not
+ * grow past its bound) while the instruments above it grew to fill whatever
+ * height that left — which, once the instruments themselves ran shorter than
+ * the column, opened a blank gap between the last instrument and the tier
+ * below it rather than letting that tier move up to sit against it. With both
+ * content-sized, the stack itself scrolls as one column, the same as the rail
+ * beside it, and any leftover height collects once at the bottom rather than
+ * splitting the difference in the middle.
+ */
+.slot__stack > .slot--instruments {
+  flex: 0 1 auto;
+}
+
+/* The developer tier: resident and now an accordion list rather than a tab
+   strip, so closed by default it costs two header bars, not a fixed 10rem. */
 .slot__stack > .slot--dev {
-  flex: 0 0 10rem;
+  flex: 0 1 auto;
   border-top: var(--rule);
   border-right: 0;
 }
@@ -1006,7 +1073,8 @@ body {
   min-width: 0;
   min-height: 0;
   flex: 1;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .slot__empty {
@@ -1068,6 +1136,48 @@ body {
 /* Absent, not disabled: a dash here is a value the operator has to read. */
 .glance--dead .glance__value {
   color: var(--absent);
+}
+
+/*
+ * A glance whose headline is a coloured icon rather than a label — battery,
+ * link and GPS. Shares the bar's own rhythm (the same left rule, the same
+ * inset) so it reads as one strip with the worded glances beside it, not as a
+ * second kind of bar bolted on. The icon's own geometry lives in
+ * `display.css`, the same split as every other instrument face.
+ */
+.status-glance {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--pad-chip);
+  padding: 0 var(--target-x);
+  border-left: var(--rule);
+  white-space: nowrap;
+}
+
+.status-glance:first-child {
+  border-left: 0;
+  padding-left: 0;
+}
+
+.status-glance__value {
+  font-family: var(--data);
+  font-size: var(--fs-data);
+  line-height: var(--lh-data);
+  letter-spacing: var(--track-data);
+  font-variant-numeric: tabular-nums;
+  color: var(--lume);
+}
+
+/*
+ * The seam in the app bar between identity (which vehicle) and its vitals
+ * (the state of it). A rule rather than a gap: `--target-x` already separates
+ * every other pair of items on the bar, so an ungapped seam here would read
+ * as one more of those, not as the boundary it actually is.
+ */
+.shell__divider {
+  align-self: stretch;
+  width: 0;
+  border-left: var(--rule);
 }
 
 /* --- views popover ------------------------------------------------------- */

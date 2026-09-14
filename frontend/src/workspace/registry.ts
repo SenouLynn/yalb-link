@@ -64,7 +64,7 @@ export const SECTIONS: readonly SectionDef[] = [
   { id: 'vehicle', label: 'Vehicle', tier: 'operator', grow: 0 },
   { id: 'map', label: 'Map', tier: 'operator', grow: 3 },
   { id: 'instruments', label: 'Instruments', tier: 'operator', grow: 1 },
-  { id: 'dev', label: 'Developer', tier: 'dev', grow: 0, stackedIn: 'instruments', tabbed: true },
+  { id: 'dev', label: 'Developer', tier: 'dev', grow: 0, stackedIn: 'instruments' },
 ];
 
 export interface PanelDef {
@@ -72,8 +72,17 @@ export interface PanelDef {
   /** Shown in the panel header and in the Views menu. */
   label: string;
   section: SectionId;
-  /** Whether the operator may hide it. A panel carrying the link's own health
-   *  is not hideable: losing it is how you stop knowing the display is lying. */
+  /**
+   * Whether the operator may hide it.
+   *
+   * Used to be set on `link` alone — a panel carrying the link's own health
+   * was the one thing losing which meant you stopped knowing the display was
+   * lying. That guarantee now lives on the app bar's status icons instead,
+   * which no panel toggle reaches, so the rail's own copy of the same facts
+   * is no longer the operator's only way to see them and can be hidden like
+   * anything else. Nothing sets this today; it stays available for whatever
+   * next needs it.
+   */
   fixed?: boolean;
   /**
    * Owns the space its section's other panels do not use.
@@ -114,7 +123,7 @@ export interface PanelDef {
  * drift apart.
  */
 export const PANELS: readonly PanelDef[] = [
-  { id: 'link', label: 'Link', section: 'vehicle', fixed: true },
+  { id: 'link', label: 'Link', section: 'vehicle' },
   { id: 'state', label: 'Target state', section: 'vehicle' },
   { id: 'mission', label: 'Mission', section: 'vehicle' },
   { id: 'position', label: 'Position', section: 'vehicle', mirror: 'map', side: 'trail' },
@@ -126,8 +135,8 @@ export const PANELS: readonly PanelDef[] = [
 
   { id: 'instruments', label: 'Instruments', section: 'instruments' },
 
-  { id: 'families', label: 'Families', section: 'dev' },
-  { id: 'sample', label: 'Raw sample', section: 'dev' },
+  { id: 'families', label: 'Logs - Families', section: 'dev' },
+  { id: 'sample', label: 'Logs - Raw', section: 'dev' },
 ];
 
 export type PanelVisibility = Readonly<Record<string, boolean>>;

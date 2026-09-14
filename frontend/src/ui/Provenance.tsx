@@ -8,8 +8,12 @@ export interface ProvenanceProps {
 }
 
 /**
- * Shows the MAVLink family a value resolved from and its age, over a rule that
- * drains as the value approaches its TTL.
+ * Shows the age of a value, over a rule that drains as it approaches its TTL.
+ * The MAVLink family it resolved from rides along as a tooltip on the age
+ * rather than as its own text — the source is looked up rarely enough that it
+ * doesn't earn a permanent place on the header line, and dropping it there
+ * gives every group label back the width it was ceding to a repeated family
+ * name.
  *
  * The bar carries the same information as the age text, on purpose. Reading a
  * number takes attention the operator is spending on the aircraft; a bar that
@@ -34,8 +38,9 @@ export function Provenance({ reading }: ProvenanceProps) {
         />
       </div>
       <div className="provenance__text">
-        <span>{reading.source ?? 'NO SOURCE'}</span>
-        <span>{reading.state === 'unavailable' ? NO_VALUE : age(reading.ageMs)}</span>
+        <span title={reading.source ?? 'NO SOURCE'}>
+          {reading.state === 'unavailable' ? NO_VALUE : age(reading.ageMs)}
+        </span>
       </div>
     </div>
   );

@@ -8,11 +8,13 @@ import { FleetOverview } from '@/fleet/FleetOverview';
 import type { SavedCamera } from '@/map/FleetMap';
 import type { ReplayEventSource } from '@/stream/replay';
 import type { StreamSource } from '@/stream/select';
+import { GlanceBar } from '@/vehicle/GlanceBar';
 import { VehiclePane } from '@/vehicle/VehiclePane';
 import { ViewBar, WorkspaceShell } from '@/workspace/Workspace';
 
 import { sourceLabel } from './format';
 import { Glance, Lever } from './primitives';
+import { readFlight } from './readings';
 import { ReplayControls } from './ReplayControls';
 
 export interface FlightDisplayProps {
@@ -89,12 +91,23 @@ export function FlightDisplay({
             * way to change it.
             */}
           {section === 'vehicle' && view !== undefined && (
-            <Glance
-              label="Vehicle"
-              value={lost(view) ? `${view.key} · LOST` : view.key}
-              tone={lost(view) ? 'caution' : 'normal'}
-              title="Return to the fleet to select a different vehicle"
-            />
+            <>
+              <Glance
+                label="Vehicle"
+                value={lost(view) ? `${view.key} · LOST` : view.key}
+                tone={lost(view) ? 'caution' : 'normal'}
+                title="Return to the fleet to select a different vehicle"
+              />
+              {/*
+                * The vitals move up from the view bar into identity's own row,
+                * so they read at a glance regardless of which panel is open —
+                * the same reason "which vehicle" moved up before this. The
+                * hairline marks the seam: left of it is where the operator is,
+                * right of it is the state of the aircraft they are looking at.
+                */}
+              <span className="shell__divider" aria-hidden="true" />
+              <GlanceBar view={view} readings={readFlight(view, nowMs)} nowMs={nowMs} />
+            </>
           )}
         </>
       }

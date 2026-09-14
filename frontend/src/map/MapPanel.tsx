@@ -1,4 +1,4 @@
-import { Chip, Lever, LeverRow } from '@/ui/primitives';
+import { Chip, Lever } from '@/ui/primitives';
 /** Imperative MapLibre adapter for one vehicle and its breadcrumb track. */
 
 import maplibregl from 'maplibre-gl';
@@ -14,6 +14,7 @@ import type { MissionGeometry } from '@/mission/model';
 import { framePoints, nextFollowMode, shouldFollow, type FollowMode } from './camera';
 
 import { DEFAULT_BASEMAP, type TileSource } from './tileSource';
+import { MapControls } from './MapControls';
 
 export interface MapPanelProps {
   position: PositionResult | null;
@@ -180,8 +181,11 @@ export function MapPanel({
   mission = { points: [], omitted: {} },
   missionRevision = null,
   vehicleKey,
-  tileSource = DEFAULT_BASEMAP,
+  tileSource: initialTileSource = DEFAULT_BASEMAP,
 }: MapPanelProps) {
+  const [tileSource, setTileSource] = useState(initialTileSource);
+  const [tilted, setTilted] = useState(false);
+  useEffect(() => { setTileSource(initialTileSource); }, [initialTileSource]);
   const [mode, setMode] = useState<FollowMode>('follow');
   const modeRef = useRef<FollowMode>('follow');
   const changeMode = (action: 'pan' | 'follow' | 'mission', hasPoints = true) => {
@@ -217,10 +221,11 @@ export function MapPanel({
     mapRef.current = map;
 
     map.on('movestart', (event) => { if (event.originalEvent) changeMode('pan'); });
-    map.on('load', () => {
+    map.on('style.load', () => {
       loadedRef.current = true;
       addFlightLayers(map, trackRef.current, trajectoryRef.current, missionRef.current);
     });
+    map.on('pitch', () => { setTilted(map.getPitch() > 1); });
 
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(containerRef.current);
@@ -240,16 +245,12 @@ export function MapPanel({
   useEffect(() => {
     const map = mapRef.current;
 
-    if (map === null || !loadedRef.current) {
+    if (map === null) {
       return;
     }
 
+    loadedRef.current = false;
     void map.setStyle(buildStyle(tileSource));
-    void map.once('styledata', () => {
-      if (map.getSource(TRACK_SOURCE) === undefined) {
-        addFlightLayers(map, trackRef.current, trajectoryRef.current, missionRef.current);
-      }
-    });
   }, [tileSource]);
 
   useEffect(() => {
@@ -346,13 +347,12 @@ export function MapPanel({
   return (
     <div className="map-shell">
       <div className="map-overlays">
-        {/* Terse on purpose. These two sit ON the map rather than beside it, so
-            every character of label is a character of ground the operator came
-            here to look at; the full sentence is on the pointer. The 28px
-            target itself is not negotiable — field operation on a laptop is a
-            standing requirement, and a control shrunk below a gloved fingertip
-            stops being a control. */}
-        <LeverRow label="Map view">
+        <MapControls
+          onZoom={delta => { mapRef.current?.zoomTo(mapRef.current.getZoom() + delta, { duration: 200 }); }}
+          tilted={tilted}
+          onTilt={() => { changeMode('pan'); mapRef.current?.easeTo({ pitch: tilted ? 0 : 55, duration: 300 }); }}
+          onReset={() => { mapRef.current?.easeTo({ bearing: 0, pitch: 0, duration: 300 }); }}
+        >
           <Lever
             onClick={fitMission}
             disabled={mission.points.length === 0}
@@ -368,7 +368,7 @@ export function MapPanel({
           >
             Follow
           </Lever>
-        </LeverRow>
+        </MapControls>
       </div>
       {trajectory.length > 1 || mission.points.length > 0 ? (
         <div className="map-legend">

@@ -1,5 +1,7 @@
 /** Vehicle identity, armed state, mode, and the health of the data itself. */
 
+import type { ReactNode } from 'react';
+
 import { FleetEventType } from '@/gen/gcs/v1/fleet_pb';
 import { GpsFixType } from '@/gen/gcs/v1/types_pb';
 import { isFamilyFresh, type VehicleView } from '@/fleet/state';
@@ -17,6 +19,10 @@ export interface StatusRowsProps {
   source: StreamSource;
   /** Renders as a closed-by-default rail accordion. */
   collapsible?: boolean | undefined;
+  /** A rail-only header action — the show/hide lever. Omitted for the plain,
+   *  mirrored rendering (`LinkRows` carries none today, `StateRows` ignores
+   *  it — only `LinkRows` wires it through). */
+  actions?: ReactNode | undefined;
 }
 
 /**
@@ -24,15 +30,16 @@ export interface StatusRowsProps {
  *
  * Separate from vehicle state because the two fail independently: a healthy
  * aircraft behind a dropped browser connection must not be reported as lost,
- * and a lost aircraft on a healthy connection must not look fine. This is the
- * one rail group the operator cannot hide — losing it is how you stop knowing
- * that the display is lying to you.
+ * and a lost aircraft on a healthy connection must not look fine. Hideable
+ * like any other rail group now — the boolean-and-strength version of this
+ * that used to make it un-hideable lives on the app bar's link icon instead,
+ * which no panel toggle reaches.
  */
-export function LinkRows({ view, nowMs, connected, source, collapsible }: StatusRowsProps) {
+export function LinkRows({ view, nowMs, connected, source, collapsible, actions }: StatusRowsProps) {
   const lost = view.lifecycle === FleetEventType.VEHICLE_LOST;
 
   return (
-    <Group label="Link" reading={heartbeatReading(view, nowMs)} collapsible={collapsible}>
+    <Group label="Link" reading={heartbeatReading(view, nowMs)} collapsible={collapsible} actions={actions}>
       <Row
         label="Source"
         value={sourceLabel(source, connected)}
@@ -98,7 +105,7 @@ function armedLabel(armed: boolean | undefined): string {
  * rather than at each use is what lets the switch below be exhaustive, instead
  * of a set of number comparisons that happen to line up with the enum today.
  */
-function gpsFixOf(view: VehicleView): GpsFixType | undefined {
+export function gpsFixOf(view: VehicleView): GpsFixType | undefined {
   return view.sample.gpsFixType;
 }
 
@@ -115,7 +122,7 @@ function gpsLabel(view: VehicleView, nowMs: number): string {
   return `${fixName(gpsFixType)}${sats}`;
 }
 
-function fixName(fix: GpsFixType): string {
+export function fixName(fix: GpsFixType): string {
   switch (fix) {
     case GpsFixType.GPS_FIX_TYPE_NO_GPS:
       return 'NO GPS';

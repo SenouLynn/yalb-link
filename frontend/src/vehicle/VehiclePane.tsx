@@ -53,7 +53,6 @@ import {
   type SectionId,
 } from '@/workspace/Workspace';
 
-import { GlanceBar } from './GlanceBar';
 
 export interface VehiclePaneProps {
   fleet: FleetState;
@@ -100,9 +99,6 @@ export function VehiclePane({ fleet, view, nowMs, source, active, controls }: Ve
         }
       >
         {controls}
-        {view === undefined ? null : (
-          <GlanceBar view={view} readings={readFlight(view, nowMs)} nowMs={nowMs} />
-        )}
       </ViewBar>
 
       {view === undefined ? (
@@ -117,6 +113,7 @@ export function VehiclePane({ fleet, view, nowMs, source, active, controls }: Ve
           source={source}
           visible={visible}
           mirrored={mirrored}
+          onToggle={toggle}
           onToggleMirror={toggleMirror}
           active={active}
         />
@@ -133,6 +130,7 @@ function SelectedFlightDisplay({
   source,
   visible,
   mirrored,
+  onToggle,
   onToggleMirror,
   active,
 }: {
@@ -142,6 +140,7 @@ function SelectedFlightDisplay({
   source: StreamSource;
   visible: PanelVisibility;
   mirrored: PanelVisibility;
+  onToggle: (id: string) => void;
   onToggleMirror: (id: string) => void;
   active: boolean;
 }) {
@@ -173,7 +172,13 @@ function SelectedFlightDisplay({
    * critical bar, passed below as a `sectionHeaders` entry instead.
    */
   const content: PanelContent = {
-    link: <LinkRows {...status} collapsible />,
+    link: (
+      <LinkRows
+        {...status}
+        collapsible
+        actions={<VisibilityLever id="link" label="Link" visible={visible['link'] === true} onToggle={onToggle} />}
+      />
+    ),
     state: <StateRows {...status} collapsible />,
     position: (
       <PositionGroup
@@ -238,12 +243,15 @@ function SelectedFlightDisplay({
         readings={readings}
         collapsible
         actions={
-          <MirrorLever
-            id="radiolink"
-            mirrored={mirrored['radiolink'] === true}
-            onToggle={onToggleMirror}
-            target="Radio link beside the instruments"
-          />
+          <>
+            <VisibilityLever id="radiolink" label="Radio link" visible={visible['radiolink'] === true} onToggle={onToggle} />
+            <MirrorLever
+              id="radiolink"
+              mirrored={mirrored['radiolink'] === true}
+              onToggle={onToggleMirror}
+              target="Radio link beside the instruments"
+            />
+          </>
         }
       />
     ),
@@ -314,8 +322,47 @@ function PositionGroup({
 }
 
 /**
+ * Hides this panel from the rail — the same effect as unchecking it in Views,
+ * reachable without opening the popover. One-way through this control: once
+ * clicked the panel (and the lever sitting inside its header) goes `hidden`
+ * along with the rest of it, so bringing it back is a Views popover action,
+ * the same as showing any other panel this hid without a rail lever of its
+ * own. `event.preventDefault()` for the same reason `MirrorLever` needs it —
+ * this sits inside a collapsible `Group`'s `<summary>`.
+ */
+function VisibilityLever({
+  id,
+  label,
+  visible,
+  onToggle,
+}: {
+  id: string;
+  label: string;
+  visible: boolean;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <Lever
+      compact
+      quiet
+      aria-label={`Hide ${label}`}
+      title={`Hide ${label} from the rail — bring it back from Views`}
+      onClick={(event) => {
+        event.preventDefault();
+        onToggle(id);
+      }}
+    >
+      {visible ? '−' : '+'}
+    </Lever>
+  );
+}
+
+/**
  * The rail's "+": mirrors a panel's plain content back onto the map or beside
- * the instruments without touching the rail accordion it sits inside.
+ * the instruments without touching the rail accordion it sits inside. The
+ * glyph itself flips to "-" once mirrored, so the lever states the action a
+ * second click takes rather than relying on `pressed` styling alone to carry
+ * "this is already showing".
  *
  * `event.preventDefault()` is load-bearing, not defensive: this lever renders
  * inside a `<summary>` once its `Group` is collapsible, and a `<summary>`'s
@@ -336,6 +383,7 @@ function MirrorLever({
   return (
     <Lever
       compact
+      quiet
       pressed={mirrored}
       aria-label={mirrored ? `Stop mirroring ${target}` : `Mirror ${target}`}
       title={mirrored ? `Showing on ${target}` : `Show on ${target}`}
@@ -344,7 +392,7 @@ function MirrorLever({
         onToggle(id);
       }}
     >
-      +
+      {mirrored ? '-' : '+'}
     </Lever>
   );
 }

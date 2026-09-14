@@ -68,3 +68,14 @@ They confirm the fleet's compact left roster/dominant shared map and the vehicle
 view's context sidebar, central map and right-hand instruments/inspection.
 [T-022](../tasks/cards/T-022-fleet-overview.md) owns the first fleet navigation
 slice; these screenshots inform hierarchy and density, not new backend controls.
+
+## Map controls follow-up (2026-09-14)
+
+Operator confirmed roads, satellite, terrain relief and the future 3D view as
+the desired reference features. T-043 exposes the existing raster catalogue on
+both fleet and vehicle maps, manual zoom and north reset, plus vehicle camera
+tilt labelled 3D. The reference's 3D toggle is also camera pitch only; neither
+implementation here configures elevation terrain or hosted 3D buildings.
+Vehicle Fit/Follow and track/prediction/mission overlays remain, with geometry
+restored on style load after basemap selection. This is code and automated
+adapter-test evidence, not browser or SITL acceptance.

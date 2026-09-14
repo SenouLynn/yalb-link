@@ -32,7 +32,8 @@ export function FamiliesPanel({ view, nowMs }: { view: VehicleView; nowMs: numbe
   if (families.length === 0) {
     return (
       <Group
-        label="Families"
+        label="Logs - Families"
+        collapsible
         absent="Nothing decoded for this vehicle yet. The backend reports a family the first time it arrives."
       />
     );
@@ -41,7 +42,7 @@ export function FamiliesPanel({ view, nowMs }: { view: VehicleView; nowMs: numbe
   const fresh = families.filter(([, seenMs]) => nowMs - seenMs <= TELEMETRY_TTL_MS).length;
 
   return (
-    <Group label="Families" annotation={`${String(fresh)}/${String(families.length)} fresh`}>
+    <Group label="Logs - Families" collapsible annotation={`${String(fresh)}/${String(families.length)} fresh`}>
       {families.map(([family, seenMs]) => {
         const ageMs = Math.max(0, nowMs - seenMs);
 
@@ -71,11 +72,11 @@ export function SamplePanel({ view }: { view: VehicleView }) {
     .sort(([a], [b]) => a.localeCompare(b));
 
   if (fields.length === 0) {
-    return <Group label="Raw sample" absent="No telemetry fields merged for this vehicle yet." />;
+    return <Group label="Logs - Raw" collapsible absent="No telemetry fields merged for this vehicle yet." />;
   }
 
   return (
-    <Group label="Raw sample" annotation={`${String(fields.length)} fields`}>
+    <Group label="Logs - Raw" collapsible annotation={`${String(fields.length)} fields`}>
       {fields.map(([field, value]) => (
         <Row key={field} label={field} value={formatWire(value)} stacked={isLong(value)} />
       ))}

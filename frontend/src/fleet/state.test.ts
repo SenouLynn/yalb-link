@@ -424,6 +424,7 @@ describe('source-coherent accumulation', () => {
       voltageV: 8,
       currentA: 2,
       remainingPct: 80,
+      cellCount: 2,
       source: 'BATTERY_STATUS',
     });
   });
@@ -449,6 +450,7 @@ describe('source-coherent accumulation', () => {
       voltageV: null,
       currentA: 2,
       remainingPct: 80,
+      cellCount: null,
       source: 'BATTERY_STATUS',
     });
   });
