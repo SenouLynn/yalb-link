@@ -70,11 +70,12 @@ var DefaultRates = []RateRequest{
 }
 
 // RateRequester asks a vehicle for the telemetry the display needs, as soon as
-// the fold reports that vehicle is there.
+// the fold reports that vehicle is there or that it moved to a link the policy
+// was never addressed to.
 //
 // It is a Sink rather than a background loop so that the request is ordered
-// against the discovery that triggered it: the route it writes to was recorded
-// from the same frame that produced the fleet event.
+// against the event that triggered it: the route it writes to was recorded
+// from the same frame that produced the event.
 type RateRequester struct {
 	// Source is the transport the requests are written to.
 	Source codec.FrameSource
@@ -86,22 +87,32 @@ type RateRequester struct {
 	Log *slog.Logger
 	// Now returns epoch milliseconds, matching the bridge's clock.
 	Now func() int64
+	// MinConflictInterval bounds how often a bare source-address change alone
+	// may re-issue the policy for one vehicle, so a flapping link cannot
+	// exceed the cadence the loss/recovery path already allows: recovery
+	// cannot repeat faster than one HeartbeatTTL, because that is how long a
+	// vehicle must stay silent before it can be lost again. Defaults to
+	// codec.HeartbeatTTL.
+	MinConflictInterval time.Duration
+
+	lastConflictMs map[routes.Key]int64
 }
 
 var _ Sink = (*RateRequester)(nil)
 
-// Publish requests rates when a vehicle is discovered or recovered.
+// Publish requests rates when a vehicle is discovered, recovered, or reported
+// on a source address different from the one it was last heard on.
 //
 // A write failure is returned, which stops the bridge. A GCS that silently
 // failed to ask for telemetry would sit on a healthy-looking link showing
 // nothing but heartbeats, and that is the exact failure this milestone exists
 // to make impossible.
 func (r *RateRequester) Publish(ctx context.Context, ev vehicle.Event) error {
-	if !r.triggers(ev.Fleet) {
+	id, reason, ok := r.trigger(ev)
+	if !ok {
 		return nil
 	}
 
-	id := ev.Fleet.GetVehicleId()
 	key := routes.Key{
 		SysID:  uint8(id.GetSystemId()),
 		CompID: uint8(id.GetComponentId()),
@@ -127,38 +138,84 @@ func (r *RateRequester) Publish(ctx context.Context, ev vehicle.Event) error {
 		"compid", key.CompID,
 		"link", link,
 		"families", len(r.rates()),
-		"trigger", ev.Fleet.GetType().String(),
+		"trigger", reason,
 	)
 
 	return nil
 }
 
-// triggers reports whether this event means a vehicle just became reachable.
+// trigger reports whether ev should re-issue the rate policy: the vehicle it
+// targets, and the name to log as the reason.
 //
 // HEARTBEAT_UPDATED is deliberately excluded: it fires on every arm, mode
 // change, and system-state transition, and re-requesting the whole policy each
 // time would put a burst of commands on the link exactly when the operator is
 // doing something.
-func (r *RateRequester) triggers(fleet *gcsv1.FleetEvent) bool {
-	if fleet == nil {
-		return false
+func (r *RateRequester) trigger(ev vehicle.Event) (*gcsv1.VehicleId, string, bool) {
+	if fleet := ev.Fleet; fleet != nil {
+		switch fleet.GetType() {
+		case gcsv1.FleetEventType_FLEET_EVENT_TYPE_VEHICLE_DISCOVERED,
+			gcsv1.FleetEventType_FLEET_EVENT_TYPE_VEHICLE_RECOVERED:
+			if !isAutopilot(fleet.GetVehicleId()) {
+				return nil, "", false
+			}
+
+			return fleet.GetVehicleId(), fleet.GetType().String(), true
+		}
+
+		return nil, "", false
 	}
 
-	if fleet.GetVehicleId().GetComponentId() != uint32(codec.AutopilotComponentID) {
-		return false
+	if w := ev.Warning; w != nil && w.Type == vehicle.WarningSourceConflict {
+		if !isAutopilot(w.VehicleID) {
+			return nil, "", false
+		}
+
+		if !r.allowConflict(w.VehicleID, w.OccurredMs) {
+			return nil, "", false
+		}
+
+		return w.VehicleID, w.Type.String(), true
 	}
 
-	switch fleet.GetType() {
-	case gcsv1.FleetEventType_FLEET_EVENT_TYPE_VEHICLE_DISCOVERED,
-		gcsv1.FleetEventType_FLEET_EVENT_TYPE_VEHICLE_RECOVERED:
-		return true
-	case gcsv1.FleetEventType_FLEET_EVENT_TYPE_VEHICLE_LOST,
-		gcsv1.FleetEventType_FLEET_EVENT_TYPE_HEARTBEAT_UPDATED,
-		gcsv1.FleetEventType_FLEET_EVENT_TYPE_UNSPECIFIED:
-		return false
-	default:
-		return false
+	return nil, "", false
+}
+
+// allowConflict enforces MinConflictInterval per vehicle, so a source that
+// keeps flapping between addresses cannot re-issue the policy on every frame.
+func (r *RateRequester) allowConflict(id *gcsv1.VehicleId, nowMs int64) bool {
+	key := routes.Key{
+		SysID:  uint8(id.GetSystemId()),
+		CompID: uint8(id.GetComponentId()),
 	}
+
+	if last, seen := r.lastConflictMs[key]; seen {
+		if nowMs-last < r.minConflictInterval().Milliseconds() {
+			return false
+		}
+	}
+
+	if r.lastConflictMs == nil {
+		r.lastConflictMs = make(map[routes.Key]int64)
+	}
+
+	r.lastConflictMs[key] = nowMs
+
+	return true
+}
+
+func (r *RateRequester) minConflictInterval() time.Duration {
+	if r.MinConflictInterval <= 0 {
+		return codec.HeartbeatTTL
+	}
+
+	return r.MinConflictInterval
+}
+
+// isAutopilot keeps gimbals and companion computers off the request path even
+// though they share the system ID.
+func isAutopilot(id *gcsv1.VehicleId) bool {
+	return id.GetComponentId() == uint32(codec.AutopilotComponentID)
 }
 
 func (r *RateRequester) rates() []RateRequest {

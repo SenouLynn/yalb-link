@@ -136,6 +136,15 @@ func fleet(kind gcsv1.FleetEventType, sysID, compID uint32) vehicle.Event {
 	}}
 }
 
+// warning builds a vehicle.Event carrying one Warning, mirroring fleet above.
+func warning(kind vehicle.WarningType, sysID, compID uint32, occurredMs int64) vehicle.Event {
+	return vehicle.Event{Warning: &vehicle.Warning{
+		VehicleID:  &gcsv1.VehicleId{SystemId: sysID, ComponentId: compID},
+		Type:       kind,
+		OccurredMs: occurredMs,
+	}}
+}
+
 // TestRateRequestsOnDiscovery pins the whole policy: the exact families, the
 // exact intervals, and the target they are addressed to.
 func TestRateRequestsOnDiscovery(t *testing.T) {
@@ -374,8 +383,95 @@ func TestRateRequestsOnRecovery(t *testing.T) {
 	}
 }
 
+// TestRateRequestsOnSourceConflict covers T-023: a vehicle whose heartbeats
+// never stopped, but whose source address moved to a new link, must have the
+// policy re-issued to the link it is now heard on. By the time this event
+// reaches the requester the route table already reflects the new link, the
+// same way bridge.frame upserts the route before folding the frame that
+// produced it.
+func TestRateRequestsOnSourceConflict(t *testing.T) {
+	const newLink codec.LinkID = "udp:10.0.0.9:48241"
+
+	src := newRecordingSource()
+	r := newRequester(t, src)
+	r.Routes.Upsert(routes.Entry{Key: routes.Key{SysID: 1, CompID: 1}, Link: newLink}, rateNowMs)
+
+	ev := warning(vehicle.WarningSourceConflict, 1, 1, rateNowMs)
+
+	if err := r.Publish(t.Context(), ev); err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+
+	got := src.snapshot()
+	if len(got) != len(DefaultRates) {
+		t.Fatalf("source conflict requested %d families, want %d", len(got), len(DefaultRates))
+	}
+
+	for _, w := range got {
+		if w.Link != newLink {
+			t.Fatalf("wrote to link %q, want the new link %q", w.Link, newLink)
+		}
+	}
+}
+
+// TestRateRequestsBoundAgainstFlappingSource keeps a source that keeps
+// changing address from putting commands on the link faster than the
+// loss/recovery path already allows: recovery cannot repeat sooner than one
+// HeartbeatTTL apart, because that is how long a vehicle must stay silent
+// before it can be lost, and lost, again.
+func TestRateRequestsBoundAgainstFlappingSource(t *testing.T) {
+	src := newRecordingSource()
+	r := newRequester(t, src)
+
+	if err := r.Publish(t.Context(), warning(vehicle.WarningSourceConflict, 1, 1, rateNowMs)); err != nil {
+		t.Fatalf("Publish (first conflict): %v", err)
+	}
+
+	if got := len(src.snapshot()); got != len(DefaultRates) {
+		t.Fatalf("first conflict requested %d families, want %d", got, len(DefaultRates))
+	}
+
+	soon := rateNowMs + 1_000 // well inside codec.HeartbeatTTL
+	if err := r.Publish(t.Context(), warning(vehicle.WarningSourceConflict, 1, 1, soon)); err != nil {
+		t.Fatalf("Publish (flapping conflict): %v", err)
+	}
+
+	if got := len(src.snapshot()); got != len(DefaultRates) {
+		t.Fatalf("flapping conflict wrote %d messages, want the first burst unchanged (%d)",
+			got, len(DefaultRates))
+	}
+
+	later := rateNowMs + codec.HeartbeatTTL.Milliseconds() + 1
+	if err := r.Publish(t.Context(), warning(vehicle.WarningSourceConflict, 1, 1, later)); err != nil {
+		t.Fatalf("Publish (later conflict): %v", err)
+	}
+
+	if got := len(src.snapshot()); got != 2*len(DefaultRates) {
+		t.Fatalf("conflict past MinConflictInterval wrote %d messages total, want %d",
+			got, 2*len(DefaultRates))
+	}
+}
+
+// TestNoRateRequestsForSourceConflictOnNonAutopilotComponent keeps a gimbal or
+// companion computer's address change from putting commands on the link, the
+// same guard TestNoRateRequestsForNonAutopilotComponents pins for discovery.
+func TestNoRateRequestsForSourceConflictOnNonAutopilotComponent(t *testing.T) {
+	src := newRecordingSource()
+	r := newRequester(t, src)
+	r.Routes.Upsert(routes.Entry{Key: routes.Key{SysID: 1, CompID: 2}, Link: "udp:10.0.0.9:14550"}, rateNowMs)
+
+	if err := r.Publish(t.Context(), warning(vehicle.WarningSourceConflict, 1, 2, rateNowMs)); err != nil {
+		t.Fatalf("Publish: %v", err)
+	}
+
+	if n := len(src.snapshot()); n != 0 {
+		t.Errorf("wrote %d messages for a non-autopilot component's source conflict, want none", n)
+	}
+}
+
 // TestNoRateRequestsForOrdinaryEvents is the back-pressure guard: only the two
-// reachability transitions may put commands on the link.
+// reachability transitions and a genuine source conflict may put commands on
+// the link.
 func TestNoRateRequestsForOrdinaryEvents(t *testing.T) {
 	quiet := []struct {
 		name  string
@@ -385,7 +481,7 @@ func TestNoRateRequestsForOrdinaryEvents(t *testing.T) {
 		{"vehicle lost", fleet(gcsv1.FleetEventType_FLEET_EVENT_TYPE_VEHICLE_LOST, 1, 1)},
 		{"unspecified", fleet(gcsv1.FleetEventType_FLEET_EVENT_TYPE_UNSPECIFIED, 1, 1)},
 		{"telemetry", vehicle.Event{Telemetry: &gcsv1.TelemetryEvent{}}},
-		{"warning", vehicle.Event{Warning: &vehicle.Warning{VehicleID: &gcsv1.VehicleId{SystemId: 1}}}},
+		{"warning of unspecified type", warning(vehicle.WarningUnspecified, 1, 1, rateNowMs)},
 	}
 
 	for _, tc := range quiet {
