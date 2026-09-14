@@ -11,3 +11,4 @@ decision, consequences, and a verification point.
 - [0004: Guarded operator command transactions](0004-operator-command-transactions.md)
 - [0005: The UI presentation system](0005-ui-presentation-system.md)
 - [0006: Operator connection readiness](0006-operator-connection-readiness.md)
+- [0007: Native in-process serial acquisition](0007-native-serial-acquisition.md)

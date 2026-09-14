@@ -129,11 +129,18 @@ and recover. The Vehicle UI is sufficient to advance; practical connection
 setup and recovery now define the next outcome. The ADR covers first launch,
 bench USB, field radio, saved device selection, MissionPlanner handoff and
 interruption recovery. Shape its missing implementation slices on the task
-board before claiming them. [T-045](cards/T-045-connection-contract.md) defines
-the local connection contract; its dependent cards cover backend serial access,
-saved profiles, frontend controls, recovery and fresh-machine launch. T-023
-alone does not complete this milestone;
-hardware scenarios below remain planned and unexecuted.
+board before claiming them. [T-045](cards/T-045-connection-contract.md) is
+done: the [connection contract](connection-contract.md) defines device
+inventory, connection lifecycle states, the HTTP/SSE surface and startup/retry
+policy, and [ADR 0007](../adr/0007-native-serial-acquisition.md) settles native
+in-process serial acquisition over an external adapter. Its dependent cards
+([T-046](cards/T-046-serial-acquisition.md) backend serial access,
+[T-047](cards/T-047-saved-connections.md) saved profiles,
+[T-048](cards/T-048-connection-controls.md) frontend controls,
+[T-049](cards/T-049-connection-recovery.md) recovery,
+[T-050](cards/T-050-local-observer-launch.md) fresh-machine launch) can now be
+promoted to `ready` and implemented against it. T-023 alone does not complete
+this milestone; hardware scenarios below remain planned and unexecuted.
 
 Prioritize [T-023](cards/T-023-rate-requests-after-source-change.md) reconnect
 recovery alongside [T-027](cards/T-027-target-profile.md), the target profile.
