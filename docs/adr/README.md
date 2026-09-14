@@ -12,3 +12,5 @@ decision, consequences, and a verification point.
 - [0005: The UI presentation system](0005-ui-presentation-system.md)
 - [0006: Operator connection readiness](0006-operator-connection-readiness.md)
 - [0007: Native in-process serial acquisition](0007-native-serial-acquisition.md)
+- [0008: Explicit offline map preparation](0008-explicit-offline-map-preparation.md)
+- [0009: Bounded offline map packages](0009-bounded-offline-map-packages.md)

@@ -75,3 +75,32 @@ it('restores the latest flight geometry after rapid basemap changes and exposes 
   expect(map.zoomTo).toHaveBeenCalledWith(9, { duration: 200 });
   act(() => { root.unmount(); });
 });
+
+it('shows an explicit imagery-unavailable chip on a failed basemap tile and clears it on reload', () => {
+  vi.stubGlobal('ResizeObserver', class { observe = vi.fn(); disconnect = vi.fn(); });
+  const container = document.createElement('div');
+  const root = createRoot(container);
+  const track = [{ latDeg: 47, lonDeg: -122, atMs: 1 }];
+  act(() => { root.render(<MapPanel position={null} track={track} />); });
+  const map = state.maps[0];
+  if (!map) throw new Error('Map was not mounted');
+  act(() => { map.events['style.load']?.(); });
+  expect(container.textContent).not.toContain('Imagery unavailable');
+
+  // MapLibre reports a failed raster tile request as an 'error' event carrying
+  // the source id, not a thrown exception. Position/track/mission overlays are
+  // unrelated GeoJSON sources, so they must stay intact alongside the banner.
+  act(() => { (map.events['error'] as ((e: { sourceId: string }) => void) | undefined)?.({ sourceId: 'basemap' }); });
+  expect(container.textContent).toContain('Imagery unavailable');
+  expect(map.sources.get('track')).toMatchObject({ data: { geometry: { coordinates: [[-122, 47]] } } });
+
+  // An unrelated source erroring must not be mistaken for the basemap.
+  act(() => { root.render(<MapPanel position={null} track={track} />); });
+  act(() => { (map.events['error'] as ((e: { sourceId: string }) => void) | undefined)?.({ sourceId: 'track' }); });
+  expect(container.textContent).toContain('Imagery unavailable'); // unchanged from the prior basemap failure
+
+  // A style reload (retry or basemap switch) is the one thing that clears it.
+  act(() => { map.events['style.load']?.(); });
+  expect(container.textContent).not.toContain('Imagery unavailable');
+  act(() => { root.unmount(); });
+});

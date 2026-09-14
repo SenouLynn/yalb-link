@@ -178,3 +178,18 @@ define what “lift-off,” “go-to,” “next waypoint” and RTH mean in the
 QuadPlane mode, including transitions and operator handoff. Before PID work,
 verify which exact parameters can be changed while armed and when they take
 effect; live tuning feasibility is a question, not a promised capability.
+
+## Offline map preparation decision — 2026-09-14
+
+[ADR 0008](../adr/0008-explicit-offline-map-preparation.md) establishes explicit
+Mission Planner-style area selection and prefetch, with operator-initiated
+refresh. [ADR 0009](../adr/0009-bounded-offline-map-packages.md) bounds the first
+implementation to one region, one offline basemap and complete package updates.
+These settle the workflow and scope questions raised above; provider, format,
+detail and storage limits remain open. Earlier references to deferred imagery
+architecture remain applicable to those implementation choices, not to whether
+an explicit preparation workflow is desired.
+
+T-030 continues to verify offline startup and usable overlays without imagery.
+Saved-map preparation is separate, unimplemented work requiring shaped cards;
+these decisions do not expand its active scope or claim hardware acceptance.

@@ -185,6 +185,7 @@ export function MapPanel({
 }: MapPanelProps) {
   const [tileSource, setTileSource] = useState(initialTileSource);
   const [tilted, setTilted] = useState(false);
+  const [imageryUnavailable, setImageryUnavailable] = useState(false);
   useEffect(() => { setTileSource(initialTileSource); }, [initialTileSource]);
   const [mode, setMode] = useState<FollowMode>('follow');
   const modeRef = useRef<FollowMode>('follow');
@@ -223,9 +224,19 @@ export function MapPanel({
     map.on('movestart', (event) => { if (event.originalEvent) changeMode('pan'); });
     map.on('style.load', () => {
       loadedRef.current = true;
+      setImageryUnavailable(false);
       addFlightLayers(map, trackRef.current, trajectoryRef.current, missionRef.current);
     });
     map.on('pitch', () => { setTilted(map.getPitch() > 1); });
+    // A failed basemap tile request (offline, or the tile host unreachable)
+    // does not throw; MapLibre reports it here. Position, track and mission
+    // overlays are independent GeoJSON layers, so they stay usable — this only
+    // makes the gap explicit instead of a silently blank ground.
+    map.on('error', (event) => {
+      if ((event as { sourceId?: string }).sourceId === 'basemap') {
+        setImageryUnavailable(true);
+      }
+    });
 
     const observer = new ResizeObserver(() => map.resize());
     observer.observe(containerRef.current);
@@ -370,8 +381,9 @@ export function MapPanel({
           </Lever>
         </MapControls>
       </div>
-      {trajectory.length > 1 || mission.points.length > 0 ? (
+      {trajectory.length > 1 || mission.points.length > 0 || imageryUnavailable ? (
         <div className="map-legend">
+          {imageryUnavailable ? <Chip tone="caution">Imagery unavailable</Chip> : null}
           {trajectory.length > 1 ? <Chip>5 s prediction</Chip> : null}
           {mission.points.length > 0 ? <Chip>Commanded mission</Chip> : null}
         </div>

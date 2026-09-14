@@ -1,7 +1,8 @@
 /** One shared map with keyed markers, explicit camera actions and no follow loop. */
 import maplibregl from 'maplibre-gl';
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { FleetPosition } from '@/fleet/overview';
+import { Chip } from '@/ui/primitives';
 import { buildStyle } from './MapPanel';
 import { MapControls } from './MapControls';
 import { DEFAULT_BASEMAP } from './tileSource';
@@ -20,6 +21,7 @@ export function FleetMap({ positions, onOpen, camera, request }: {
   const open = useRef(onOpen);
   open.current = onOpen;
   const fitted = useRef(camera.current !== null);
+  const [imageryUnavailable, setImageryUnavailable] = useState(false);
   const apply = (frame: Frame) => {
     if ('bounds' in frame) map.current?.fitBounds(frame.bounds, { padding: 60, maxZoom: frame.maxZoom, duration: 0 });
     else map.current?.jumpTo(frame);
@@ -33,6 +35,14 @@ export function FleetMap({ positions, onOpen, camera, request }: {
     });
     map.current = instance;
     instance.on('movestart', event => { if (event.originalEvent) fitted.current = true; });
+    instance.on('style.load', () => { setImageryUnavailable(false); });
+    // Same failed-tile signal as MapPanel: markers are independent DOM
+    // overlays, so a fleet with no imagery still shows every vehicle.
+    instance.on('error', event => {
+      if ((event as { sourceId?: string }).sourceId === 'basemap') {
+        setImageryUnavailable(true);
+      }
+    });
     fitted.current = camera.current !== null;
     const observer = new ResizeObserver(() => instance.resize());
     observer.observe(container.current);
@@ -79,6 +89,7 @@ export function FleetMap({ positions, onOpen, camera, request }: {
         onZoom={delta => { fitted.current = true; map.current?.zoomTo(map.current.getZoom() + delta, { duration: 200 }); }}
         onReset={() => { map.current?.easeTo({ bearing: 0, pitch: 0, duration: 300 }); }} />
     </div>
+    {imageryUnavailable && <div className="map-legend"><Chip tone="caution">Imagery unavailable</Chip></div>}
     <div ref={container} className="map-panel" aria-label="Fleet position map" />
     {positions.length === 0 && <p className="fleet-map__empty">No fresh vehicle positions</p>}
   </div>;

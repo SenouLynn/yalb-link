@@ -10,6 +10,7 @@ Recorded validation procedures and results (raw captures are optional):
 - [T017](validation/t017.md) — T-017 workspace acceptance — 2026-09-09
 - [T021](validation/t021.md) — T-021 Compose recording persistence
 - [T022](validation/t022.md) — T-022 fleet overview acceptance — 2026-09-09/10
+- [T030](validation/t030.md) — T-030 observer startup without internet — 2026-09-14
 
 See the [temporary artifact workflow](../temp/README.md) for capture and cleanup.
 Reusable mission validation helpers live in `scripts/validation/`.
