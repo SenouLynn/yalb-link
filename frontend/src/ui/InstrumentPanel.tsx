@@ -1,8 +1,8 @@
 import { AttitudeIndicator } from './AttitudeIndicator';
 import { HeadingIndicator } from './HeadingIndicator';
-import { NO_VALUE, num, signed } from './format';
+import { age, NO_VALUE, num, signed } from './format';
 import { Group, Row } from './primitives';
-import { hasDisplayValue, type FlightReadings } from './readings';
+import { hasDisplayValue, type FlightReadings, type Reading } from './readings';
 
 /**
  * The primary readings, grouped by the MAVLink family they resolve from.
@@ -16,24 +16,27 @@ import { hasDisplayValue, type FlightReadings } from './readings';
  * The consulted tier (guidance, home, radio link) is not here: it lives in the
  * rail, because it is read before and after a flight rather than during one.
  *
- * Each group leads with the one reading flown on — altitude, ground speed,
- * airspeed, battery — and its remaining rows sit at the data step beneath it.
- * The lead step previously had a single consumer in the whole application,
- * which made a four-step scale really three steps and one special case, and
- * left this column with no spine for the eye to run down.
+ * Altitude, flight path, and airspeed collapse into one "Flight data" pane —
+ * styled like every other rail accordion — rather than three separate groups.
+ * One header can only carry one family's provenance faithfully, though, and
+ * these three are three different families with three different ages.
+ * Altitude keeps the header's own drain bar, since it's already this group's
+ * `lead` row; ground speed/climb and airspeed name their own source and age on
+ * their first row's hint instead, the same way `HomeRows` states a source that
+ * differs from its group header's.
  */
 export function InstrumentPanel({ readings }: { readings: FlightReadings }) {
-  const { position, flightPath, airspeed, battery } = readings;
+  const { position, flightPath, airspeed } = readings;
   const altitude = hasDisplayValue(position) ? position.value : null;
   const path = hasDisplayValue(flightPath) ? flightPath.value : null;
-  const power = hasDisplayValue(battery) ? battery.value : null;
   const air = hasDisplayValue(airspeed) ? airspeed.value : null;
 
   return (
     <>
+      <HeadingIndicator reading={readings.heading} />
       <AttitudeIndicator reading={readings.attitude} />
 
-      <Group label="Altitude" reading={position}>
+      <Group label="Flight data" reading={position} collapsible>
         <Row
           label="Altitude"
           hint={datumNote(altitude)}
@@ -42,15 +45,12 @@ export function InstrumentPanel({ readings }: { readings: FlightReadings }) {
           tone={altitude === null ? 'dead' : 'normal'}
           lead
         />
-      </Group>
-
-      <Group label="Flight path" reading={flightPath}>
         <Row
           label="Ground speed"
+          hint={sourceHint(flightPath)}
           value={path === null ? NO_VALUE : num(path.groundSpeedMps)}
           unit="m/s"
           tone={path === null ? 'dead' : 'normal'}
-          lead
         />
         <Row
           label="Climb"
@@ -58,37 +58,26 @@ export function InstrumentPanel({ readings }: { readings: FlightReadings }) {
           unit="m/s"
           tone={path === null ? 'dead' : 'normal'}
         />
-      </Group>
-
-      <Group label="Airspeed" reading={airspeed}>
         <Row
           label="Airspeed"
+          hint={sourceHint(airspeed)}
           value={air === null ? NO_VALUE : num(air.airspeedMps)}
           unit="m/s"
           tone={air === null ? 'dead' : 'normal'}
-          lead
         />
       </Group>
-
-      <Group label="Power" reading={battery}>
-        <Row
-          label="Battery"
-          value={power === null ? NO_VALUE : num(power.voltageV, 2)}
-          unit="V"
-          tone={power === null ? 'dead' : 'normal'}
-          lead
-        />
-        <Row
-          label="Remaining"
-          value={power === null ? NO_VALUE : num(power.remainingPct, 0)}
-          unit="%"
-          tone={power === null ? 'dead' : 'normal'}
-        />
-      </Group>
-
-      <HeadingIndicator reading={readings.heading} />
     </>
   );
+}
+
+/** Names a reading's own source and age, for a row whose family the group
+ *  header does not already state — see `HomeRows` for the same pattern. */
+function sourceHint(reading: Reading<unknown>): string | undefined {
+  if (reading.source === null || reading.ageMs === null) {
+    return undefined;
+  }
+
+  return `${reading.source} · ${age(reading.ageMs)}`;
 }
 
 /** Names the altitude datum explicitly; the two differ by field elevation. */

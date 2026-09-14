@@ -35,6 +35,20 @@
   max-height: 4rem;
 }
 
+/* --- command -------------------------------------------------------------- */
+
+/*
+ * The fixed command bar above the map/video viewport — arm/disarm today,
+ * Return-to-Home/Land/Failsafe reserved for once they exist. It renders one
+ * `Group`, whose own header and body chrome already butt flush to the slot
+ * edge; the one thing that chrome does not supply on its own is a seam
+ * against what follows it, since a resident Group is normally followed by
+ * another Group's own header rule, not by raw map content.
+ */
+.critical-bar {
+  border-bottom: var(--rule);
+}
+
 /* --- map ---------------------------------------------------------------- */
 
 .map-shell {

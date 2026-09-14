@@ -32,15 +32,17 @@ import {
   type MissionViewState,
 } from '@/mission/state';
 import type { StreamSource } from '@/stream/select';
-import { ArmControl } from '@/ui/ArmControl';
+import type { ArmControlProps } from '@/ui/ArmControl';
+import { CriticalCommandBar } from '@/ui/CriticalCommandBar';
 import { FamiliesPanel, SamplePanel } from '@/ui/DevPanels';
 import { latLon } from '@/ui/format';
 import { GuidancePanel, HomeRows, RadioLinkPanel } from '@/ui/InspectionPanel';
 import { InstrumentPanel } from '@/ui/InstrumentPanel';
-import { Group, Row } from '@/ui/primitives';
-import { hasDisplayValue, readFlight } from '@/ui/readings';
+import { Group, Lever, Row } from '@/ui/primitives';
+import { hasDisplayValue, readFlight, type FlightReadings } from '@/ui/readings';
 import { LinkRows, StateRows } from '@/ui/StatusBar';
 import {
+  DEFAULT_MIRRORED,
   DEFAULT_VISIBILITY,
   ViewBar,
   ViewsMenu,
@@ -68,6 +70,7 @@ export interface VehiclePaneProps {
 
 export function VehiclePane({ fleet, view, nowMs, source, active, controls }: VehiclePaneProps) {
   const [visible, setVisible] = useState<PanelVisibility>(DEFAULT_VISIBILITY);
+  const [mirrored, setMirrored] = useState<PanelVisibility>(DEFAULT_MIRRORED);
 
   const toggle = (id: string) => {
     // Moving focus out before the panel is hidden; otherwise focus lands on the
@@ -81,6 +84,12 @@ export function VehiclePane({ fleet, view, nowMs, source, active, controls }: Ve
 
   const toggleWholeSection = (id: SectionId) => {
     setVisible((previous) => toggleSection(id, previous));
+  };
+
+  /** Toggles a panel's plain copy in its mirror target (the map or the
+   *  instruments column) without touching its rail accordion at all. */
+  const toggleMirror = (id: string) => {
+    setMirrored((previous) => ({ ...previous, [id]: previous[id] !== true }));
   };
 
   return (
@@ -107,6 +116,8 @@ export function VehiclePane({ fleet, view, nowMs, source, active, controls }: Ve
           nowMs={nowMs}
           source={source}
           visible={visible}
+          mirrored={mirrored}
+          onToggleMirror={toggleMirror}
           active={active}
         />
       )}
@@ -121,6 +132,8 @@ function SelectedFlightDisplay({
   nowMs,
   source,
   visible,
+  mirrored,
+  onToggleMirror,
   active,
 }: {
   fleet: FleetState;
@@ -128,6 +141,8 @@ function SelectedFlightDisplay({
   nowMs: number;
   source: StreamSource;
   visible: PanelVisibility;
+  mirrored: PanelVisibility;
+  onToggleMirror: (id: string) => void;
   active: boolean;
 }) {
   const readings = readFlight(view, nowMs);
@@ -137,45 +152,43 @@ function SelectedFlightDisplay({
   const position = hasDisplayValue(readings.position) ? readings.position.value : null;
   const status = { view, nowMs, connected: fleet.connected, source };
 
+  const armProps: ArmControlProps = {
+    active,
+    view,
+    connected: fleet.connected,
+    source,
+    latest: fleet.commands[view.key],
+    staleLatest: fleet.commandsStale[view.key] === true,
+    nowMs,
+  };
+
   /*
    * One node per registered panel id. Composition is the only thing that knows
    * both the registry and the feature modules, which is what keeps a feature
    * from being able to put itself on screen.
+   *
+   * `content` is the rail's authoritative rendering — collapsible, and for the
+   * three mirrored panels, carrying the "+" that mirrors them out. Command
+   * isn't here at all: it left the panel system entirely for the fixed
+   * critical bar, passed below as a `sectionHeaders` entry instead.
    */
   const content: PanelContent = {
-    link: <LinkRows {...status} />,
-    state: <StateRows {...status} />,
-    command: (
-      <ArmControl
-        active={active}
-        key={view.key}
-        view={view}
-        connected={fleet.connected}
-        source={source}
-        latest={fleet.commands[view.key]}
-        staleLatest={fleet.commandsStale[view.key] === true}
-        nowMs={nowMs}
-      />
-    ),
-    /*
-     * Where it is, and what that is measured against.
-     *
-     * Home has no section of its own: it is the datum the position above it and
-     * the altitude tape across the screen are both measured against, and a
-     * heading between them read as an unrelated fact that happened to be
-     * nearby. It comes from a different family with a different lifetime, so
-     * `HomeRows` names its own source rather than borrowing this header's.
-     */
+    link: <LinkRows {...status} collapsible />,
+    state: <StateRows {...status} collapsible />,
     position: (
-      <Group label="Position" reading={readings.position}>
-        <Row
-          label="Lat / lon"
-          value={latLon(position?.latDeg, position?.lonDeg)}
-          tone={position === null ? 'dead' : 'normal'}
-        />
-        <Row label="Track" value={`${String(view.track.length)} / 500`} unit="pts" />
-        <HomeRows readings={readings} />
-      </Group>
+      <PositionGroup
+        readings={readings}
+        view={view}
+        collapsible
+        actions={
+          <MirrorLever
+            id="position"
+            mirrored={mirrored['position'] === true}
+            onToggle={onToggleMirror}
+            target="Position on the map"
+          />
+        }
+      />
     ),
     mission: (
       <MissionPanel
@@ -185,6 +198,7 @@ function SelectedFlightDisplay({
         error={mission.error}
         activeSeq={activeSeq}
         onDownload={mission.onDownload}
+        collapsible
       />
     ),
     waypoints: (
@@ -205,14 +219,134 @@ function SelectedFlightDisplay({
         vehicleKey={view.key}
       />
     ) : null,
-    guidance: <GuidancePanel readings={readings} />,
-    radiolink: <RadioLinkPanel readings={readings} />,
+    guidance: (
+      <GuidancePanel
+        readings={readings}
+        collapsible
+        actions={
+          <MirrorLever
+            id="guidance"
+            mirrored={mirrored['guidance'] === true}
+            onToggle={onToggleMirror}
+            target="Guidance on the map"
+          />
+        }
+      />
+    ),
+    radiolink: (
+      <RadioLinkPanel
+        readings={readings}
+        collapsible
+        actions={
+          <MirrorLever
+            id="radiolink"
+            mirrored={mirrored['radiolink'] === true}
+            onToggle={onToggleMirror}
+            target="Radio link beside the instruments"
+          />
+        }
+      />
+    ),
     instruments: <InstrumentPanel readings={readings} />,
     families: <FamiliesPanel view={view} nowMs={nowMs} />,
     sample: <SamplePanel view={view} />,
   };
 
-  return <WorkspaceSlots visible={visible} content={content} />;
+  /*
+   * Plain, non-collapsible renderings for the same three panels' mirrored
+   * copies — exactly how each looked before this pane grew a rail, so the map
+   * band and the instruments column read the same as ever when mirrored on.
+   */
+  const mirrorContent: PanelContent = {
+    position: <PositionGroup readings={readings} view={view} />,
+    guidance: <GuidancePanel readings={readings} />,
+    radiolink: <RadioLinkPanel readings={readings} />,
+  };
+
+  return (
+    <WorkspaceSlots
+      visible={visible}
+      mirrored={mirrored}
+      content={content}
+      mirrorContent={mirrorContent}
+      sectionHeaders={{ map: <CriticalCommandBar key={view.key} {...armProps} /> }}
+    />
+  );
+}
+
+/**
+ * Where it is, and what that is measured against.
+ *
+ * Home has no section of its own: it is the datum the position above it and
+ * the altitude tape across the screen are both measured against, and a
+ * heading between them read as an unrelated fact that happened to be nearby.
+ * It comes from a different family with a different lifetime, so `HomeRows`
+ * names its own source rather than borrowing this header's.
+ *
+ * Pulled out to a named component (rather than left inline, as before) so the
+ * rail rendering and the mirrored rendering under the map can share one
+ * implementation instead of two copies drifting apart.
+ */
+function PositionGroup({
+  readings,
+  view,
+  collapsible,
+  actions,
+}: {
+  readings: FlightReadings;
+  view: VehicleView;
+  collapsible?: boolean | undefined;
+  actions?: ReactNode | undefined;
+}) {
+  const position = hasDisplayValue(readings.position) ? readings.position.value : null;
+
+  return (
+    <Group label="Position" reading={readings.position} collapsible={collapsible} actions={actions}>
+      <Row
+        label="Lat / lon"
+        value={latLon(position?.latDeg, position?.lonDeg)}
+        tone={position === null ? 'dead' : 'normal'}
+      />
+      <Row label="Track" value={`${String(view.track.length)} / 500`} unit="pts" />
+      <HomeRows readings={readings} />
+    </Group>
+  );
+}
+
+/**
+ * The rail's "+": mirrors a panel's plain content back onto the map or beside
+ * the instruments without touching the rail accordion it sits inside.
+ *
+ * `event.preventDefault()` is load-bearing, not defensive: this lever renders
+ * inside a `<summary>` once its `Group` is collapsible, and a `<summary>`'s
+ * own toggle is a default action gated on `event.defaultPrevented` — without
+ * this, every mirror click would also open or close the accordion beneath it.
+ */
+function MirrorLever({
+  id,
+  mirrored,
+  onToggle,
+  target,
+}: {
+  id: string;
+  mirrored: boolean;
+  onToggle: (id: string) => void;
+  target: string;
+}) {
+  return (
+    <Lever
+      compact
+      pressed={mirrored}
+      aria-label={mirrored ? `Stop mirroring ${target}` : `Mirror ${target}`}
+      title={mirrored ? `Showing on ${target}` : `Show on ${target}`}
+      onClick={(event) => {
+        event.preventDefault();
+        onToggle(id);
+      }}
+    >
+      +
+    </Lever>
+  );
 }
 
 function useMission(key: VehicleKey, sysId: number, compId: number, source: StreamSource) {

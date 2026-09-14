@@ -14,7 +14,6 @@ import {
   PANELS,
   SECTIONS,
   columnOccupied,
-  panelsInSection,
   sectionCheck,
   sectionOccupied,
   stackedIn,
@@ -26,6 +25,7 @@ import {
 } from './registry';
 
 export {
+  DEFAULT_MIRRORED,
   DEFAULT_VISIBILITY,
   PANELS,
   SECTIONS,
@@ -102,13 +102,26 @@ export function ViewBar({ children, trailing }: { children?: ReactNode; trailing
  */
 export function WorkspaceSlots({
   visible,
+  mirrored = EMPTY_VISIBILITY,
   content,
+  mirrorContent = EMPTY_CONTENT,
+  sectionHeaders = EMPTY_HEADERS,
   emptyHint,
 }: {
   visible: PanelVisibility;
+  /** Which mirrored-in copies are currently on. Gated together with `visible`. */
+  mirrored?: PanelVisibility | undefined;
   content: PanelContent;
+  /** Plain renderings for a panel's mirrored-in copy, keyed the same as `content`. */
+  mirrorContent?: PanelContent | undefined;
+  /**
+   * Fixed, un-hideable chrome rendered above a section's own body — for
+   * content that must never be a click away, like the critical command bar
+   * above the map. Not a panel: it carries no visibility toggle of its own.
+   */
+  sectionHeaders?: Partial<Record<SectionId, ReactNode>> | undefined;
   /** Shown when the operator has hidden everything. */
-  emptyHint?: string;
+  emptyHint?: string | undefined;
 }) {
   const anyVisible = PANELS.some((panel) => visible[panel.id] === true);
 
@@ -131,11 +144,23 @@ export function WorkspaceSlots({
       )}
 
       {COLUMN_SECTIONS.map((section) => (
-        <Column key={section.id} section={section} visible={visible} content={content} />
+        <Column
+          key={section.id}
+          section={section}
+          visible={visible}
+          mirrored={mirrored}
+          content={content}
+          mirrorContent={mirrorContent}
+          sectionHeaders={sectionHeaders}
+        />
       ))}
     </main>
   );
 }
+
+const EMPTY_VISIBILITY: PanelVisibility = {};
+const EMPTY_CONTENT: PanelContent = {};
+const EMPTY_HEADERS: Partial<Record<SectionId, ReactNode>> = {};
 
 /**
  * One column of the workspace.
@@ -147,52 +172,95 @@ export function WorkspaceSlots({
 function Column({
   section,
   visible,
+  mirrored,
   content,
+  mirrorContent,
+  sectionHeaders,
 }: {
   section: SectionDef;
   visible: PanelVisibility;
+  mirrored: PanelVisibility;
   content: PanelContent;
+  mirrorContent: PanelContent;
+  sectionHeaders: Partial<Record<SectionId, ReactNode>>;
 }) {
   const nested = stackedIn(section.id);
+  const slotProps = { visible, mirrored, content, mirrorContent, sectionHeaders };
 
   if (nested.length === 0) {
-    return <Slot section={section} visible={visible} content={content} />;
+    return <Slot section={section} {...slotProps} />;
   }
+
+  // A header pins the column open even if nothing under it has anything to
+  // show — the same reason `occupied` alone isn't enough for `Slot` below.
+  const occupied = columnOccupied(section.id, visible, mirrored) || sectionHeaders[section.id] !== undefined;
 
   return (
     <div
       className={`slot slot--column slot--${section.id}`}
       style={{ '--grow': section.grow } as CSSProperties}
-      hidden={!columnOccupied(section.id, visible)}
+      hidden={!occupied}
     >
       <div className="slot__stack">
-        <Slot section={section} visible={visible} content={content} nested />
+        <Slot section={section} {...slotProps} nested />
         {nested.map((child) => (
-          <Slot key={child.id} section={child} visible={visible} content={content} nested />
+          <Slot key={child.id} section={child} {...slotProps} nested />
         ))}
       </div>
     </div>
   );
 }
 
+/** One entry in a section's render list: its own panel, or a mirror of one
+ *  whose home is elsewhere. */
+interface SlotEntry {
+  panel: PanelDef;
+  isMirror: boolean;
+}
+
 function Slot({
   section,
   visible,
+  mirrored,
   content,
+  mirrorContent,
+  sectionHeaders,
   nested,
 }: {
   section: SectionDef;
   visible: PanelVisibility;
+  mirrored: PanelVisibility;
   content: PanelContent;
+  mirrorContent: PanelContent;
+  sectionHeaders: Partial<Record<SectionId, ReactNode>>;
   /** Inside a stack, so its flex sizing is a height rather than a width. */
   nested?: boolean;
 }) {
-  const panels = panelsInSection(section.id);
-  const shown = panels.filter((panel) => visible[panel.id] === true);
+  /*
+   * One pass over `PANELS` — the registry's single source of order — rather
+   * than concatenating a home list and a mirrored list, so DOM order for a
+   * section stays tied to the one array that defines it even once mirrors
+   * are mixed in.
+   */
+  const entries: SlotEntry[] = PANELS.filter(
+    (panel) => panel.section === section.id || panel.mirror === section.id,
+  ).map((panel) => ({ panel, isMirror: panel.section !== section.id }));
+
+  // Both `visible` and, for a mirrored-in entry, `mirrored` must say yes —
+  // hiding a panel from the Views popover must hide its mirror with it.
+  const entryVisible = (entry: SlotEntry) =>
+    entry.isMirror
+      ? visible[entry.panel.id] === true && mirrored[entry.panel.id] === true
+      : visible[entry.panel.id] === true;
+
+  const shown = entries.filter(entryVisible);
+  const header = sectionHeaders[section.id];
 
   const tabbed = section.tabbed === true;
-  const [active, setActive] = useState(panels[0]?.id ?? '');
-  const current = shown.some((panel) => panel.id === active) ? active : (shown[0]?.id ?? '');
+  const [active, setActive] = useState(entries[0]?.panel.id ?? '');
+  const current = shown.some((entry) => entry.panel.id === active)
+    ? active
+    : (shown[0]?.panel.id ?? '');
 
   /*
    * A section splits into two regions: the one panel that owns the leftover
@@ -201,47 +269,66 @@ function Slot({
    * the readings that describe progress along it fold in under the map, and
    * turning them off gives the map the column.
    */
-  const bleeding = panels.filter((panel) => panel.bleed === true);
-  const rows = panels.filter((panel) => panel.bleed !== true);
-  const isShown = (panel: PanelDef) =>
-    visible[panel.id] === true && (!tabbed || panel.id === current);
-  const anyShown = (group: readonly PanelDef[]) => group.some(isShown);
+  const bleeding = entries.filter((entry) => entry.panel.bleed === true);
+  const rows = entries.filter((entry) => entry.panel.bleed !== true);
+  const isShown = (entry: SlotEntry) => entryVisible(entry) && (!tabbed || entry.panel.id === current);
+  const anyShown = (group: readonly SlotEntry[]) => group.some(isShown);
 
   /*
    * The row region's two sides. Split only while both have something on them:
    * one side alone takes the full width rather than leaving a gutter where the
    * other would have been.
+   *
+   * `side` is scoped to whichever section it actually describes a split for —
+   * a mirrored entry's side always applies (waypoints/position/guidance split
+   * the map's trailing band that way), but a panel's *home* rendering only
+   * honours its own `side` when it has no mirror elsewhere to reserve that
+   * meaning for. Without this, position/guidance's `side: 'trail'` — meant for
+   * their map mirror — would also apply to their unrelated rail home, routing
+   * every other rail row through a lead/trail split with nothing in `lead` and
+   * dropping link/state/mission/radiolink from the section entirely.
    */
-  const lead = rows.filter((panel) => panel.side === 'lead');
-  const trail = rows.filter((panel) => panel.side === 'trail');
+  const sideOf = (entry: SlotEntry) =>
+    entry.isMirror || entry.panel.mirror === undefined ? entry.panel.side : undefined;
+  const lead = rows.filter((entry) => sideOf(entry) === 'lead');
+  const trail = rows.filter((entry) => sideOf(entry) === 'trail');
   const sided = lead.length > 0 || trail.length > 0;
   const split = anyShown(lead) && anyShown(trail);
 
-  const mount = (panel: PanelDef) => (
-    <div
-      key={panel.id}
-      id={`panel-${panel.id}`}
-      className="panel-mount"
-      hidden={!isShown(panel)}
-      role={tabbed ? 'tabpanel' : undefined}
-      aria-labelledby={tabbed ? `tab-${panel.id}` : undefined}
-      tabIndex={tabbed ? 0 : undefined}
-    >
-      {content[panel.id]}
-    </div>
-  );
+  const mount = (entry: SlotEntry) => {
+    // A mirrored copy needs its own id: `radiolink` would otherwise render at
+    // both `#panel-radiolink` (its rail home) and here, and two elements
+    // sharing an id is invalid HTML that silently breaks focus management and
+    // any `aria-controls` reference.
+    const domId = entry.isMirror ? `panel-${entry.panel.id}-mirror` : `panel-${entry.panel.id}`;
+    return (
+      <div
+        key={domId}
+        id={domId}
+        className="panel-mount"
+        hidden={!isShown(entry)}
+        role={tabbed ? 'tabpanel' : undefined}
+        aria-labelledby={tabbed ? `tab-${entry.panel.id}` : undefined}
+        tabIndex={tabbed ? 0 : undefined}
+      >
+        {(entry.isMirror ? mirrorContent : content)[entry.panel.id]}
+      </div>
+    );
+  };
 
   return (
     <section
       className={`slot slot--${section.id}${bleeding.length > 0 ? ' slot--bleeding' : ''}`}
       style={nested === true ? undefined : ({ '--grow': section.grow } as CSSProperties)}
       aria-label={section.label}
-      hidden={shown.length === 0}
+      hidden={shown.length === 0 && header === undefined}
     >
+      {header}
+
       {tabbed && shown.length > 0 ? (
         <Tabs
           label="Developer panels"
-          tabs={shown.map((panel) => ({ id: panel.id, label: panel.label }))}
+          tabs={shown.map((entry) => ({ id: entry.panel.id, label: entry.panel.label }))}
           active={current}
           onSelect={setActive}
         />

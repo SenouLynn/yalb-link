@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import {
   ViewBar,
   WorkspaceShell,
   WorkspaceSlots,
   ViewsMenu,
+  DEFAULT_MIRRORED,
   DEFAULT_VISIBILITY,
   toggleSection,
   type PanelContent,
@@ -20,28 +21,67 @@ import { mockMissionSnapshot } from '@/mission/fixtures';
 import { missionGeometry } from '@/mission/model';
 import { instrumentReadings, NOW, vehicle } from './fixtures';
 
+/** A minimal stand-in for `MirrorLever` — the rail's "+" that mirrors a panel
+ *  back onto the map or beside the instruments without touching the
+ *  accordion it sits inside. */
+function MirrorLever({
+  id,
+  mirrored,
+  onToggle,
+}: {
+  id: string;
+  mirrored: boolean;
+  onToggle: (id: string) => void;
+}) {
+  return (
+    <Lever
+      compact
+      pressed={mirrored}
+      aria-label={mirrored ? `Stop mirroring ${id}` : `Mirror ${id}`}
+      onClick={(event) => {
+        event.preventDefault();
+        onToggle(id);
+      }}
+    >
+      +
+    </Lever>
+  );
+}
+
 /**
  * The shell with every registered panel mounted.
  *
  * This is the story that catches slot regressions: toggling panels off in Views
  * must reflow without leaving a gap, and no slot may push the page sideways.
+ * It also has to demonstrate the accordion/mirror behavior the real
+ * `VehiclePane` wires up, or it stops catching regressions in that instead.
  */
 function Workshop() {
   const [visible, setVisible] = useState<PanelVisibility>(DEFAULT_VISIBILITY);
+  const [mirrored, setMirrored] = useState<PanelVisibility>(DEFAULT_MIRRORED);
   const [loaded, setLoaded] = useState(true);
   const snapshot = loaded ? mockMissionSnapshot(1, 1, NOW) : null;
   const status = { view: vehicle, nowMs: NOW, connected: true, source: 'mock' as const };
+  const readings = instrumentReadings('live');
+
+  const toggleMirror = (id: string) => {
+    setMirrored((current) => ({ ...current, [id]: current[id] !== true }));
+  };
+
+  const position = (collapsible?: boolean, actions?: ReactNode) => (
+    <Group label="Position" reading={readings.position} collapsible={collapsible} actions={actions}>
+      <Row label="Lat / lon" value="47.393227, 8.545423" />
+      <Row label="Track" value="160 / 500" unit="pts" />
+      <HomeRows readings={readings} />
+    </Group>
+  );
 
   const content: PanelContent = {
-    link: <LinkRows {...status} />,
-    state: <StateRows {...status} />,
-    command: <Group label="Command"><Row label="Arm" value="DISARMED" /></Group>,
-    position: (
-      <Group label="Position" reading={instrumentReadings('live').position}>
-        <Row label="Lat / lon" value="47.393227, 8.545423" />
-        <Row label="Track" value="160 / 500" unit="pts" />
-        <HomeRows readings={instrumentReadings('live')} />
-      </Group>
+    link: <LinkRows {...status} collapsible />,
+    state: <StateRows {...status} collapsible />,
+    position: position(
+      true,
+      <MirrorLever id="position" mirrored={mirrored['position'] === true} onToggle={toggleMirror} />,
     ),
     mission: (
       <MissionPanel
@@ -53,6 +93,7 @@ function Workshop() {
         onDownload={() => {
           setLoaded(true);
         }}
+        collapsible
       />
     ),
     waypoints: (
@@ -66,11 +107,29 @@ function Workshop() {
     map: (
       <div className="slot__empty">Map placeholder · layout preview</div>
     ),
-    guidance: <GuidancePanel readings={instrumentReadings('live')} />,
-    radiolink: <RadioLinkPanel readings={instrumentReadings('live')} />,
-    instruments: <InstrumentPanel readings={instrumentReadings('live')} />,
+    guidance: (
+      <GuidancePanel
+        readings={readings}
+        collapsible
+        actions={<MirrorLever id="guidance" mirrored={mirrored['guidance'] === true} onToggle={toggleMirror} />}
+      />
+    ),
+    radiolink: (
+      <RadioLinkPanel
+        readings={readings}
+        collapsible
+        actions={<MirrorLever id="radiolink" mirrored={mirrored['radiolink'] === true} onToggle={toggleMirror} />}
+      />
+    ),
+    instruments: <InstrumentPanel readings={readings} />,
     families: <FamiliesPanel view={vehicle} nowMs={NOW} />,
     sample: <SamplePanel view={vehicle} />,
+  };
+
+  const mirrorContent: PanelContent = {
+    position: position(),
+    guidance: <GuidancePanel readings={readings} />,
+    radiolink: <RadioLinkPanel readings={readings} />,
   };
 
   return (
@@ -89,7 +148,19 @@ function Workshop() {
             />
           }
         />
-        <WorkspaceSlots visible={visible} content={content} />
+        <WorkspaceSlots
+          visible={visible}
+          mirrored={mirrored}
+          content={content}
+          mirrorContent={mirrorContent}
+          sectionHeaders={{
+            map: (
+              <div className="critical-bar">
+                <Group label="Command"><Row label="Arm" value="DISARMED" /></Group>
+              </div>
+            ),
+          }}
+        />
       </div>
     </WorkspaceShell>
   );

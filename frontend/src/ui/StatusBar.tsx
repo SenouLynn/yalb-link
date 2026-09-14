@@ -15,6 +15,8 @@ export interface StatusRowsProps {
   connected: boolean;
   /** Where this page's data comes from. Never inferred from the data itself. */
   source: StreamSource;
+  /** Renders as a closed-by-default rail accordion. */
+  collapsible?: boolean | undefined;
 }
 
 /**
@@ -26,11 +28,11 @@ export interface StatusRowsProps {
  * one rail group the operator cannot hide — losing it is how you stop knowing
  * that the display is lying to you.
  */
-export function LinkRows({ view, nowMs, connected, source }: StatusRowsProps) {
+export function LinkRows({ view, nowMs, connected, source, collapsible }: StatusRowsProps) {
   const lost = view.lifecycle === FleetEventType.VEHICLE_LOST;
 
   return (
-    <Group label="Link" reading={heartbeatReading(view, nowMs)}>
+    <Group label="Link" reading={heartbeatReading(view, nowMs)} collapsible={collapsible}>
       <Row
         label="Source"
         value={sourceLabel(source, connected)}
@@ -47,11 +49,11 @@ export function LinkRows({ view, nowMs, connected, source }: StatusRowsProps) {
 }
 
 /** Armed state, mode, and the two estimators an operator checks before flying. */
-export function StateRows({ view, nowMs }: StatusRowsProps) {
+export function StateRows({ view, nowMs, collapsible }: StatusRowsProps) {
   const heartbeat = view.heartbeat;
 
   return (
-    <Group label="Target state" reading={heartbeatReading(view, nowMs)}>
+    <Group label="Target state" reading={heartbeatReading(view, nowMs)} collapsible={collapsible}>
       <Row
         label="Armed"
         value={armedLabel(heartbeat?.armed)}

@@ -11,7 +11,7 @@
  * styling the panel directly. A one-off style is how the next drift starts.
  */
 
-import type { ReactNode, Ref, AriaAttributes } from 'react';
+import type { MouseEvent, ReactNode, Ref, AriaAttributes } from 'react';
 
 import { Provenance } from './Provenance';
 import type { Reading } from './readings';
@@ -47,24 +47,36 @@ export interface GroupProps {
    */
   absent?: string | undefined;
   children?: ReactNode;
+  /**
+   * Renders as a closed-by-default disclosure — `<details>`/`<summary>` —
+   * instead of a plain section, reusing the `.group__head--disclosure`
+   * styling `WaypointList` already established. Uncontrolled: nothing else
+   * needs to observe whether a given group is open, so there is no state to
+   * lift.
+   */
+  collapsible?: boolean | undefined;
 }
 
 /** A labelled section of rows, separated from its neighbours by a hairline. */
-export function Group({ label, annotation, actions, reading, absent, children, className, 'aria-label': ariaLabel }: GroupProps) {
+export function Group({ label, annotation, actions, reading, absent, children, className, collapsible, 'aria-label': ariaLabel }: GroupProps) {
+  const Root = collapsible === true ? 'details' : 'section';
+  const Head = collapsible === true ? 'summary' : 'div';
+  const headClass = collapsible === true ? 'group__head group__head--disclosure' : 'group__head';
+
   return (
-    <section className={`group${className ? ` ${className}` : ''}`} aria-label={ariaLabel}>
-      <div className="group__head">
+    <Root className={`group${className ? ` ${className}` : ''}`} aria-label={ariaLabel}>
+      <Head className={headClass}>
         <span className="group__label">{label}</span>
         {actions}
         {annotation === undefined ? null : <span className="group__annotation">{annotation}</span>}
         {reading === undefined || absent !== undefined ? null : <Provenance reading={reading} />}
-      </div>
+      </Head>
       {absent === undefined ? (
         <div className="group__body">{children}</div>
       ) : (
         <Note tone="absent">{absent}</Note>
       )}
-    </section>
+    </Root>
   );
 }
 
@@ -190,7 +202,13 @@ export function Glance({ label, value, unit, tone = 'normal', title }: GlancePro
 export interface LeverProps extends AriaAttributes {
   ref?: Ref<HTMLButtonElement>;
   children: ReactNode;
-  onClick?: (() => void) | undefined;
+  /**
+   * Takes the click event so a lever nested inside a `<summary>` (a
+   * collapsible group's header action) can call `event.preventDefault()` and
+   * act on its own click without also toggling the disclosure it sits in.
+   * Every plain caller can still pass a zero-argument function.
+   */
+  onClick?: ((event: MouseEvent<HTMLButtonElement>) => void) | undefined;
   /**
    * Navigates instead of acting. Renders an anchor, which is what a thing that
    * changes the address has to be — it must open in a new tab, be copied, and
@@ -201,6 +219,11 @@ export interface LeverProps extends AriaAttributes {
   caution?: boolean | undefined;
   /** Fills its container — a group's committing action, not a lever in a row. */
   wide?: boolean | undefined;
+  /** Pads to the chip token instead of the target-x token, for a one-glyph
+   *  label — the rail's mirror "+" — so it doesn't carry a worded button's
+   *  full-width padding around a single character. The hit area stays on the
+   *  target axis regardless. */
+  compact?: boolean | undefined;
   disabled?: boolean | undefined;
   /** Renders the toggled-on state for a control that holds a position. */
   pressed?: boolean | undefined;
@@ -234,6 +257,7 @@ export function Lever({
   href,
   caution,
   wide,
+  compact,
   disabled,
   pressed,
   title,
@@ -244,6 +268,7 @@ export function Lever({
 
   if (caution === true) classes.push('lever--caution');
   if (wide === true) classes.push('lever--wide');
+  if (compact === true) classes.push('lever--compact');
 
   if (href !== undefined) {
     return (

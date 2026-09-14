@@ -25,7 +25,7 @@ export function quarantineDurationMs(resolution: CommandResolution | undefined):
   return Math.max(0, seconds * 1000 + Math.round((until.nanos - attested.nanos) / 1e6));
 }
 
-export function ArmControl({ view, connected, source, latest, staleLatest = false, active = true, nowMs }: {
+export interface ArmControlProps {
   active?: boolean;
   view: VehicleView;
   connected: boolean;
@@ -34,7 +34,9 @@ export function ArmControl({ view, connected, source, latest, staleLatest = fals
   /** Whether `latest` predates a stream gap. See `FleetState.commandsStale`. */
   staleLatest?: boolean;
   nowMs: number;
-}) {
+}
+
+export function ArmControl({ view, connected, source, latest, staleLatest = false, active = true, nowMs }: ArmControlProps) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CommandTransaction | undefined>(latest);

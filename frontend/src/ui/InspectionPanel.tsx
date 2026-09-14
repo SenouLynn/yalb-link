@@ -18,6 +18,8 @@
  * instrument on the display already takes.
  */
 
+import type { ReactNode } from 'react';
+
 import { age, bearing, latLon, num, signed, NO_VALUE } from './format';
 import { Group, Row } from './primitives';
 import { hasDisplayValue, type FlightReadings, type Reading } from './readings';
@@ -32,7 +34,17 @@ function absent(reading: Reading<unknown>, sentence: string): string | undefined
   return reading.state === 'unavailable' ? sentence : undefined;
 }
 
-export function GuidancePanel({ readings }: { readings: FlightReadings }) {
+export function GuidancePanel({
+  readings,
+  collapsible,
+  actions,
+}: {
+  readings: FlightReadings;
+  collapsible?: boolean | undefined;
+  /** A rail-only header action — e.g. the "+" that mirrors this panel back
+   *  onto the map. Omitted for the plain, mirrored rendering. */
+  actions?: ReactNode | undefined;
+}) {
   const { guidance } = readings;
   const value = hasDisplayValue(guidance) ? guidance.value : null;
 
@@ -44,6 +56,8 @@ export function GuidancePanel({ readings }: { readings: FlightReadings }) {
         guidance,
         'Not received. The autopilot reports it while it is navigating.',
       )}
+      collapsible={collapsible}
+      actions={actions}
     >
       <Row
         label="Target bearing"
@@ -144,7 +158,17 @@ export function HomeRows({ readings }: { readings: FlightReadings }) {
   );
 }
 
-export function RadioLinkPanel({ readings }: { readings: FlightReadings }) {
+export function RadioLinkPanel({
+  readings,
+  collapsible,
+  actions,
+}: {
+  readings: FlightReadings;
+  collapsible?: boolean | undefined;
+  /** A rail-only header action — e.g. the "+" that mirrors this panel back
+   *  beside the instruments. Omitted for the plain, mirrored rendering. */
+  actions?: ReactNode | undefined;
+}) {
   const { link } = readings;
   const value = hasDisplayValue(link) ? link.value : null;
 
@@ -153,6 +177,8 @@ export function RadioLinkPanel({ readings }: { readings: FlightReadings }) {
       label="Radio link"
       reading={link}
       absent={absent(link, 'Not received. Radio telemetry may be unavailable on this link.')}
+      collapsible={collapsible}
+      actions={actions}
     >
       {/* Local and remote belong in the label, not on the pointer: they are
           the only thing telling two identically named rows apart, and a

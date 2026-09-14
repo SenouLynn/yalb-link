@@ -35,6 +35,8 @@ export interface MissionPanelProps {
   error: string | null;
   activeSeq: number | null;
   onDownload: () => void;
+  /** Renders as a closed-by-default rail accordion. */
+  collapsible?: boolean | undefined;
 }
 
 export function MissionPanel({
@@ -44,6 +46,7 @@ export function MissionPanel({
   activeSeq,
   onDownload,
   nowMs = Date.now(),
+  collapsible,
 }: MissionPanelProps) {
   /*
    * Nothing known about the route collapses to a sentence, not to a column of
@@ -60,6 +63,7 @@ export function MissionPanel({
       label="Mission"
       reading={missionReading(snapshot, nowMs)}
       aria-label="Onboard mission"
+      collapsible={collapsible}
     >
       {known ? (
         <>

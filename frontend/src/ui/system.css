@@ -226,6 +226,10 @@ body {
   letter-spacing: var(--track-label);
   text-transform: uppercase;
   color: var(--lume-dim);
+  /* A two-word label wrapping to a second line grows the header bar out of its
+     one-row-unit height, which is the one thing a header may never do — see
+     The Data Row: "a row is one, a noted row is two, never one and a half." */
+  white-space: nowrap;
 }
 
 .group__annotation {
@@ -606,6 +610,19 @@ a.lever {
   width: 100%;
 }
 
+/*
+ * A single-glyph lever — the rail's mirror "+" — spends the target axis on
+ * height only. Padded to `--pad-chip` rather than `--target-x`, both already
+ * declared tokens, so a one-character label sits in a near-square button
+ * instead of the full-width padding a worded label needs. `min-width` keeps
+ * the tap target itself on the target axis regardless — the glyph gets
+ * smaller padding, not a smaller hit area.
+ */
+.lever--compact {
+  min-width: var(--target-h);
+  padding: 0 var(--pad-chip);
+}
+
 .lever-row {
   display: flex;
   flex-wrap: wrap;
@@ -852,7 +869,7 @@ body {
  * no error anywhere and every panel in it still mounted.
  */
 .shell__body > .slot--vehicle {
-  flex: 0 0 15rem;
+  flex: 0 0 19rem;
 }
 
 /*

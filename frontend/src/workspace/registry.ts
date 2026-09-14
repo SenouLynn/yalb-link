@@ -96,6 +96,16 @@ export interface PanelDef {
    * in the band under the map, stacked they would push it off the screen.
    */
   side?: 'lead' | 'trail';
+
+  /**
+   * A second, plain rendering of this panel mirrored into another section.
+   *
+   * The panel's authoritative home stays wherever `section` says; a mirror is
+   * a read-only copy for a place the operator would otherwise have to leave
+   * that home to see. Interpreted together with `side`: a panel mirrored into
+   * `map` still splits lead/trail there even though its home section does not.
+   */
+  mirror?: SectionId;
 }
 
 /**
@@ -106,16 +116,15 @@ export interface PanelDef {
 export const PANELS: readonly PanelDef[] = [
   { id: 'link', label: 'Link', section: 'vehicle', fixed: true },
   { id: 'state', label: 'Target state', section: 'vehicle' },
-  { id: 'command', label: 'Command', section: 'vehicle' },
   { id: 'mission', label: 'Mission', section: 'vehicle' },
+  { id: 'position', label: 'Position', section: 'vehicle', mirror: 'map', side: 'trail' },
+  { id: 'guidance', label: 'Guidance', section: 'vehicle', mirror: 'map', side: 'trail' },
+  { id: 'radiolink', label: 'Radio link', section: 'vehicle', mirror: 'instruments' },
 
   { id: 'map', label: 'Map', section: 'map', bleed: true },
   { id: 'waypoints', label: 'Waypoints', section: 'map', side: 'lead' },
-  { id: 'position', label: 'Position', section: 'map', side: 'trail' },
-  { id: 'guidance', label: 'Guidance', section: 'map', side: 'trail' },
 
   { id: 'instruments', label: 'Instruments', section: 'instruments' },
-  { id: 'radiolink', label: 'Radio link', section: 'instruments' },
 
   { id: 'families', label: 'Families', section: 'dev' },
   { id: 'sample', label: 'Raw sample', section: 'dev' },
@@ -128,6 +137,16 @@ export type PanelVisibility = Readonly<Record<string, boolean>>;
  *  matters. */
 export const DEFAULT_VISIBILITY: PanelVisibility = Object.fromEntries(
   PANELS.map((panel) => [panel.id, true]),
+);
+
+/**
+ * Every mirrored panel starts mirrored on, so a rail item that used to be a
+ * plain part of the map or the instruments column looks exactly the same on
+ * first load — the accordion it now also lives in defaults closed
+ * independently of this.
+ */
+export const DEFAULT_MIRRORED: PanelVisibility = Object.fromEntries(
+  PANELS.filter((panel) => panel.mirror !== undefined).map((panel) => [panel.id, true]),
 );
 
 /** The sections that mount as their own column, left to right. */
@@ -148,9 +167,32 @@ export function panelsInSection(section: SectionId): readonly PanelDef[] {
   return PANELS.filter((panel) => panel.section === section);
 }
 
-/** Whether a section has anything to show, which is what decides if it mounts. */
-export function sectionOccupied(section: SectionId, visible: PanelVisibility): boolean {
-  return panelsInSection(section).some((panel) => visible[panel.id] === true);
+/** Panels mirrored into `section`, in registry order. */
+export function mirroredIntoSection(section: SectionId): readonly PanelDef[] {
+  return PANELS.filter((panel) => panel.mirror === section);
+}
+
+/**
+ * Whether a section has anything to show, which is what decides if it mounts.
+ *
+ * `mirrored` is optional: a caller that only ever reasons about home panels
+ * (the Views popover) can keep calling this with two arguments. A caller that
+ * also renders mirrored-in panels (the shell) must pass it, or a section
+ * whose only visible content is a mirror would be reported empty and hidden.
+ */
+export function sectionOccupied(
+  section: SectionId,
+  visible: PanelVisibility,
+  mirrored?: PanelVisibility,
+): boolean {
+  const homeShown = panelsInSection(section).some((panel) => visible[panel.id] === true);
+  if (homeShown || mirrored === undefined) {
+    return homeShown;
+  }
+
+  return mirroredIntoSection(section).some(
+    (panel) => visible[panel.id] === true && mirrored[panel.id] === true,
+  );
 }
 
 /**
@@ -158,10 +200,14 @@ export function sectionOccupied(section: SectionId, visible: PanelVisibility): b
  * inside it. A column whose instruments are hidden still mounts while the
  * developer tier under it is on.
  */
-export function columnOccupied(section: SectionId, visible: PanelVisibility): boolean {
+export function columnOccupied(
+  section: SectionId,
+  visible: PanelVisibility,
+  mirrored?: PanelVisibility,
+): boolean {
   return (
-    sectionOccupied(section, visible) ||
-    stackedIn(section).some((nested) => sectionOccupied(nested.id, visible))
+    sectionOccupied(section, visible, mirrored) ||
+    stackedIn(section).some((nested) => sectionOccupied(nested.id, visible, mirrored))
   );
 }
 
