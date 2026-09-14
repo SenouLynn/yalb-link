@@ -24,6 +24,8 @@ Measure E2E-03 on powered ground hardware after applicable SITL checks; no fligh
 - [ ] Record actual radio/serial settings and observed rates, loss and recovery latency.
 - [ ] Required readings remain within predeclared freshness bounds at measured capacity; missing families are explicit.
 - [ ] Radio/USB interruptions, independent truth comparison and offline recording/replay pass or have precise blockers.
+- [ ] Ground radio attached before aircraft power-up shows a waiting state; short and long airborne equipment power cycles recover without service restart.
+- [ ] Ground device removal remains distinct from aircraft silence; the saved Field radio profile and explicit MissionPlanner handoff behave as specified in ADR 0006.
 
 ## Verification
 

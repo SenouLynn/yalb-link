@@ -4,7 +4,7 @@ title: Demonstrate USB controller observation
 status: backlog
 priority: 1
 owner: unassigned
-depends_on: T-027, T-023
+depends_on: T-027, T-048, T-049, T-050
 ---
 
 ## Motivation and evidence
@@ -17,7 +17,7 @@ Demonstrate USB controller observation with explicit evidence and remaining limi
 
 ## Scope
 
-Select a narrow serial ingress or documented local serial-to-UDP adapter experiment; verify the choice before expanding configuration. Keep operator commands disabled.
+Accept the implemented connection journey from T-045 through T-050 on the target USB controller. Cover first selection, saved settings, hardware attached before/after launch, unplug/replug and explicit port release/reacquisition for MissionPlanner. Keep operator commands disabled. A manually configured adapter experiment alone does not satisfy ADR 0006.
 
 ## Acceptance criteria
 
@@ -31,7 +31,7 @@ Run relevant Go transport/bridge tests; exercise E2E-01 on the captured target a
 
 ## Open questions
 
-Native serial versus local bridge; serial device selection and baud configuration.
+Target device identity, USB-only readings and ground procedure require T-027 evidence. Connection service choices belong to T-045; implementation belongs to its dependent cards.
 
 ## Notes
 

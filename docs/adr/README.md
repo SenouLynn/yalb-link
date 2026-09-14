@@ -10,3 +10,4 @@ decision, consequences, and a verification point.
 - [0003: Retain recordings within aggregate bounds](0003-recording-retention.md)
 - [0004: Guarded operator command transactions](0004-operator-command-transactions.md)
 - [0005: The UI presentation system](0005-ui-presentation-system.md)
+- [0006: Operator connection readiness](0006-operator-connection-readiness.md)

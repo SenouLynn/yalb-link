@@ -123,6 +123,18 @@ runbook. A passed replay confirms reproducibility, not independent correctness.
 
 ## Next scoped work
 
+[ADR 0006](../adr/0006-operator-connection-readiness.md), accepted 2026-09-14,
+establishes the intermediary operator milestone: install, select, save, connect
+and recover. The Vehicle UI is sufficient to advance; practical connection
+setup and recovery now define the next outcome. The ADR covers first launch,
+bench USB, field radio, saved device selection, MissionPlanner handoff and
+interruption recovery. Shape its missing implementation slices on the task
+board before claiming them. [T-045](cards/T-045-connection-contract.md) defines
+the local connection contract; its dependent cards cover backend serial access,
+saved profiles, frontend controls, recovery and fresh-machine launch. T-023
+alone does not complete this milestone;
+hardware scenarios below remain planned and unexecuted.
+
 Prioritize [T-023](cards/T-023-rate-requests-after-source-change.md) reconnect
 recovery alongside [T-027](cards/T-027-target-profile.md), the target profile.
 Then [T-028](cards/T-028-usb-observer.md) demonstrates USB observation and
