@@ -34,6 +34,13 @@ gomavlib. Windows is deferred, not rejected. [T-027](cards/T-027-target-profile.
 must confirm the actual operator host before [T-050](cards/T-050-local-observer-launch.md)
 commits to a platform list.
 
+The [ADR 0007 platform boundary](../adr/0007-native-serial-acquisition.md)
+clarifies the implementation policy: develop on macOS and deploy shared source
+as separate OS/architecture executables. Permit CGO for macOS detailed device
+discovery; preserve a CGO-free Linux production build. T-046 verifies both
+platforms and T-050 defines the tested distribution matrix. This policy does
+not itself establish hardware support.
+
 **Decision, settled here:** the backend acquires serial MAVLink natively
 in-process, not by requiring an operator-run serial-to-UDP adapter. This is
 costly to reverse (it shapes packaging, permissions, and the API below), so it

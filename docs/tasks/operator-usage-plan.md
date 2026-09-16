@@ -138,8 +138,8 @@ in-process serial acquisition over an external adapter. Its dependent cards
 [T-047](cards/T-047-saved-connections.md) saved profiles,
 [T-048](cards/T-048-connection-controls.md) frontend controls,
 [T-049](cards/T-049-connection-recovery.md) recovery,
-[T-050](cards/T-050-local-observer-launch.md) fresh-machine launch) can now be
-promoted to `ready` and implemented against it. T-023 alone does not complete
+[T-050](cards/T-050-local-observer-launch.md) fresh-machine launch) can be shaped against it; promotion must still respect each card’s own
+dependencies and verification scope. T-023 alone does not complete
 this milestone; hardware scenarios below remain planned and unexecuted.
 
 [T-023](cards/T-023-rate-requests-after-source-change.md) reconnect recovery,
@@ -197,3 +197,60 @@ an explicit preparation workflow is desired.
 T-030 continues to verify offline startup and usable overlays without imagery.
 Saved-map preparation is separate, unimplemented work requiring shaped cards;
 these decisions do not expand its active scope or claim hardware acceptance.
+
+
+## Bench-to-radio execution review — 2026-09-16
+
+The empty ready queue was a planning gap, not evidence that the connection
+milestone is optional or externally blocked. T-045 is complete, but the runtime
+still opens only UDP. A USB-C cable or ground radio cannot yet feed this
+application directly. This review shapes T-046 for implementation; it does not
+claim that hardware observation now works. Board status remains solely in the
+individual cards.
+
+Execute the milestone in these increments:
+
+1. **Native serial foundation (T-046):** enumerate/select/open/release through
+   backend HTTP, carry real MAVLink through the existing fleet pipeline, and
+   expose acquisition status. Prove this with controlled serial traffic and the
+   target QuadPlane SITL before asking hardware to diagnose application defects.
+   This is the earliest developer bench-test checkpoint, with manual HTTP
+   selection; it is not the completed operator journey.
+2. **Repeatable operator setup (T-047, T-048, T-050):** persist Bench controller
+   and Field radio profiles, expose controls from an empty fleet, and deliver a
+   local launch without SITL. T-047 can be shaped against the completed contract;
+   T-048 needs both serial acquisition and profiles. T-050 must choose and test
+   its launch/package approach, including actual host device access.
+3. **Recovery (T-049):** distinguish an open silent radio from removed ground
+   USB, retry active connections, preserve stale context honestly and release
+   the port for MissionPlanner. Reconcile its proposed 30 s retry ceiling with
+   T-027's 10 s recovery acceptance bound before implementation; neither is
+   already measured hardware performance.
+4. **USB acceptance (T-028 / E2E-01):** on the actual controller, record host,
+   board/build and USB-only readings, then exercise attach before/after launch,
+   handoff, unplug/replug and restarts. Capture allowed observer traffic rather
+   than asserting that read-only means no bytes transmitted.
+5. **Powered ground radio acceptance (T-031 / E2E-03):** use the same native
+   serial path with the actual ground-radio settings. Measure delivered stream
+   rates, latency and loss; test aircraft silence/power return separately from
+   ground USB removal, plus offline recording/replay. Only then advance to
+   RC-piloted field observation (T-032).
+
+Parameter snapshots (T-029), parameter writes and UI polish do not gate the
+first telemetry bench test. Saved profiles, recovery and installation do gate
+full ADR 0006 acceptance; a manual adapter or HTTP experiment cannot close it.
+
+Additional acceptance gaps to resolve while implementing: T-027 asks for
+`AUTOPILOT_VERSION`/frame identity displayed within 5 s, but the current codec
+and UI have no matching decoded identity surface. Do not equate heartbeat
+system/component identity with exact firmware or frame verification. Shape a
+separate read-only identity slice if that display requirement is retained;
+independent hardware identification alone does not satisfy its UI wording.
+The existing family freshness policy must also be checked against the proposed
+3x-message-interval acceptance wording rather than assumed identical.
+
+Hardware information still needed for acceptance: confirm the operator host,
+reported MicoAir H743 v1 / Plane 4.6.x target, exact observed firmware build,
+USB device metadata and LR900-F/-P settings. These facts constrain real-device
+verification; they do not block controlled serial implementation. No real
+controller or radio acceptance was performed in this planning review.
