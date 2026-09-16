@@ -401,7 +401,10 @@ describe('source-coherent accumulation', () => {
     ['global then GPS', [global, gps]],
     ['GPS then global', [gps, global]],
   ])('keeps the resolved position within one family: %s', (_name, events) => {
-    const view = reduce(...events).vehicles[vehicleKey(1, 1)];
+    // These unstamped events use receipt time: keep arrival chronological in
+    // either family order. Older observation rejection has separate coverage.
+    const chronological = events.map((event, index) => ({ ...event, receivedAtMs: T0 + index }));
+    const view = reduce(...chronological).vehicles[vehicleKey(1, 1)];
     if (view === undefined) throw new Error('no vehicle');
 
     expect(resolvePosition(view.sample)).toEqual({

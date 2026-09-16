@@ -1,0 +1,6 @@
+# External observer relay sends original SITL datagrams to the normal backend.
+# Use with -f docker-compose.yml -f scripts/validation/t019.compose.yml.
+services:
+  ardupilot-sitl-copter-1:
+    environment:
+      GCS_OUT: udpclient:host.docker.internal:14560

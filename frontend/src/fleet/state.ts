@@ -13,6 +13,7 @@ import type { HeartbeatState } from '@/gen/gcs/v1/vehicle_pb';
 import type { CommandTransaction } from '@/gen/gcs/v1/commands_pb';
 import { isFresh } from '@/logic/freshness';
 import { accumulateGeoTrack, type GeoPoint } from '@/logic/geoTrack';
+import { resolvePosition } from '@/logic/position';
 import { lastLegM } from '@/logic/odometer';
 import { sampleFromEvent, type TelemetrySample } from '@/logic/sample';
 
@@ -289,9 +290,38 @@ function applyTelemetry(event: TelemetryEvent, receivedAtMs: number): VehicleUpd
     sysId: id.systemId,
     compId: id.componentId,
     apply: (previous) => {
-      // Accumulate the event partial, not the merged vehicle sample. Otherwise
-      // every attitude/battery frame would re-append the last known position.
-      const track = accumulateGeoTrack(previous.track, partial);
+      const isPosition = partial.sourceMessage === 'GLOBAL_POSITION_INT'
+        || partial.sourceMessage === 'GPS_RAW_INT';
+      const familySeen = previous.familySeenMs[partial.sourceMessage];
+      const lastPoint = previous.track[previous.track.length - 1];
+
+      // Retained duplicates and out-of-order position events must not rewind
+      // either the merged position or its breadcrumb history. Observation time
+      // shares the backend/replay clock; GPS epoch and global boot clocks do not.
+      if (isPosition && (!Number.isFinite(observedMs)
+        || (familySeen !== undefined && observedMs <= familySeen)
+        || (lastPoint !== undefined && observedMs < lastPoint.atMs))) {
+        return previous;
+      }
+
+      const globalPreferred = isFamilyFresh(previous, 'GLOBAL_POSITION_INT', observedMs)
+        && resolvePosition(previous.sample)?.source === 'GLOBAL_POSITION_INT';
+      const appendPosition = isPosition
+        && resolvePosition(partial) !== null
+        && isFresh(observedMs, receivedAtMs, TELEMETRY_TTL_MS)
+        && !(partial.sourceMessage === 'GPS_RAW_INT' && globalPreferred);
+
+      // Append only the chosen position family, never a merged sample on an
+      // unrelated event. This prevents slower GPS fixes backtracking between
+      // fresh global positions while retaining GPS-only and stale-global fallback.
+      // Families may share a millisecond timestamp. If global arrives after
+      // GPS at that instant, replace the fallback point rather than count a
+      // zero-time segment between two estimates of the same observation.
+      const replacing = appendPosition && lastPoint?.atMs === observedMs;
+      const track = appendPosition
+        ? accumulateGeoTrack(replacing ? previous.track.slice(0, -1) : previous.track,
+          { ...partial, receivedAtMs: observedMs })
+        : previous.track;
 
       /*
        * Reference identity is the append test, not the length: once the track
@@ -305,7 +335,7 @@ function applyTelemetry(event: TelemetryEvent, receivedAtMs: number): VehicleUpd
         lastSeenMs: receivedAtMs,
         sample: { ...previous.sample, ...partial },
         track,
-        odometerM: previous.odometerM + (appended ? lastLegM(track) : 0),
+        odometerM: previous.odometerM + (appended ? lastLegM(track) - (replacing ? lastLegM(previous.track) : 0) : 0),
         firstFixAtMs: appended ? (previous.firstFixAtMs ?? observedMs) : previous.firstFixAtMs,
         familySeenMs: { ...previous.familySeenMs, [partial.sourceMessage]: observedMs },
       };
