@@ -142,11 +142,15 @@ in-process serial acquisition over an external adapter. Its dependent cards
 promoted to `ready` and implemented against it. T-023 alone does not complete
 this milestone; hardware scenarios below remain planned and unexecuted.
 
-Prioritize [T-023](cards/T-023-rate-requests-after-source-change.md) reconnect
-recovery alongside [T-027](cards/T-027-target-profile.md), the target profile.
-Then [T-028](cards/T-028-usb-observer.md) demonstrates USB observation and
-[T-029](cards/T-029-parameter-inspection.md) adds parameter inspection.
-[T-030](cards/T-030-offline-observer.md) establishes offline behavior;
+[T-023](cards/T-023-rate-requests-after-source-change.md) reconnect recovery,
+[T-027](cards/T-027-target-profile.md) the target profile, and
+[T-030](cards/T-030-offline-observer.md) offline behavior are done. T-027's
+profile ([runbook](../runbooks/validation/t027.md)) is a SITL-verified frame
+approximation (Plane 4.6.3, `quadplane-tri`), not physical-controller
+evidence; its named gaps (exact firmware patch/build, host OS, LR900 serial
+settings, USB-only-power peripheral availability) still block
+[T-028](cards/T-028-usb-observer.md) USB observation and
+[T-029](cards/T-029-parameter-inspection.md) parameter inspection. Next:
 [T-031](cards/T-031-radio-ground-acceptance.md) measures the real radio ground
 path before [T-032](cards/T-032-rc-field-acceptance.md) field observation.
 

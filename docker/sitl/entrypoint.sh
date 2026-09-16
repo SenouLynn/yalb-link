@@ -30,13 +30,17 @@ esac
 
 echo "starting SITL sysid=${SYSID} model=${VEHICLE_MODEL} out=${GCS_OUT}"
 
+# Layered default-param files (base plus frame-specific overrides, e.g.
+# quadplane-tri) are recorded at build time as a comma-separated path list.
+defaults=$(cat /sitl/defaults-manifest)
+
 # serial0 streams to the GCS; serial1 remains available to external tools.
 exec ardupilot-sitl \
   --model "${VEHICLE_MODEL}" \
   --sysid "${SYSID}" \
   --speedup "${SPEEDUP}" \
   --home "${HOME_LOCATION}" \
-  --defaults "/sitl/defaults.parm" \
+  --defaults "${defaults}" \
   --serial0 "${GCS_OUT}" \
   --serial1 "tcp:0" \
   "$@"

@@ -58,6 +58,30 @@ services:
     ports:
       - "5761:5760"
 
+  # T-027 target profile: closest SITL approximation of the operator's
+  # reported Plane 4.6.x tricopter QuadPlane. Frame identity only -- it does
+  # not stand in for the actual board, firmware patch or radio path.
+  ardupilot-sitl-quadplane-tri-4:
+    <<: *sitl-common
+    container_name: yalb-sitl-quadplane-tri-4
+    profiles: [target-profile]
+    build:
+      context: ./docker/sitl
+      args:
+        ARDUPILOT_TAG: Plane-4.6.3
+        WAF_TARGET: plane
+        # quadplane-tri layers a QuadPlane base file with tricopter VTOL
+        # motor/frame overrides; neither file alone is a valid frame.
+        DEFAULT_PARAMS_PATH: >-
+          Tools/autotest/default_params/quadplane.parm
+          Tools/autotest/default_params/quadplane-tri.parm
+    environment:
+      <<: *sitl-env
+      SYSID: "4"
+      VEHICLE_MODEL: quadplane-tri
+    ports:
+      - "5763:5760"
+
   # Same firmware as sysid 1, distinct identity on the shared socket.
   ardupilot-sitl-copter-3:
     <<: *sitl-common

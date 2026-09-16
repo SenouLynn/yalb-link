@@ -10,7 +10,10 @@ ARG ARDUPILOT_TAG=Copter-4.7.0
 # waf target: `copter` or `plane`. The binary is always `ardu<target>`.
 ARG WAF_TARGET=copter
 
-# Stock parameter paths differ between vehicle trees and are explicit.
+# Stock parameter paths differ between vehicle trees and are explicit. Space-
+# separate multiple repo-relative paths to layer defaults in order (later
+# files override earlier ones) -- ArduPilot's own frames, such as
+# quadplane-tri, require a base file plus a frame-specific override.
 ARG DEFAULT_PARAMS_PATH=Tools/autotest/default_params/copter.parm
 
 ENV DEBIAN_FRONTEND=noninteractive
@@ -39,9 +42,14 @@ RUN git clone --depth=1 --branch=${ARDUPILOT_TAG} \
     && git submodule update --init --recursive --depth=1 \
     && ./waf configure --board sitl \
     && ./waf ${WAF_TARGET} \
-    && mkdir -p /out \
+    && mkdir -p /out/defaults \
     && cp /ardupilot/build/sitl/bin/ardu${WAF_TARGET} /out/ardupilot-sitl \
-    && cp /ardupilot/${DEFAULT_PARAMS_PATH} /out/defaults.parm
+    && for path in ${DEFAULT_PARAMS_PATH}; do \
+         cp "/ardupilot/${path}" "/out/defaults/$(basename "${path}")"; \
+       done \
+    && for path in ${DEFAULT_PARAMS_PATH}; do \
+         printf '/sitl/defaults/%s,' "$(basename "${path}")"; \
+       done | sed 's/,$//' > /out/defaults-manifest
 
 FROM ubuntu:${UBUNTU_VERSION}
 
@@ -55,7 +63,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && useradd --create-home --uid 10001 sitl
 
 COPY --from=build /out/ardupilot-sitl /usr/local/bin/ardupilot-sitl
-COPY --from=build /out/defaults.parm /sitl/defaults.parm
+COPY --from=build /out/defaults /sitl/defaults
+COPY --from=build /out/defaults-manifest /sitl/defaults-manifest
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
