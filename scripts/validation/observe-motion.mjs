@@ -95,8 +95,24 @@ try {
   }
   const end=Date.now()+Number(seconds)*1000;
   let nextCapture=0;
+  const started=Date.now(); let cameraStage=0;
   while(Date.now()<end){
-    const sample=await evaluate(`(()=>{const map=window.motionMaps.find(m=>m.getSource('trajectory'));return {hostTime:Date.now()/1000,text:document.querySelector('#root').innerText,transitions:window.motionTransitions,trajectory:map?.getSource('trajectory')?._data,track:map?.getSource('track')?._data};})()`);
+    if(process.env.MOTION_CAMERA_SMOKE === '1' && cameraStage === 0 && Date.now()-started > 90000){
+      const rect=await evaluate(`(()=>{const map=window.motionMaps.find(m=>m.getSource('trajectory'));const r=map.getCanvas().getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+      await send('Input.dispatchMouseEvent',{type:'mousePressed',x:rect.x,y:rect.y,button:'left',clickCount:1});
+      for(let i=1;i<=10;i++){
+        await send('Input.dispatchMouseEvent',{type:'mouseMoved',x:rect.x+i*12,y:rect.y,button:'left',buttons:1});
+        await sleep(30);
+      }
+      await send('Input.dispatchMouseEvent',{type:'mouseReleased',x:rect.x+120,y:rect.y,button:'left',clickCount:1});
+      cameraStage=1;
+    }
+    if(process.env.MOTION_CAMERA_SMOKE === '1' && cameraStage === 1 && Date.now()-started > 100000){
+      await evaluate(`(()=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent==='Follow'&&!b.disabled);if(!b)throw Error('Follow unavailable');b.click();})()`);
+      cameraStage=2;
+    }
+    const sample=await evaluate(`(()=>{const map=window.motionMaps.find(m=>m.getSource('trajectory'));return {hostTime:Date.now()/1000,text:document.querySelector('#root').innerText,transitions:window.motionTransitions,center:map?.getCenter(),follow:[...document.querySelectorAll('button')].find(b=>b.textContent==='Follow')?.getAttribute('aria-pressed'),trajectory:map?.getSource('trajectory')?._data,track:map?.getSource('track')?._data};})()`);
+    sample.cameraStage=cameraStage;
     observations.push(sample);
     if(Date.now()>=nextCapture){
       const png=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:false});
@@ -106,7 +122,7 @@ try {
     await sleep(200);
   }
 } finally {
-  await writeFile(resolve(out,'browser.json'),JSON.stringify({url,observations,errors}));
+  await writeFile(resolve(out,'browser.json'),JSON.stringify({url,observations,errors,cameraSmoke:process.env.MOTION_CAMERA_SMOKE === '1'}));
   socket?.close();browser.kill();
   await new Promise(res=>browser.exitCode!==null||browser.signalCode!==null?res():browser.once('exit',res));
   await rm(profile,{recursive:true,force:true});

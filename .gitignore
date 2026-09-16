@@ -22,3 +22,7 @@
 
 /frontend/storybook-static/
 /frontend/debug-storybook.log
+
+# Local Python validation caches and T-018 simulator captures.
+__pycache__/
+/docs/temp/evidence/T-018/

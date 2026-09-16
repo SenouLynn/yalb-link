@@ -1,7 +1,8 @@
 import unittest
+import math
 from types import SimpleNamespace
 from unittest.mock import Mock
-from sitl_motion import bounded_wait, distance, offset, HOME, Experiment, Relay
+from sitl_motion import bounded_wait, distance, offset, HOME, Experiment, Relay, route_points
 
 
 class MotionTests(unittest.TestCase):
@@ -12,6 +13,30 @@ class MotionTests(unittest.TestCase):
         self.assertGreater(east[1], north[1])
         self.assertAlmostEqual(distance(HOME, north), 100, places=4)
         self.assertAlmostEqual(distance(north, east), 100, places=2)
+
+    def test_figure_eight_has_two_closed_circuits_and_opposing_lobes(self):
+        points = [(0, 0), *route_points('figure-eight')]
+        for index in [8, 16, 24, 32]:
+            self.assertLess(math.hypot(*points[index]), 1e-10)
+        self.assertEqual(len(points), 33)
+        self.assertGreater(max(n for n, e in points), 39)
+        self.assertLess(min(n for n, e in points), -39)
+        # Signed turning direction reverses between the two lobes.
+        def turn(a, b, c):
+            return (b[0]-a[0])*(c[1]-b[1])-(b[1]-a[1])*(c[0]-b[0])
+        self.assertLess(turn(*points[1:4]) * turn(*points[9:12]), 0)
+        for a, b in zip(points[1:17], points[17:]):
+            self.assertAlmostEqual(a[0], b[0])
+            self.assertAlmostEqual(a[1], b[1])
+
+    def test_snake_progresses_with_five_alternating_extrema_and_finite_end(self):
+        points = route_points('snake')
+        self.assertEqual([round(e) for n, e in points[::2]], [20, -20, 20, -20, 20])
+        self.assertTrue(all(b[0] > a[0] for a, b in zip(points, points[1:])))
+        self.assertEqual(points[-1][0], 150)
+        self.assertAlmostEqual(points[-1][1], 0)
+        with self.assertRaises(ValueError):
+            route_points('unbounded')
 
     def test_silence_times_out(self):
         ticks = iter([0, 0, 1, 2, 3])

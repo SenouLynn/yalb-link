@@ -82,6 +82,10 @@ numeric address because ArduPilot's `udpclient` parser does not accept it
 reliably; the fixed address keeps the route valid when only the backend is
 recreated.
 
+For measured flight scenarios, use the [Copter baseline](validation/t019.md)
+and [figure-eight / traveling S-turn procedure](validation/t018.md). These
+external drivers capture autopilot response through the real backend and UI.
+
 ## Watch a vehicle fly
 
 ```sh

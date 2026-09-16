@@ -8,6 +8,7 @@ Recorded validation procedures and results (raw captures are optional):
 
 - [T015](validation/t015.md) — T-015 evidence — decoded flight state the display no longer discards
 - [T017](validation/t017.md) — T-017 workspace acceptance — 2026-09-09
+- [T018](validation/t018.md) — Copter figure-eight and traveling S-turn routes, measured prediction and camera checks
 - [T019](validation/t019.md) — Copter motion baseline, independent measurements and fault/replay procedure
 - [T021](validation/t021.md) — T-021 Compose recording persistence
 - [T022](validation/t022.md) — T-022 fleet overview acceptance — 2026-09-09/10

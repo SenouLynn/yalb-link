@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Bounded T-019 motion experiment, exclusively for the local Compose Copter.
+"""Bounded T-019 baseline and T-018 compound motion experiments, exclusively for the local Compose Copter.
 
 Requires pymavlink==2.4.49. Recreate the SITL container before each run.
 Received frames and decoded observations have host receipt timestamps; these
@@ -36,6 +36,16 @@ def bounded_wait(receive, predicate, timeout, label, clock=time.monotonic):
         if message is not None and predicate(message):
             return message
     raise TimeoutError(label)
+
+
+def route_points(scenario):
+    """Finite waypoint approximations; coordinates are metres north/east."""
+    if scenario == 'figure-eight':
+        return [(40 * math.sin(i * math.pi / 8),
+                 20 * math.sin(i * math.pi / 4)) for i in range(1, 33)]
+    if scenario == 'snake':
+        return [(15 * i, 20 * math.sin(math.pi * i / 2)) for i in range(1, 11)]
+    raise ValueError(f'Unknown compound scenario: {scenario}')
 
 
 class Relay:
@@ -161,7 +171,7 @@ class Experiment:
             and abs(m.relative_alt/1000 - 20) <= 2, 90, f'endpoint {north},{east}')
         self.record(self.events, event='endpoint', horizontal_error_m=distance((msg.lat/1e7,msg.lon/1e7),(lat,lon)), relative_alt_m=msg.relative_alt/1000)
 
-    def run(self):
+    def run(self, scenario='baseline', interrupt=False):
         heartbeat = self.wait(lambda m: m.get_type() == 'HEARTBEAT', 20, 'heartbeat')
         if heartbeat.autopilot != self.mav.MAV_AUTOPILOT_ARDUPILOTMEGA or heartbeat.type != self.mav.MAV_TYPE_QUADROTOR:
             raise RuntimeError('Expected ArduPilot quadrotor')
@@ -191,24 +201,39 @@ class Experiment:
         self.wait(lambda m: m.get_type() == 'GLOBAL_POSITION_INT' and abs(m.relative_alt/1000-20) <= 2, 90, 'takeoff altitude')
         self.phase_start('stationary-air')
         self.hold(10)
-        self.phase_start('accelerate-north')
-        self.target(100, 0, baseline=True)
-        self.phase_start('turn-east')
-        self.target(100, 100)
+        if scenario == 'baseline':
+            self.phase_start('accelerate-north')
+            self.target(100, 0, baseline=True)
+            self.phase_start('turn-east')
+            self.target(100, 100)
+        else:
+            points = route_points(scenario)
+            self.phase_start(scenario, points=points)
+            for index, (north, east) in enumerate(points, 1):
+                self.record(self.events, event='waypoint', index=index,
+                            north_m=north, east_m=east)
+                self.target(north, east)
+                if interrupt and index == len(points) // 2:
+                    self.interruption()
+                    self.phase_start(scenario, resumed=True)
         self.phase_start('settle')
         self.hold(10)
-        self.phase_start('position-interruption')
-        self.backend_rate(-1)
-        self.hold(8)
-        self.phase_start('position-recovery')
-        self.backend_rate(200000)
-        self.hold(10)
+        if scenario == 'baseline':
+            self.interruption()
         self.phase_start('land')
         self.mode(9)
         self.wait(lambda m: m.get_type() == 'HEARTBEAT' and not m.base_mode & self.mav.MAV_MODE_FLAG_SAFETY_ARMED, 90, 'land and disarm')
         self.phase_start('complete')
         # Keep UDP forwarding through several heartbeats after TCP disarm.
         self.hold(3)
+
+    def interruption(self):
+        self.phase_start('position-interruption')
+        self.backend_rate(-1)
+        self.hold(8)
+        self.phase_start('position-recovery')
+        self.backend_rate(200000)
+        self.hold(10)
 
     def backend_rate(self, interval):
         self.record(self.commands, channel='backend-udp', command=511, message_id=33, interval_us=interval)
@@ -225,6 +250,8 @@ class Experiment:
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--scenario', choices=['baseline', 'figure-eight', 'snake'], default='baseline')
+    parser.add_argument('--interrupt', action='store_true', help='Pause backend position halfway through a compound route')
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     from pymavlink import mavutil
@@ -236,7 +263,7 @@ def main():
         raise
     experiment = Experiment(link, args.output, mavutil.mavlink, relay)
     try:
-        experiment.run()
+        experiment.run(args.scenario, args.interrupt)
     except BaseException as error:
         experiment.record(experiment.events, event='failure', error=str(error))
         # No force-disarm in air. Best-effort restore stream and request LAND;
