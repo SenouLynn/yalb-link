@@ -36,6 +36,7 @@ go_test(
     ],
     embed = [":codec"],
     deps = [
+        "//internal/gen/gcs/v1:gcs",
         "@com_github_bluenviron_gomavlib_v3//:gomavlib",
         "@com_github_bluenviron_gomavlib_v3//pkg/dialects/ardupilotmega",
         "@com_github_bluenviron_gomavlib_v3//pkg/message",

@@ -1,9 +1,9 @@
 ---
 id: T-014
 title: Unify flight-display primitives and make mock review reproducible
-status: in_progress
+status: done
 priority: 2
-owner: codex
+owner: unassigned
 depends_on: none
 ---
 
@@ -99,3 +99,7 @@ Verification completed 2026-09-10:
 
 All behavioral evidence here is synthetic mock/browser evidence, not acceptance
 of live aircraft telemetry. No backend or live command behavior was changed.
+
+Board reconciliation 2026-09-23: closed the stale active claim using the completed
+acceptance checklist and verification results above; no additional frontend
+implementation or hardware acceptance is claimed.

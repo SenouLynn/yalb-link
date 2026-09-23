@@ -1,11 +1,14 @@
 # Local connection service contract
 
 Defined by [T-045](cards/T-045-connection-contract.md), required by
-[ADR 0006](../adr/0006-operator-connection-readiness.md). This is planning
-context: it specifies interfaces for [T-046](cards/T-046-serial-acquisition.md)
+[ADR 0006](../adr/0006-operator-connection-readiness.md). This specifies interfaces for [T-046](cards/T-046-serial-acquisition.md)
 through [T-050](cards/T-050-local-observer-launch.md) to implement
-independently against. No runtime code changes with it; nothing here is
-executable evidence until a dependent card builds and tests it.
+independently against. T-046 implements inventory, acquisition, HTTP actions and
+SSE bootstrap; its [runbook](../runbooks/validation/t046.md) records executable
+evidence. T-047 implements profile storage, identity matching and startup
+resolution; [ADR 0010](../adr/0010-connection-profile-persistence.md) records
+its costly-to-reverse choices. Connection controls and retry policy remain
+later work ([T-048](cards/T-048-connection-controls.md)/[T-049](cards/T-049-connection-recovery.md)).
 
 Read [ADR 0006](../adr/0006-operator-connection-readiness.md) first for the
 operator journeys this contract must satisfy. This document does not restate
@@ -92,8 +95,10 @@ A connection's `Status.State` ([§5](#5-backend-interfaces)) covers layers 2
 through 4. It must never be inferred from layers 5 or 6: a device that is
 present, open, and parsing valid MAVLink but has no vehicle within
 `HeartbeatTTL` is `REPORTING` at the connection layer with zero live vehicles,
-not `INTERRUPTED` — interruption is a property of a connection that *was*
-carrying a vehicle and stopped, per [§8](#8-state-machine).
+not `INTERRUPTED`. Interruption means valid frame traffic itself stopped for
+60 seconds, independently of vehicle heartbeats. This resolves the original
+§4/§8 conflict: valid frames without HEARTBEAT prove connection reporting, not
+vehicle liveness.
 
 ## 5. Backend interfaces
 
@@ -147,8 +152,8 @@ type Status struct {
     Settings Settings
     State    State
 
-    // DetailedError is set only for AccessFailed and reports only what the
-    // transport actually returned (permission denied, device busy). It never
+    // DetailedError reports observed access/transport failures and inventory
+    // removal evidence (permission denied, device busy, missing). It never
     // guesses an untested cause: not baud mismatch, not "aircraft is off".
     DetailedError string
 
@@ -185,7 +190,15 @@ type Manager interface {
 }
 ```
 
-**Open engineering question for T-046, not settled here:** how a serial
+**Resolved by T-046:** `connection.Manager` multiplexes one codec node per
+opened transport into a single bridge, route table and fleet fold. Serial
+ports open synchronously, then use a one-shot gomavlib custom client; this
+avoids gomavlib serial auto-retry taking ownership of T-049 policy. Serial
+channel labels include an open generation, so old addressed routes cannot
+become writable after reopen. Disconnect cancels that source, releases the
+port and forwards channel retirement without closing the shared event stream.
+
+**Original engineering question:** how a serial
 `Device`'s frames reach the existing `bridge.Bridge`. `bridge.Config.Source`
 is one `codec.FrameSource` today, and `codec.NewNode` takes a fixed
 `[]gomavlib.EndpointConf` at `Initialize`, which does not obviously support
@@ -238,14 +251,23 @@ side effects, closer in kind to arm/disarm than to a static download.
 
 ```
 GET    /api/connections                 configured connections + Status (§5), including
-                                         the UDP development entry when enabled
+                                         the UDP development entry when enabled and one
+                                         entry per saved profile, keyed by profile id
 GET    /api/connections/devices         current OS device inventory (Inventory.List)
-POST   /api/connections/connect         body {device_id, settings} -> opens; 200 + Status;
-                                         404 if device_id no longer in the inventory;
-                                         409 if the device is busy/owned elsewhere
-POST   /api/connections/disconnect      body {id} -> explicit release (Manager.Disconnect)
-GET    /api/connections/profiles        saved profiles (storage owned by T-047)
-POST   /api/connections/profiles        save or update a profile
+POST   /api/connections/connect         body {device_id|profile_id, device_id?, settings?} -> opens;
+                                         200 + Status; 404 if device_id/profile_id no longer
+                                         resolves; 409 if busy/owned elsewhere or AMBIGUOUS
+                                         (§8) with no explicit device_id disambiguating it;
+                                         profile_id alone auto-resolves by identity (§9);
+                                         profile_id + device_id is the explicit-selection path
+                                         for AMBIGUOUS/DEVICE_MISSING; omitted settings default
+                                         to the profile's saved settings
+POST   /api/connections/disconnect      body {id} -> explicit release (Manager.Disconnect);
+                                         for a profile-backed id this persists RELEASED intent
+GET    /api/connections/profiles        saved profiles (T-047, ADR 0010)
+POST   /api/connections/profiles        body {id?, name, device_id, settings} -> save or
+                                         update; device identity is always captured fresh
+                                         from current inventory, never from the caller
 DELETE /api/connections/profiles/{id}   remove a profile
 ```
 
@@ -272,9 +294,10 @@ and handoff explicit:
 | `OPENING` | Connect requested; awaiting the OS open() result. | `IDLE`, `DEVICE_LOST` (auto-retry, §9). |
 | `ACCESS_FAILED` | Open failed. `DetailedError` carries only what the OS/library reported (permission denied, already open by another process) — never an inferred cause. | `OPENING`. |
 | `OPEN_AWAITING_TRAFFIC` | Port open; no valid MAVLink parsed yet. Ordinary for a ground radio attached before the aircraft powers on ([ADR 0006](../adr/0006-operator-connection-readiness.md)). | `OPENING`. |
-| `REPORTING` | Port open, valid MAVLink parsing, at least one vehicle within `HeartbeatTTL`. | `OPEN_AWAITING_TRAFFIC`; `INTERRUPTED` on recovery. |
-| `INTERRUPTED` | Was `REPORTING`; every vehicle it carried has exceeded `HeartbeatTTL`, but the device/port is still present. Distinct from `DEVICE_LOST` — telemetry silence is never treated as evidence the device was removed. | `REPORTING`. |
+| `REPORTING` | Port open, valid MAVLink received within the last 60 seconds. A heartbeat is not required. | `OPEN_AWAITING_TRAFFIC`; `INTERRUPTED` on recovery. |
+| `INTERRUPTED` | Was `REPORTING`; no valid MAVLink frame for more than 60 seconds, but the device/port is still present. Distinct from `DEVICE_LOST` — telemetry silence is never treated as evidence the device was removed. | `REPORTING`. |
 | `DEVICE_LOST` | The OS reports the device gone (unplugged) while connected. | `OPENING`, `OPEN_AWAITING_TRAFFIC`, `REPORTING`, `INTERRUPTED`. |
+| `TRANSPORT_FAILED` | Read/write or event-stream failure without evidence of removal. The observed error is retained; no cause is guessed. | Any open state. |
 | `RELEASED` | Explicit operator disconnect (MissionPlanner handoff). Retries are cancelled; the connection stays here until `Connect` is called again. | Any connected state, via `Manager.Disconnect`. |
 
 `AMBIGUOUS` and `DEVICE_MISSING` require operator selection, matching
@@ -334,10 +357,10 @@ Every surfaced error names only what was actually observed:
   device" — [ADR 0006](../adr/0006-operator-connection-readiness.md): "silence
   alone cannot establish a wrong device, incorrect baud rate, powered-off
   aircraft or failed radio path."
-- `409 Conflict` on `POST .../connect` — the device is already open by this
-  Manager (idempotent return, not an error) or reported busy by the OS
-  (another process holds it). The response distinguishes which; only the
-  latter is a real conflict.
+- `200 OK` on repeated identical `POST .../connect` returns the existing status
+  without another open. `409 Conflict` means an already-open device has different
+  requested settings, or the OS reports busy. The response distinguishes these
+  cases without naming an unobserved owner.
 - `404 Not Found` on `POST .../connect` — the `device_id` from a stale
   inventory snapshot no longer resolves; the caller must re-list.
 - Silent ports are never escalated to an error. `OPEN_AWAITING_TRAFFIC` is a
@@ -349,8 +372,10 @@ Not settled by this document; each belongs to the card named:
 
 - Exact serial device-access library and OS permission handling —
   [T-046](cards/T-046-serial-acquisition.md).
-- Profile storage schema and location —
-  [T-047](cards/T-047-saved-connections.md).
+- Profile storage schema, location and identity-matching algorithm — resolved
+  by [T-047](cards/T-047-saved-connections.md)/[ADR 0010](../adr/0010-connection-profile-persistence.md).
+  A hardware-backed PTY restart harness for profiles, extending T-046's, was
+  scoped out of T-047 and remains unexecuted.
 - Measured retry/interruption timing bounds (§9's numbers are proposed
   starting points) — [T-049](cards/T-049-connection-recovery.md).
 - Packaging, launcher, and the final supported OS list (§2's assumption) —
@@ -368,3 +393,78 @@ the current transport (`internal/codec/frame.go`, `internal/bridge/bridge.go`,
 `frontend/src/stream/live.ts`) code cited throughout. Every ADR 0006 journey
 in §10 walks through a normal and at least one failure path. No code changes
 accompany this document; `./scripts/kanban check` validates the linked cards.
+
+## T-046 wire and implementation notes
+
+Status uses snake-case JSON fields: `id`, `device`, `settings`, `state`,
+`opened_at_ms`, `last_frame_at_ms`, `vehicle_keys`, and optional
+`detailed_error`/`error_code`. Settings are `{"baud_rate":57600}` (8N1); keys
+are `{"system_id":1,"component_id":1}`. Baud is a positive integer; the
+library/OS decides whether the requested speed is supported. Inventory includes
+available OS metadata (`description`, `serial_number`, `manufacturer`, `vid`,
+`pid`), never an inferred radio identity. Device IDs are path-based snapshot
+identities; persistent matching remains T-047.
+
+`vehicle_keys` reflects last-source attribution within the existing 60-second
+route TTL, not heartbeat liveness. Moving an identity to another connection or
+closing its link removes the old attribution. Timestamp values are Unix
+milliseconds; RELEASED preserves historical timestamps without claiming freshness.
+`acquisition` publishes status/frame evidence and retains the latest serialized
+snapshot per connection. Existing frontend consumers can ignore the new event;
+frontend consumption and controls belong to T-048.
+
+Connect bodies are bounded, strict JSON with the existing same-origin guards.
+Permission-denied opens return 403, missing devices 404, busy/settings conflicts
+409, invalid settings 400, and unclassified transport failures 500 with observed
+details. No status guesses baud mismatch or another application's identity.
+Inventory refresh runs once per second while the manager lives; an enumeration
+error alone never marks a device lost. A closed port with a still-present device
+is TRANSPORT_FAILED, not DEVICE_LOST. Explicit reconnect is supported; no
+background reconnect or profile startup behavior is implemented in T-046.
+
+## T-047 wire and implementation notes
+
+Saved profiles live in `internal/connection.Profile`/`Store`, persisted by
+`FileStore` as one versioned JSON document (default
+`os.UserConfigDir()/yalb-gcs/connection-profiles.json`, overridable with
+`GCS_CONNECTION_PROFILES_PATH`) replaced atomically on every write. Full
+rationale, the identity-matching algorithm and the CONNECTED/IDLE/RELEASED
+intent semantics are recorded in
+[ADR 0010](../adr/0010-connection-profile-persistence.md); this section is
+only the wire/behavior summary.
+
+`GET /api/connections` includes one entry per saved profile from backend
+startup, keyed by the profile's own id rather than a `Device.ID` — this is
+what makes a saved connection's identity stable across a restart that renames
+its OS port. `POST /api/connections/connect` accepts `profile_id` as an
+alternative to `device_id`; passing both is the explicit-selection path used
+to resolve `AMBIGUOUS`/`DEVICE_MISSING`, and the chosen device is never
+written back into the profile's saved identity. `POST /api/connections/profiles`'s
+`device_id` is always re-resolved against current inventory, never trusted
+from the request body.
+
+`AMBIGUOUS` is a new `Status.State` alongside T-046's ten. It and
+`DEVICE_MISSING` are only evaluated at backend startup and on each
+`POST /api/connections/connect` call in this task; there is no
+background/sweep-driven re-evaluation of an already-seeded `DEVICE_MISSING`
+or `AMBIGUOUS` entry; T-049 owns that. A profile lacking a full
+serial-number/VID/PID identity never auto-matches and always requires an
+explicit `device_id`, which is expected for adapters that report no serial
+number, not an error condition.
+
+The T-047 acceptance suite (atomic save/reload/delete, invalid/version-
+mismatched/truncated files, an injected write failure that must not replace
+good data, concurrent writers that must never corrupt the file, startup
+resolution, and HTTP CRUD/connect/disconnect) is executed by
+`go test -race ./internal/connection/...`; see the T-047 card's Notes for the
+full recorded command list and platform results. A real-backend PTY hardware
+harness for profile save/reload/restart, extending T-046's, was scoped out of
+this pass and remains unexecuted — no hardware or PTY evidence is claimed for
+T-047.
+
+The fixed, startup-configured UDP target appears in inventory/status and can be
+released/reopened through its existing ID; callers cannot introduce arbitrary
+UDP endpoints. Serial-only startup still runs the bridge, mission coordinator,
+recording sink and SSE hub. Connection management is available with operator
+commands disabled. Observer-originated traffic remains heartbeat, addressed
+message-interval requests, and explicitly requested mission download traffic.

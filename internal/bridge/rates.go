@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -103,7 +104,9 @@ var _ Sink = (*RateRequester)(nil)
 // Publish requests rates when a vehicle is discovered, recovered, or reported
 // on a source address different from the one it was last heard on.
 //
-// A write failure is returned, which stops the bridge. A GCS that silently
+// Unexpected write failures are returned, which stop the bridge. A link
+// explicitly closed during acquisition is ordinary lifecycle, not a pipeline
+// failure; its next discovery/source change requests rates again. A GCS that silently
 // failed to ask for telemetry would sit on a healthy-looking link showing
 // nothing but heartbeats, and that is the exact failure this milestone exists
 // to make impossible.
@@ -129,6 +132,10 @@ func (r *RateRequester) Publish(ctx context.Context, ev vehicle.Event) error {
 		msg := codec.EncodeSetMessageInterval(target, req.MsgID, req.IntervalUs())
 
 		if err := r.Source.WriteTo(link, msg); err != nil {
+			if errors.Is(err, codec.ErrUnknownLink) {
+				r.log().InfoContext(ctx, "telemetry rate request cancelled", "link", link, "reason", "link closed")
+				return nil
+			}
 			return fmt.Errorf("bridge: requesting message %d from %s: %w", req.MsgID, key, err)
 		}
 	}

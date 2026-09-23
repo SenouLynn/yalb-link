@@ -103,7 +103,11 @@ func handler(hub *Hub, log *slog.Logger, keepalivePeriod time.Duration) http.Han
 
 // writeEvent renders one event as an SSE frame.
 func writeEvent(w http.ResponseWriter, ev Event) error {
-	data, err := encode(ev.Message)
+	data := []byte(ev.JSON)
+	var err error
+	if data == nil {
+		data, err = encode(ev.Message)
+	}
 	if err != nil {
 		return err
 	}

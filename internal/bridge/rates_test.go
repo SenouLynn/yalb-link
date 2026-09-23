@@ -667,3 +667,16 @@ func TestMultiSinkStopsAtFirstFailure(t *testing.T) {
 		t.Errorf("sink after the failure saw %d events, want none", n)
 	}
 }
+
+// Disconnect can race a discovery-triggered rate request. The ordinary link
+// closure must not stop observation of all other connections.
+func TestRateRequestClosedLinkKeepsPipelineRunning(t *testing.T) {
+	src := newRecordingSource()
+	src.failAt = 0
+	src.err = codec.ErrUnknownLink
+	r := newRequester(t, src)
+	r.Routes.Upsert(routes.Entry{Key: routes.Key{SysID: 1, CompID: 1}, Link: "serial:closed"}, rateNowMs)
+	if err := r.Publish(t.Context(), fleet(gcsv1.FleetEventType_FLEET_EVENT_TYPE_VEHICLE_DISCOVERED, 1, 1)); err != nil {
+		t.Fatal(err)
+	}
+}

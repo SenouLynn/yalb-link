@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -20,6 +21,7 @@ import (
 	"yalb.gcs/internal/bridge"
 	"yalb.gcs/internal/codec"
 	"yalb.gcs/internal/command"
+	"yalb.gcs/internal/connection"
 	"yalb.gcs/internal/mission"
 	"yalb.gcs/internal/recording"
 	"yalb.gcs/internal/routes"
@@ -86,36 +88,45 @@ func run(log *slog.Logger) error {
 	hub := stream.NewHub(log, 0)
 	defer hub.Close()
 
+	profilesPath, err := connection.ResolveProfilesPath(os.LookupEnv(connection.EnvProfilesPath))
+	if err != nil {
+		return fmt.Errorf("gcs: resolving connection profiles path: %w", err)
+	}
+	connections := connection.New(connection.Config{
+		Inventory: connection.NativeInventory{ExtraPaths: filepath.SplitList(os.Getenv("GCS_SERIAL_PATHS"))},
+		OnStatus:  hub.PublishAcquisition,
+		Profiles:  connection.NewFileStore(profilesPath),
+	})
+	defer connections.Close()
+	table := routes.NewTable()
+	missionCoordinator := &mission.Coordinator{Log: log, Source: connections, Routes: table}
 	var registry *command.Registry
-	missionCoordinator := &mission.Coordinator{Log: log}
-	if bind == "" {
-		// An explicitly empty bind disables MAVLink while retaining health checks.
-		log.Warn("MAVLink socket disabled", "reason", codec.EnvUDPBind+" set to empty")
+	if command.ResolveEnabled(os.LookupEnv(command.EnvEnabled)) {
+		publisher := bridge.MultiSink{bridge.LogSink{Log: log}, hub}
+		if store != nil {
+			publisher = append(publisher, &recording.Recorder{Store: store})
+		}
+		registry = &command.Registry{Source: connections, Routes: table, Publisher: publisher, Log: log}
+		log.Info("operator commands enabled")
 	} else {
+		log.Info("operator commands disabled", "env", command.EnvEnabled)
+	}
+	if bind != "" {
 		node, err := codec.NewNode([]gomavlib.EndpointConf{gomavlib.EndpointUDPServer{Address: bind}})
 		if err != nil {
 			return fmt.Errorf("gcs: opening MAVLink socket on %s: %w", bind, err)
 		}
-		table := routes.NewTable()
-		missionCoordinator.Source = node
-		missionCoordinator.Routes = table
-		if command.ResolveEnabled(os.LookupEnv(command.EnvEnabled)) {
-			publisher := bridge.MultiSink{bridge.LogSink{Log: log}, hub}
-			if store != nil {
-				publisher = append(publisher, &recording.Recorder{Store: store})
-			}
-			registry = &command.Registry{Source: node, Routes: table, Publisher: publisher, Log: log}
-			log.Info("operator commands enabled")
-		} else {
-			log.Info("operator commands disabled", "env", command.EnvEnabled)
-		}
-		if err := startBridge(ctx, group, log, bind, node, table, registry, missionCoordinator, hub, store); err != nil {
+		if err := connections.AddUDP(bind, node); err != nil {
 			_ = node.Close()
 			return err
 		}
+	} else {
+		log.Info("UDP disabled; serial acquisition available")
 	}
-
-	serveHTTP(ctx, group, log, hub, store, registry, missionCoordinator)
+	if err := startBridge(ctx, group, log, bind, connections, table, registry, missionCoordinator, hub, store); err != nil {
+		return err
+	}
+	serveHTTP(ctx, group, log, hub, store, registry, missionCoordinator, connections)
 
 	if err := group.Wait(); err != nil {
 		return fmt.Errorf("gcs: backend stopped: %w", err)
@@ -189,11 +200,15 @@ func startBridge(
 
 // serveHTTP runs the health and event servers and shuts them down with the
 // context.
-func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub *stream.Hub, store *recording.Store, registry *command.Registry, missionCoordinator *mission.Coordinator) {
-	mux := newHTTPMux(log, hub, store, registry, missionCoordinator)
+func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub *stream.Hub, store *recording.Store, registry *command.Registry, missionCoordinator *mission.Coordinator, connections *connection.Manager) {
+	mux := newHTTPMux(log, hub, store, registry, missionCoordinator, connections)
 
+	addr := os.Getenv("GCS_HTTP_ADDR")
+	if addr == "" {
+		addr = httpAddr
+	}
 	srv := &http.Server{
-		Addr:              httpAddr,
+		Addr:              addr,
 		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		// Event-stream handlers block until their request context is cancelled.
@@ -207,10 +222,10 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub
 	}
 
 	group.Go(func() error {
-		log.Info("http listening", "addr", httpAddr, "events", stream.Path)
+		log.Info("http listening", "addr", addr, "events", stream.Path)
 
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("gcs: http server on %s: %w", httpAddr, err)
+			return fmt.Errorf("gcs: http server on %s: %w", addr, err)
 		}
 
 		return nil
@@ -231,8 +246,11 @@ func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub
 	})
 }
 
-func newHTTPMux(log *slog.Logger, hub *stream.Hub, store *recording.Store, registry *command.Registry, missionCoordinator *mission.Coordinator) *http.ServeMux {
+func newHTTPMux(log *slog.Logger, hub *stream.Hub, store *recording.Store, registry *command.Registry, missionCoordinator *mission.Coordinator, connections *connection.Manager) *http.ServeMux {
 	mux := http.NewServeMux()
+	if connections != nil {
+		connection.Mount(mux, connections)
+	}
 
 	// This is liveness only; it does not assert a vehicle link.
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {

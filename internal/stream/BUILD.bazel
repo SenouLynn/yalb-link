@@ -9,6 +9,7 @@ go_library(
     importpath = "yalb.gcs/internal/stream",
     visibility = ["//:__subpackages__"],
     deps = [
+        "//internal/connection",
         "//internal/gen/gcs/v1:gcs",
         "//internal/vehicle",
         "@org_golang_google_protobuf//encoding/protojson",
@@ -19,11 +20,13 @@ go_library(
 go_test(
     name = "stream_test",
     srcs = [
+        "acquisition_test.go",
         "hub_test.go",
         "sse_test.go",
     ],
     embed = [":stream"],
     deps = [
+        "//internal/connection",
         "//internal/gen/gcs/v1:gcs",
         "//internal/vehicle",
         "@org_golang_google_protobuf//encoding/protojson",

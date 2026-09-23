@@ -1,7 +1,7 @@
 ---
 id: T-046
 title: Discover and open local serial devices through the backend
-status: ready
+status: done
 priority: 1
 owner: unassigned
 depends_on: T-045
@@ -45,16 +45,16 @@ serial support initially; raw USB/libusb is not required by this workflow.
 
 ## Acceptance criteria
 
-- [ ] Native macOS builds with CGO and Linux production builds without CGO; controlled serial checks run on both platforms with OS/architecture and limitations recorded.
+- [x] Native macOS builds with CGO and Linux production builds without CGO; controlled serial checks run on both platforms with OS/architecture and limitations recorded.
 
-- [ ] Inventory reports available device identity metadata without claiming a generic serial device is a radio.
-- [ ] Connect opens the selected device/settings and routes MAVLink through the normal bridge; disconnect releases it.
-- [ ] Missing, inaccessible, busy and silent devices produce distinct supported states/errors without inventing a cause.
-- [ ] Acquisition allows only the intended observer traffic when operator commands are disabled.
-- [ ] A controlled serial test source exercises framing, port closure, error handling and multiple vehicle identities; hardware limitations are recorded.
-- [ ] Inventory/status/connect/disconnect are exercisable over HTTP with operator commands disabled; a late SSE subscriber receives the current acquisition state.
-- [ ] A serial-only backend with UDP disabled discovers vehicles and streams telemetry through the existing bridge, routes and recording pipeline.
-- [ ] Closing/reopening a serial connection neither terminates the shared fleet pipeline nor leaves stale addressed-write routes; repeated identical connect is idempotent.
+- [x] Inventory reports available device identity metadata without claiming a generic serial device is a radio.
+- [x] Connect opens the selected device/settings and routes MAVLink through the normal bridge; disconnect releases it.
+- [x] Missing, inaccessible, busy and silent devices produce distinct supported states/errors without inventing a cause.
+- [x] Acquisition allows only the intended observer traffic when operator commands are disabled.
+- [x] A controlled serial test source exercises framing, port closure, error handling and multiple vehicle identities; hardware limitations are recorded.
+- [x] Inventory/status/connect/disconnect are exercisable over HTTP with operator commands disabled; a late SSE subscriber receives the current acquisition state.
+- [x] A serial-only backend with UDP disabled discovers vehicles and streams telemetry through the existing bridge, routes and recording pipeline.
+- [x] Closing/reopening a serial connection neither terminates the shared fleet pipeline nor leaves stale addressed-write routes; repeated identical connect is idempotent.
 
 ## Verification
 
@@ -65,8 +65,7 @@ claimed by packaging. Run the controlled serial harness below on both macOS
 and Linux, recording inventory metadata availability, access errors and port
 release behavior. A cross-build alone does not satisfy Linux runtime evidence.
 Keep race tests CGO-enabled, independently of the production binary policy.
-These are required implementation checks, not results of this documentation
-update.
+Executed results and limitations are recorded below and in the T-046 runbook.
 
 Implement controlled transport tests in `internal/connection` (new package)
 and the affected codec/bridge/HTTP packages, then run:
@@ -93,15 +92,16 @@ releases the port for a second opener and that no outbound traffic follows.
 
 Repeat applicable Plane 4.6.3 QuadPlane ingestion from the T-027 runbook through
 the controlled serial path before hardware acceptance. Record exact commands,
-results and platform limits; tests specified here have not yet been executed.
+results and platform limits; executed evidence is recorded below.
 
 ## Open questions
 
 Serial library/adapter behavior and OS enumeration/permission handling are
 resolved by this experiment; actual device acceptance remains T-028/T-031.
-Before encoding states, reconcile the contract's §4 valid-frames/no-heartbeat
-case with §8's heartbeat-based REPORTING definition; test that case explicitly.
-Idempotent connect returns success per §7, not the conflicting §11 wording.
+Resolved: REPORTING requires valid frames, independent of heartbeat liveness;
+INTERRUPTED means no valid frames for more than 60 seconds. Repeated identical
+connect returns 200 with the same open session. Both are tested and reconciled
+in the contract. I/O failure without removal evidence is TRANSPORT_FAILED.
 
 ## Notes
 
@@ -109,3 +109,36 @@ Readiness review 2026-09-16: T-045 is done; no hardware identity, radio baud or
 packaging decision prevents this controlled implementation. Promoted after
 pinning scope and verification. This is software readiness, not USB/radio
 acceptance. ADR 0007 stays proposed until its implementing experiment passes.
+
+
+Implementation and verification completed 2026-09-23:
+
+- Native `go.bug.st/serial` inventory/open, 8N1 settings, observed OS errors,
+  inventory removal, explicit release/reopen and a one-second evidence sweep.
+  A one-shot gomavlib custom client exposes synchronous open failures without
+  taking ownership of future retry policy. One manager multiplexes all sources
+  into the existing bridge/fleet fold; generation-specific serial labels and
+  ordered channel retirement prevent stale writes after close/reopen.
+- Inventory/status/connect/disconnect HTTP routes operate with commands disabled.
+  Acquisition status is retained and bootstrapped over SSE. The bridge, mission
+  coordinator and recording sink run even with UDP disabled. Fixed UDP remains
+  supported and can be released/reopened by its configured ID.
+- Disconnect racing a discovery-triggered rate request now cancels that request
+  without stopping other connections. Tests cover source handoff, pending close
+  events, stalled consumers, shutdown and goroutine leaks.
+- Required race suite passed; native macOS CGO and Linux CGO-free builds passed;
+  `make bazel-tidy` completed and all 10 Bazel backend test targets passed using
+  the repository-pinned Bazel 8.7.0. `./scripts/kanban check` passed.
+- Real-backend PTY harness passed on macOS 26.6.2 arm64 and Linux
+  6.12.76-linuxkit aarch64 with Go 1.25.0, including full 60-second silence,
+  two identities, malformed/fragmented input, late SSE subscription, mission
+  read, recording, duplicate connect, release to a second opener and reopen.
+  Both independently decoded outbound streams contained only allowed traffic.
+- Plane 4.6.3 QuadPlane ingestion passed through the native serial path, with
+  independent firmware/Q_ENABLE/Q_FRAME_CLASS readback and real stream,
+  mission-download and recording checks. ADR 0007 is now accepted.
+- Reproduction commands, observed counts/timing, harness corrections and exact
+  platform limitations: [T-046 runbook](../../runbooks/validation/t046.md).
+  Physical USB metadata, drivers, permission/ownership, baud throughput and
+  radio behavior are not claimed; permission/busy tests use injected OS errors.
+  UI controls, saved profiles and automatic reconnect remain T-048/T-047/T-049.

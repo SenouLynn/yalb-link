@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/bluenviron/gomavlib/v3 v3.3.5
+	go.bug.st/serial v1.7.1
 	go.uber.org/goleak v1.3.0
 	golang.org/x/sync v0.22.0
 	google.golang.org/protobuf v1.36.12
@@ -18,7 +19,6 @@ require (
 	github.com/pion/logging v0.2.2 // indirect
 	github.com/pion/transport/v2 v2.2.10 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
-	go.bug.st/serial v1.7.1 // indirect
 	golang.org/x/net v0.38.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	modernc.org/libc v1.74.4 // indirect

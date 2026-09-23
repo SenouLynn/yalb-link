@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"yalb.gcs/internal/connection"
 	"yalb.gcs/internal/mission"
 )
 
@@ -15,7 +16,7 @@ func TestMissionRouteIsMountedWhenCommandsAreDisabled(t *testing.T) {
 
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	coordinator := &mission.Coordinator{}
-	mux := newHTTPMux(log, nil, nil, nil, coordinator)
+	mux := newHTTPMux(log, nil, nil, nil, coordinator, nil)
 
 	response := httptest.NewRecorder()
 	mux.ServeHTTP(response, httptest.NewRequest(
@@ -48,5 +49,16 @@ func TestMissionRouteIsMountedWhenCommandsAreDisabled(t *testing.T) {
 		if got.Code != tc.status {
 			t.Errorf("%s %s status = %d, want %d", tc.method, tc.path, got.Code, tc.status)
 		}
+	}
+}
+
+func TestConnectionsMountedWithoutOperatorCommands(t *testing.T) {
+	manager := connection.New(connection.Config{})
+	defer manager.Close()
+	mux := newHTTPMux(slog.Default(), nil, nil, nil, &mission.Coordinator{}, manager)
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/connections", nil))
+	if response.Code != http.StatusOK || response.Body.String() != "[]\n" {
+		t.Fatal(response.Code, response.Body.String())
 	}
 }

@@ -49,7 +49,14 @@ The repository currently has:
 - pure TypeScript attitude, heading, position, battery, track, freshness, and
   trajectory logic;
 - Docker Compose definitions for Copter and Plane SITL;
-- native Go/TypeScript tests and a Bazel checkpoint build.
+- native Go/TypeScript tests and a Bazel checkpoint build;
+- native serial device discovery and connect/disconnect over HTTP, including
+  serial-only telemetry, mission reads and recording with commands disabled.
+  See the [serial acquisition runbook](docs/runbooks/validation/t046.md).
+- saved connection profiles that persist across backend restart, identified by
+  serial number/VID/PID rather than OS port name, with an explicit ambiguous/
+  missing state instead of a silent device substitution. See
+  [ADR 0010](docs/adr/0010-connection-profile-persistence.md).
 - an opt-in, addressed arm/disarm transaction with acknowledgement, timeout,
   cancellation, and delivery-uncertain failure states;
 - an operator-attested resolution for an ambiguous arm/disarm outcome, which
@@ -87,10 +94,13 @@ field site with the RC pilot in control and missions prepared in MissionPlanner.
 These hardware workflows are planned, not yet accepted.
 
 The [operator usage and end-to-end acceptance plan](docs/tasks/operator-usage-plan.md)
-records scenarios, evidence requirements and capability gates. Next are T-023
-link recovery, T-027 exact target identification and T-030 offline observer
-behavior, followed by USB and radio acceptance. Existing SITL display and mission
-results remain useful evidence within their recorded scope.
+records scenarios, evidence requirements and capability gates. Native serial
+acquisition now has controlled macOS/Linux and QuadPlane SITL evidence, and
+saved connection profiles now persist and resolve by device identity in
+software (no hardware/PTY restart evidence yet). Connection controls
+(T-048), recovery (T-049) and launch packaging (T-050) precede USB and radio
+hardware acceptance. Existing SITL display and mission results retain their
+recorded scope.
 
 Parameter inspection precedes a separately isolated Bench configuration writer.
 Offline mission drafting/upload follows field read validation; flight navigation

@@ -1,7 +1,9 @@
 # ADR 0007: Native in-process serial acquisition
 
-Status: Proposed — direction settled; [T-046](../tasks/cards/T-046-serial-acquisition.md)
-is the accompanying implementing experiment and has not run yet.
+Status: Accepted — implemented by [T-046](../tasks/cards/T-046-serial-acquisition.md).
+Controlled macOS/Linux arm64 serial and Plane 4.6.3 QuadPlane results are recorded
+in the [T-046 runbook](../runbooks/validation/t046.md); physical hardware support
+remains separate acceptance work.
 
 ## Context
 
@@ -37,8 +39,10 @@ logic, isolating OS-specific discovery and serial access behind the transport
 and inventory interfaces. Portability is a design requirement, not yet an
 executed hardware compatibility claim.
 
-Use the existing `go.bug.st/serial` dependency and gomavlib serial support as
-the initial implementation path. This assumes the controller and ground radio
+Use `go.bug.st/serial` for native open/read/write and metadata, with gomavlib
+framing through a one-shot custom-client adapter. The experiment found that
+gomavlib EndpointSerial owns asynchronous open/retry, so it cannot directly
+provide synchronous access errors or the application-owned retry boundary. This assumes the controller and ground radio
 present OS-visible serial ports, which hardware acceptance must confirm.
 USB-C describes the physical connection; it does not require raw USB access.
 Do not introduce `gousb`/libusb for this serial workflow. Reconsider raw USB
@@ -79,10 +83,10 @@ need their own checks; compiling a Linux binary on a Mac does not prove them.
   ([T-045](../tasks/connection-contract.md) §5) are written against this
   direction; reversing it would change that interface boundary, not just an
   implementation behind it.
-- `internal/codec.FrameSource` gains at least one non-UDP implementation.
-  Whether it multiplexes through the existing `codec.Node`/`gomavlib.Node` or
-  runs alongside it is left to [T-046](../tasks/cards/T-046-serial-acquisition.md),
-  per the open engineering question in [T-045](../tasks/connection-contract.md) §5.
+- `connection.Manager` implements `codec.FrameSource` by multiplexing one node
+  per opened transport into one existing bridge, route table and fleet fold.
+  Closing a child cannot close the shared receive pipeline. Generation-specific
+  serial labels and channel retirement prevent stale addressed-write routes.
 
 ## Verification
 

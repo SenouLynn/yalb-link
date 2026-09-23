@@ -9,6 +9,7 @@ package stream
 import (
 	"cmp"
 	"context"
+	"encoding/json"
 	"log/slog"
 	"maps"
 	"slices"
@@ -16,6 +17,7 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"yalb.gcs/internal/connection"
 	gcsv1 "yalb.gcs/internal/gen/gcs/v1"
 	"yalb.gcs/internal/vehicle"
 )
@@ -28,6 +30,8 @@ const (
 	EventTelemetry = "telemetry"
 	// EventCommand carries an operator command transaction snapshot.
 	EventCommand = "command"
+	// EventAcquisition carries local device/port/frame evidence, not fleet liveness.
+	EventAcquisition = "acquisition"
 )
 
 // DefaultQueue is the live headroom each subscriber gets beyond its bootstrap.
@@ -37,10 +41,11 @@ const (
 // delay the disconnect while showing the operator staler data.
 const DefaultQueue = 256
 
-// Event is one thing to send to a browser: an SSE event name and the protobuf
-// message that becomes its data field.
+// Event is one SSE event: a name and either a protobuf message or pre-encoded
+// acquisition JSON for its data field.
 type Event struct {
 	Message proto.Message
+	JSON    json.RawMessage
 	Name    string
 }
 
@@ -63,12 +68,13 @@ func (k vehicleKey) compare(other vehicleKey) int {
 // Hub retains the latest fleet and telemetry state and fans live events out to
 // subscribers.
 type Hub struct {
-	fleet     map[vehicleKey]*gcsv1.FleetEvent
-	telemetry map[vehicleKey]map[string]*gcsv1.TelemetryEvent
-	subs      map[*subscriber]struct{}
-	log       *slog.Logger
-	queue     int
-	mu        sync.Mutex
+	acquisition map[string]json.RawMessage
+	fleet       map[vehicleKey]*gcsv1.FleetEvent
+	telemetry   map[vehicleKey]map[string]*gcsv1.TelemetryEvent
+	subs        map[*subscriber]struct{}
+	log         *slog.Logger
+	queue       int
+	mu          sync.Mutex
 }
 
 // NewHub returns an empty hub. queue bounds each subscriber's live backlog;
@@ -83,11 +89,12 @@ func NewHub(log *slog.Logger, queue int) *Hub {
 	}
 
 	return &Hub{
-		fleet:     make(map[vehicleKey]*gcsv1.FleetEvent),
-		telemetry: make(map[vehicleKey]map[string]*gcsv1.TelemetryEvent),
-		subs:      make(map[*subscriber]struct{}),
-		log:       log,
-		queue:     queue,
+		acquisition: make(map[string]json.RawMessage),
+		fleet:       make(map[vehicleKey]*gcsv1.FleetEvent),
+		telemetry:   make(map[vehicleKey]map[string]*gcsv1.TelemetryEvent),
+		subs:        make(map[*subscriber]struct{}),
+		log:         log,
+		queue:       queue,
 	}
 }
 
@@ -184,6 +191,9 @@ func (h *Hub) snapshot() []Event {
 		}
 	}
 
+	for _, id := range slices.Sorted(maps.Keys(h.acquisition)) {
+		out = append(out, Event{Name: EventAcquisition, JSON: h.acquisition[id]})
+	}
 	return out
 }
 
@@ -297,4 +307,18 @@ func familyOf(ev *gcsv1.TelemetryEvent) string {
 	}
 
 	return string(field.Name())
+}
+
+// PublishAcquisition retains a serialized snapshot, so producer mutation cannot
+// change a subscriber's bootstrap. Publication cannot block the receive loop.
+func (h *Hub) PublishAcquisition(status connection.Status) {
+	data, err := json.Marshal(status)
+	if err != nil {
+		h.log.Error("encoding acquisition status", "err", err)
+		return
+	}
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	h.acquisition[status.ID] = data
+	h.deliver(context.Background(), Event{Name: EventAcquisition, JSON: data})
 }

@@ -1,0 +1,48 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "connection",
+    srcs = [
+        "http.go",
+        "inventory.go",
+        "manager.go",
+        "profile.go",
+        "profile_store.go",
+        "serial.go",
+        "types.go",
+    ],
+    importpath = "yalb.gcs/internal/connection",
+    visibility = ["//:__subpackages__"],
+    deps = [
+        "//internal/codec",
+        "@com_github_bluenviron_gomavlib_v3//:gomavlib",
+        "@com_github_bluenviron_gomavlib_v3//pkg/message",
+        "@st_bug_go_serial//:serial",
+        "@st_bug_go_serial//enumerator",
+    ],
+)
+
+go_test(
+    name = "connection_test",
+    srcs = [
+        "bridge_test.go",
+        "http_test.go",
+        "main_test.go",
+        "manager_profile_test.go",
+        "manager_test.go",
+        "profile_store_test.go",
+    ],
+    embed = [":connection"],
+    deps = [
+        "//internal/bridge",
+        "//internal/codec",
+        "//internal/routes",
+        "@com_github_bluenviron_gomavlib_v3//:gomavlib",
+        "@com_github_bluenviron_gomavlib_v3//pkg/dialect",
+        "@com_github_bluenviron_gomavlib_v3//pkg/dialects/ardupilotmega",
+        "@com_github_bluenviron_gomavlib_v3//pkg/frame",
+        "@com_github_bluenviron_gomavlib_v3//pkg/message",
+        "@com_github_bluenviron_gomavlib_v3//pkg/streamwriter",
+        "@org_uber_go_goleak//:goleak",
+    ],
+)
