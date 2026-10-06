@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { ConnectionsBar } from '@/connections/ConnectionsBar';
+import { emptyConnections, type UseConnectionsResult } from '@/connections/useConnections';
 import { FleetEventType } from '@/gen/gcs/v1/fleet_pb';
 import type { FleetState, VehicleKey, VehicleView } from '@/fleet/state';
 import { FleetOverview } from '@/fleet/FleetOverview';
@@ -27,6 +29,10 @@ export interface FlightDisplayProps {
   /** The running replay, when this page is one. */
   replay?: ReplayEventSource | null;
   onSelect: (key: VehicleKey) => void;
+  /** Owned by `App`, driven off the same stream `fleet` is. Defaults to an
+   *  inert fixture: most tests and stories exercise unrelated behavior and
+   *  should not have to construct a live connections controller to do it. */
+  connections?: UseConnectionsResult;
 }
 
 export function FlightDisplay({
@@ -36,6 +42,7 @@ export function FlightDisplay({
   replay = null,
   onSelect,
   initialSection,
+  connections = emptyConnections,
 }: FlightDisplayProps) {
   const [section, setSection] = useState<'fleet' | 'vehicle'>(
     initialSection ?? (source === 'replay' ? 'vehicle' : 'fleet'),
@@ -59,7 +66,12 @@ export function FlightDisplay({
 
   return (
     <WorkspaceShell
-      meta={<span>{sourceLabel(source, fleet.connected)}</span>}
+      meta={
+        <>
+          <span>{sourceLabel(source, fleet.connected)}</span>
+          <ConnectionsBar {...connections} nowMs={nowMs} live={source === 'live'} />
+        </>
+      }
       nav={
         <>
           {/*

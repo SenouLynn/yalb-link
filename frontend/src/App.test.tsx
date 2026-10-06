@@ -10,6 +10,21 @@ const harness = vi.hoisted(() => ({ start: vi.fn(), stop: vi.fn() }));
 vi.mock('@/stream/select', () => ({ selectStream: () => ({ stream: { start: harness.start }, source: 'live' }) }));
 vi.mock('@/map/FleetMap', () => ({ FleetMap: () => <div aria-label="Fleet position map" /> }));
 vi.mock('@/map/MapPanel', () => ({ MapPanel: () => <div /> }));
+// This suite is about the fleet/stream/selection wiring App owns, not the
+// connections controller — mocked out the same way the map is, so a real
+// `fetch('/api/connections')` never fires here (the mocked `source: 'live'`
+// above would otherwise make `useConnections` believe a live backend exists).
+const noopConnections = vi.hoisted(() => ({
+  connections: [], devices: [], profiles: [], devicesError: null, profilesError: null,
+  actionError: null, pending: new Set<string>(), dispatchStream: () => undefined,
+  refreshDevices: () => undefined, refreshProfiles: () => undefined,
+  connectDevice: () => undefined, connectProfile: () => undefined, disconnect: () => undefined,
+  saveProfile: () => undefined, deleteProfile: () => undefined,
+}));
+vi.mock('@/connections/useConnections', () => ({
+  useConnections: () => noopConnections,
+  emptyConnections: noopConnections,
+}));
 import App from './App';
 afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
 

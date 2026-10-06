@@ -5,8 +5,9 @@ import { fromJson, fromJsonString, type JsonValue } from '@bufbuild/protobuf';
 import { FleetEventSchema } from '@/gen/gcs/v1/fleet_pb';
 import { TelemetryEventSchema } from '@/gen/gcs/v1/telemetry_pb';
 import { CommandTransactionSchema } from '@/gen/gcs/v1/commands_pb';
+import { parseConnectionStatus } from '@/connections/types';
 
-import { EVENT_COMMAND, EVENT_FLEET, EVENT_TELEMETRY, type StreamEvent } from './events';
+import { EVENT_ACQUISITION, EVENT_COMMAND, EVENT_FLEET, EVENT_TELEMETRY, type StreamEvent } from './events';
 
 /**
  * Parses one SSE frame.
@@ -41,6 +42,13 @@ export function parseStreamEvent(
       case EVENT_COMMAND:
 		return { kind: 'command', event: fromJsonString(CommandTransactionSchema, data), receivedAtMs };
 
+      case EVENT_ACQUISITION: {
+        // Plain snake-case JSON (connection-contract.md §6), not a protobuf
+        // schema — this surface deliberately stays off the generated messages.
+        const status = parseConnectionStatus(JSON.parse(data));
+        return status === null ? null : { kind: 'acquisition', event: status, receivedAtMs };
+      }
+
       default:
         return null;
     }
@@ -72,6 +80,11 @@ export function parseStreamJson(
 
       case EVENT_COMMAND:
 		return { kind: 'command', event: fromJson(CommandTransactionSchema, value), receivedAtMs };
+
+      case EVENT_ACQUISITION: {
+        const status = parseConnectionStatus(value);
+        return status === null ? null : { kind: 'acquisition', event: status, receivedAtMs };
+      }
 
       default:
         return null;

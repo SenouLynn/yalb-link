@@ -9,12 +9,19 @@
 import type { FleetEvent } from '@/gen/gcs/v1/fleet_pb';
 import type { TelemetryEvent } from '@/gen/gcs/v1/telemetry_pb';
 import type { CommandTransaction } from '@/gen/gcs/v1/commands_pb';
+import type { ConnectionStatus } from '@/connections/types';
 
 /** One thing that arrived from the backend, stamped on receipt. */
 export type StreamEvent =
   | { kind: 'fleet'; event: FleetEvent; receivedAtMs: number }
   | { kind: 'telemetry'; event: TelemetryEvent; receivedAtMs: number }
   | { kind: 'command'; event: CommandTransaction; receivedAtMs: number }
+  /**
+   * A connection's acquisition evidence (device/MAVLink), never the browser's
+   * own hold on the SSE stream — kept syntactically distinct from `connection`
+   * below for exactly that reason (connection-contract.md §6).
+   */
+  | { kind: 'acquisition'; event: ConnectionStatus; receivedAtMs: number }
   /**
    * Transport state, not vehicle state. A vehicle can be perfectly healthy
    * while the browser has lost its connection to the backend, and conflating
@@ -52,3 +59,4 @@ export interface TelemetryStream {
 export const EVENT_FLEET = 'fleet';
 export const EVENT_TELEMETRY = 'telemetry';
 export const EVENT_COMMAND = 'command';
+export const EVENT_ACQUISITION = 'acquisition';

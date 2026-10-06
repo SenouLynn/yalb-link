@@ -1258,6 +1258,63 @@ body {
   color: var(--lume-dim);
 }
 
+/* --- connections popover -------------------------------------------------- */
+
+/*
+ * Same disclosure shape as `.views`/`.views__popover` above — a relatively
+ * positioned trigger and an absolutely positioned panel under it — but its
+ * own selectors: the two popovers hold unrelated content (device/profile
+ * controls versus panel checkboxes) and neither reuses the other's rows.
+ */
+.connections {
+  position: relative;
+}
+
+.connections__popover {
+  position: absolute;
+  z-index: 20;
+  top: 100%;
+  right: 0;
+  /* design-geometry: wide enough for a device's description plus its state
+     label on one row without wrapping. */
+  width: 20rem;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: var(--row-y) var(--row-x);
+  border: var(--rule);
+  border-radius: var(--radius);
+  background: var(--panel);
+  /* No box-shadow: `system.test.ts`'s Only-Overlays-Float gate names exactly
+     two permitted uses (`.views__popover`, `.fleet-card[data-selected]`) and
+     this is not either — the border against `--panel-deep` behind it is
+     definition enough, matching the system's general "no floating cards". */
+  display: flex;
+  flex-direction: column;
+  gap: var(--row-y);
+}
+
+.connections__row {
+  padding-bottom: var(--row-y);
+  border-bottom: var(--rule);
+}
+
+.connections__row:last-of-type {
+  border-bottom: 0;
+}
+
+.connections__pick,
+.connections__new {
+  display: flex;
+  flex-direction: column;
+  gap: var(--lever-gap);
+  padding-top: var(--lever-gap);
+}
+
+.connections__new .group__head {
+  padding: 0;
+  border-bottom: 0;
+}
+
 /* --- responsive ---------------------------------------------------------- */
 
 /*

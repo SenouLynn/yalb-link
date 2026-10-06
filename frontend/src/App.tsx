@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useState } from 'react';
 
+import { useConnections } from '@/connections/useConnections';
 import { fleetReducer, initialFleetState, type VehicleKey } from '@/fleet/state';
 import { selectStream } from '@/stream/select';
 import { FlightDisplay } from '@/ui/FlightDisplay';
@@ -24,9 +25,20 @@ export default function App() {
   // connection and force a fresh bootstrap on every render.
   const [{ stream, source, replay }] = useState(() => selectStream(search));
 
+  // A second, independent fold off the same feed (ADR 0006: a connection is
+  // an acquisition path, not a vehicle identity, and the two fail
+  // independently) — see connections/state.ts.
+  const connections = useConnections(source === 'live');
+
+  // `dispatchStream` is stable (`useCallback` with no deps in `useConnections`);
+  // depending on the whole `connections` object here would rebuild the stream
+  // — and drop the SSE connection — on every render, since its returned object
+  // is a fresh literal each time.
+  const { dispatchStream } = connections;
   useEffect(() => stream.start((event) => {
     dispatch({ type: 'stream', event });
-  }), [stream]);
+    dispatchStream(event);
+  }), [stream, dispatchStream]);
 
   useEffect(() => {
     const handle = globalThis.setInterval(() => {
@@ -46,6 +58,13 @@ export default function App() {
   };
 
   return (
-    <FlightDisplay fleet={fleet} nowMs={nowMs} source={source} replay={replay} onSelect={select} />
+    <FlightDisplay
+      fleet={fleet}
+      nowMs={nowMs}
+      source={source}
+      replay={replay}
+      onSelect={select}
+      connections={connections}
+    />
   );
 }
