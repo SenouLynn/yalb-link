@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Launch the local hardware observer: one backend process serving the built UI.
+#
+#   ./scripts/observer            build if needed, start, open the browser
+#   ./scripts/observer --rebuild  force a rebuild of backend and UI first
+#   ./scripts/observer --no-open  do not open a browser
+#
+# Observer defaults: no SITL/UDP input, operator commands disabled, UI and API
+# on 127.0.0.1 only. Settings and recordings live in one directory (below).
+# Verified on macOS arm64 only; see docs/runbooks/observer-launch.md.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ADDR="${GCS_HTTP_ADDR:-127.0.0.1:8080}"
+HOST="${ADDR%:*}"
+PORT="${ADDR##*:}"
+case "$(uname -s)" in
+  Darwin) DATA="${GCS_DATA_DIR:-$HOME/Library/Application Support/yalb-gcs}" ;;
+  *)      DATA="${GCS_DATA_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/yalb-gcs}" ;;
+esac
+BIN="$DATA/bin/gcs"
+LOG="$DATA/observer.log"
+
+rebuild=0 open_browser=1
+for arg in "$@"; do
+  case "$arg" in
+    --rebuild) rebuild=1 ;;
+    --no-open) open_browser=0 ;;
+    -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "observer: unknown option $arg" >&2; exit 2 ;;
+  esac
+done
+
+fail() { echo "observer: $*" >&2; exit 1; }
+need() { command -v "$1" >/dev/null 2>&1 || fail "missing prerequisite '$1'. $2"; }
+
+mkdir -p "$DATA/bin"
+
+# Prerequisites are only needed to build; a previously built tree starts without them.
+if [ "$rebuild" = 1 ] || [ ! -x "$BIN" ]; then
+  need go "Install Go (see go.mod for the version) and a C toolchain (xcode-select --install)."
+  echo "observer: building backend -> $BIN"
+  (cd "$ROOT" && CGO_ENABLED=1 go build -o "$BIN" ./cmd/gcs) || fail "backend build failed"
+fi
+if [ "$rebuild" = 1 ] || [ ! -f "$ROOT/frontend/dist/index.html" ]; then
+  need pnpm "Install Node and pnpm (corepack enable)."
+  echo "observer: building UI"
+  (cd "$ROOT/frontend" && { [ -d node_modules ] || pnpm install --frozen-lockfile; } && pnpm build) \
+    >"$DATA/ui-build.log" 2>&1 || { tail -20 "$DATA/ui-build.log" >&2; fail "UI build failed (full log: $DATA/ui-build.log)"; }
+fi
+
+# A listening port is the one failure the backend cannot explain well to a person.
+if lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; then
+  echo "observer: port $PORT is already in use:" >&2
+  lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >&2 || true
+  fail "stop that process (an observer may already be running at http://$ADDR/) or set GCS_HTTP_ADDR=127.0.0.1:<port>"
+fi
+
+export GCS_HTTP_ADDR="$ADDR"
+export GCS_UI_DIR="$ROOT/frontend/dist"
+export GCS_MAVLINK_UDP_BIND="${GCS_MAVLINK_UDP_BIND-}"        # empty: no UDP/SITL input
+export GCS_COMMANDS_ENABLED="${GCS_COMMANDS_ENABLED:-false}"   # observer: no operator commands
+export GCS_RECORDING_ENABLED="${GCS_RECORDING_ENABLED:-true}"
+export GCS_RECORDING_DB_PATH="${GCS_RECORDING_DB_PATH:-$DATA/recordings.db}"
+export GCS_CONNECTION_PROFILES_PATH="${GCS_CONNECTION_PROFILES_PATH:-$DATA/connection-profiles.json}"
+
+echo "observer: data dir  $DATA"
+echo "observer: UI        http://$ADDR/   (Ctrl-C stops and releases serial ports)"
+
+"$BIN" >>"$LOG" 2>&1 &
+pid=$!
+trap 'kill -TERM "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true' INT TERM
+
+for _ in $(seq 1 100); do
+  if curl -fsS "http://$HOST:$PORT/healthz" >/dev/null 2>&1; then ready=1; break; fi
+  kill -0 "$pid" 2>/dev/null || { tail -20 "$LOG" >&2; fail "backend exited during startup (log: $LOG)"; }
+  sleep 0.1
+done
+[ "${ready:-0}" = 1 ] || { kill "$pid" 2>/dev/null || true; tail -20 "$LOG" >&2; fail "backend not healthy after 10 s (log: $LOG)"; }
+
+[ "$open_browser" = 1 ] && command -v open >/dev/null 2>&1 && open "http://$ADDR/"
+wait "$pid"
+status=$?
+[ "$status" = 0 ] || { tail -20 "$LOG" >&2; fail "backend stopped with status $status (log: $LOG)"; }

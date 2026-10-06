@@ -85,6 +85,12 @@ func run(log *slog.Logger) error {
 	// The hub outlives any single browser and exists even without a MAVLink
 	// socket, so the UI can connect and correctly show an empty fleet rather
 	// than failing to load.
+	if dir := os.Getenv(envUIDir); dir != "" {
+		if err := validateUIDir(dir); err != nil {
+			return err
+		}
+	}
+
 	hub := stream.NewHub(log, 0)
 	defer hub.Close()
 
@@ -202,6 +208,10 @@ func startBridge(
 // context.
 func serveHTTP(ctx context.Context, group *errgroup.Group, log *slog.Logger, hub *stream.Hub, store *recording.Store, registry *command.Registry, missionCoordinator *mission.Coordinator, connections *connection.Manager) {
 	mux := newHTTPMux(log, hub, store, registry, missionCoordinator, connections)
+	if dir := os.Getenv(envUIDir); dir != "" {
+		mux.Handle("GET /", uiHandler(dir))
+		log.Info("serving observer UI", "dir", dir)
+	}
 
 	addr := os.Getenv("GCS_HTTP_ADDR")
 	if addr == "" {

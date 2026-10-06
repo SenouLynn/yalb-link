@@ -1,7 +1,7 @@
 ---
 id: T-050
 title: Launch the hardware observer on a fresh machine
-status: backlog
+status: ready
 priority: 1
 owner: unassigned
 depends_on: T-045
@@ -39,5 +39,17 @@ Initial OS, packaging and local server lifecycle remain open. Installation downl
 
 ## Notes
 
-Planned, not implemented or accepted. Refine verification commands and scenario
-bounds before promoting implementation work to ready.
+Shaped 2026-10-06 per the [bench readiness plan](../bench-readiness-plan.md):
+macOS-first, from a source checkout, no installer, no Windows. T-045 is done,
+so the launch approach is chosen: the Go backend serves the built UI
+(`GCS_UI_DIR`, `cmd/gcs/ui.go`) and `scripts/observer` builds, applies observer
+defaults, checks the port, opens the browser and stops cleanly.
+Procedure: [observer-launch.md](../runbooks/observer-launch.md).
+
+Implemented and checked on the developer machine only (see that runbook's
+evidence section): launch without SITL, local UI and API on one port,
+occupied-port refusal, startup-failure reporting, clean shutdown, Go tests for
+the static handler. **No acceptance box is ticked**: all of them name a clean
+declared host or offline behavior, which is unverified. Remaining: fresh-machine
+run, empty-cache offline start (with T-030), serial-ownership release checked
+with a real controller, Bazel build of `cmd/gcs` (not runnable here).

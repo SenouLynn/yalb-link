@@ -3,6 +3,7 @@
 Runbooks contain repeatable operational procedures, not architecture plans.
 
 - [dev-setup.md](dev-setup.md) — prerequisites, tests, generation, and local SITL
+- [observer-launch.md](observer-launch.md) — one-command local hardware observer launch (macOS)
 
 Recorded validation procedures and results (raw captures are optional):
 
