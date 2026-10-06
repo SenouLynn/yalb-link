@@ -12,6 +12,10 @@ The [operator usage plan](operator-usage-plan.md) records the intended hardware
 workflows, capability ordering and unexecuted end-to-end acceptance scenarios.
 It is planning context, not a second column index or a claim of validation.
 
+The [USB bench readiness plan](bench-readiness-plan.md) narrows the next milestone
+to USB-powered connection, live attitude feedback, startup and recovery, with
+an ordered path from the current integration baseline to physical acceptance.
+
 ## Workflow
 
 The columns are:
