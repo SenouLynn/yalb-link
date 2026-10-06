@@ -105,7 +105,7 @@ function LiveConnections(props: ConnectionsBarProps) {
     <>
       {actionError === null ? null : <Note tone="caution" role="alert">{actionError}</Note>}
 
-      {connections.length === 0 ? (
+      {connections.length === 0 && profiles.length === 0 ? (
         <Note tone="absent">No connections configured yet. Add one below.</Note>
       ) : (
         connections.map((connection) => (
@@ -123,6 +123,20 @@ function LiveConnections(props: ConnectionsBarProps) {
           />
         ))
       )}
+
+      {profiles.filter((profile) => !connections.some((connection) => connection.id === profile.id)).map((profile) => (
+        <div className="connections__row" key={profile.id} aria-label={profile.name}>
+          <Row label={profile.name} value="Saved" tone="normal" hint={profile.deviceId} />
+          <div className="lever-row">
+            <Lever disabled={pending.has(profile.id)} onClick={() => { props.connectProfile(profile.id); }}>
+              Connect
+            </Lever>
+            <Lever disabled={pending.has(profile.id)} onClick={() => { props.deleteProfile(profile.id); }}>
+              Delete profile
+            </Lever>
+          </div>
+        </div>
+      ))}
 
       {devicesError === null ? null : <Note tone="caution">Devices: {devicesError}</Note>}
       {profilesError === null ? null : <Note tone="caution">Profiles: {profilesError}</Note>}

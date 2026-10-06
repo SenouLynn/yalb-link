@@ -182,4 +182,16 @@ describe('ConnectionsBar', () => {
     expect(refreshDevices).toHaveBeenCalledTimes(1);
     expect(refreshProfiles).toHaveBeenCalledTimes(1);
   });
+
+  it('lists a saved profile that has no live status, with Connect and Delete', () => {
+    const connectProfile = vi.fn();
+    const el = render({ profiles: FIXTURE_PROFILES, connections: [], connectProfile });
+    openPopover(el);
+    const row = el.querySelector('[aria-label="Bench controller"]');
+    expect(row?.textContent).toContain('Saved');
+    const connect = [...(row?.querySelectorAll('button') ?? [])].find((b) => b.textContent === 'Connect');
+    act(() => { connect?.click(); });
+    expect(connectProfile).toHaveBeenCalledWith('bench-controller');
+    expect(el.textContent).not.toContain('No connections configured yet');
+  });
 });

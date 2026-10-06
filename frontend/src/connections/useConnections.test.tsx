@@ -165,6 +165,23 @@ describe('useConnections', () => {
     expect(harness.latest().connections).toEqual([{ id: 'p1', state: 'OPENING', vehicleKeys: [] }]);
   });
 
+  it('saveProfile connects with the device the operator picked, so an identity-less port still opens', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse({ id: 'p1', name: 'Bench', device: { id: '/dev/x' }, settings: { baud_rate: 57600 } }))
+      .mockResolvedValueOnce(jsonResponse({ id: 'p1', state: 'OPENING' }));
+
+    const harness = mount(true);
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => {
+      harness.latest().saveProfile({ name: 'Bench', deviceId: '/dev/x', settings: { baudRate: 57600 } });
+      for (let i = 0; i < 4; i += 1) await Promise.resolve();
+    });
+
+    const connectCall = fetchSpy.mock.calls[2];
+    expect(JSON.parse(String((connectCall?.[1] as RequestInit).body))).toEqual({ profile_id: 'p1', device_id: '/dev/x' });
+  });
+
   it('deleteProfile removes it from the profile list on success', async () => {
     vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(jsonResponse([])) // bootstrap

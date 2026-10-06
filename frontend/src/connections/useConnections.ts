@@ -177,7 +177,10 @@ export function useConnections(live: boolean): UseConnectionsResult {
       apiSaveProfile(profile)
         .then((saved) => {
           setProfiles((previous) => [...previous.filter((p) => p.id !== saved.id), saved]);
-          connectProfile(saved.id);
+          // The operator just picked this device, so pass it explicitly: a
+          // device with no USB serial/VID/PID (a PTY, a built-in port) has no
+          // identity to re-match and a bare profile connect would 404.
+          connectProfile(saved.id, profile.deviceId);
         })
         .catch((error: unknown) => { setActionError(messageOf(error)); })
         .finally(() => {

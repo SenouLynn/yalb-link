@@ -61,3 +61,16 @@ it('backs off to a ceiling while the backend stays down, and resets on the next 
   expect(create).toHaveBeenCalledTimes(reset + 1);
   stop();
 });
+it('forwards acquisition events, which the connection controls depend on', () => {
+  const sources: FakeSource[] = [];
+  const create = () => { const source = new FakeSource(); sources.push(source); return source as unknown as EventSource; };
+  const events = vi.fn();
+  new LiveEventSource({ create }).start(events);
+  sources[0]?.dispatchEvent(new MessageEvent('acquisition', {
+    data: JSON.stringify({ id: 'p1', state: 'REPORTING', vehicle_keys: [] }),
+  }));
+  expect(events).toHaveBeenCalledWith(expect.objectContaining({
+    kind: 'acquisition',
+    event: expect.objectContaining({ id: 'p1', state: 'REPORTING' }),
+  }));
+});
